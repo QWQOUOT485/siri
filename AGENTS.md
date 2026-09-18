@@ -10,7 +10,8 @@ Behavior rules for coding agents working on this project.
 5. If modifying Parser → read docs/SPEC.md
 6. If modifying API → read docs/API.md + docs/SECURITY.md
 7. If modifying networking → read docs/NETWORKING.md
-8. After completing work → run relevant tests per docs/TESTING.md
+8. If modifying Spotify/music playback → read docs/SPOTIFY.md + docs/SECURITY.md
+9. After completing work → run relevant tests per docs/TESTING.md
 
 ## Document Priority
 ```
