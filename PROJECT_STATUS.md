@@ -141,7 +141,27 @@ Windows Agent 的 LAN API 仍不得公開到 Internet。
 
 ## Updating This File
 
-完成一個真正的里程碑後再更新，例如：
+這不是選用紀錄。**任何會改變真實專案狀態的工作，在結束前 MUST 更新這份檔案。**
+
+必須更新的情況包括：
+
+- 完成一個里程碑。
+- 真實驗收測試成功或失敗。
+- 實作狀態有實質變化。
+- 發現、改變或解除 blocker。
+- Current Phase 改變。
+- 下一個必要動作改變。
+
+更新時必須遵守：
+
+- 不要因為「程式碼已寫」、「文件已寫」或「mock tests 通過」就把功能標成真實完成。
+- Windows / Spotify / Siri 的實機驗收要與 code/spec/mock-test 狀態分開記錄。
+- 沒有跑過的實機測試，必須繼續留在 Not Yet Proven 或等價區段。
+- 舊的 next step 被取代時，要刪除或更新，不要一直累積過期資訊。
+- 不得寫入 API Key、OAuth token、密碼或其他 secret。
+- 純解釋、純討論、沒有改變專案狀態的工作，不需要修改本檔。
+
+真正里程碑範例：
 
 - Spotify OAuth 真實授權成功。
 - Spotify status 驗證成功。
