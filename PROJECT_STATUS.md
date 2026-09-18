@@ -131,6 +131,14 @@
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
+## Siri Shortcut Stable Dictation Flow Documentation (2026-09-19)
+
+- `docs/SIRI_SHORTCUT.md` 已改成穩定版流程：Shortcut 自己先 Speak「請說電腦指令」→ Dictate Text → POST `/command` → Speak response。
+- clarification 必須在同一次 Shortcut 執行內完成第二次 Speak + Dictate Text + POST token；避免 Shortcut 已結束後，Siri 把「下一首／第二首」當成 iPhone 原生指令。
+- 文件建議 Dictate Text 語言設為「中文（台灣）」並使用較獨特的 Shortcut 名稱（例如「Windows 管家」）降低 Siri 原生語意衝突。
+- 已加入排查分流：Agent 沒收到 POST → iPhone/Shortcut 問題；收到 `text=下一週` → Siri ASR 問題；收到 `text=下一首` 但未執行 → Agent parser/service 問題。
+- 這只是文件與操作流程修正，**尚未完成 iPhone 實機 clarification E2E 驗收**。
+
 ## Known Blocker: Siri Shortcut clarification E2E (2026-09-18)
 
 - 實機重現時，Siri Shortcut 實際送到 Agent 的文字只有 `播放晴天`，沒有帶歌手或專輯提示。
