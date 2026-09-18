@@ -60,10 +60,49 @@ Unified response:
 - `status`
 - `action`
 - `message` (for Siri to speak)
-- `candidates` (for ambiguous results)
+- `candidates` (for ambiguous app results)
+- `clarification_required` (bool; for safe follow-up questions such as choosing a media provider)
+- `clarification_type` (e.g. `media_provider`)
+- `options` (allowlisted choices only; never executable paths/commands/URLs)
 - `confirmation_required` (bool)
 - `confirmation_token` (for shutdown flow)
 - `error_code`
+
+## Media Provider Clarification Flow
+
+When `POST /command` receives a bare playback request such as `播放`, `播放音樂`, or `Play` without a provider:
+
+1. Agent does not guess a provider and does not immediately dispatch an unrestricted launch.
+2. Return `clarification_required=true`, `clarification_type="media_provider"`, a Siri-friendly `message`, and allowlisted `options`.
+3. V1 provider allowlist: `youtube_music`, `apple_music`, `spotify`.
+4. The Shortcut asks the user to choose/say one of those providers.
+5. The follow-up request sends only the selected provider identifier or equivalent natural-language phrase back to the Agent.
+6. Agent validates the provider against the closed allowlist, resolves it through trusted internal mappings/catalog entries, then performs playback best-effort.
+7. Arbitrary provider strings, executable paths, command arguments, or URLs are rejected.
+
+Example clarification response:
+
+```json
+{
+  "success": false,
+  "status": "clarification_required",
+  "action": "play",
+  "message": "要使用 YouTube Music、Apple Music，還是 Spotify？",
+  "clarification_required": true,
+  "clarification_type": "media_provider",
+  "options": [
+    {"id": "youtube_music", "label": "YouTube Music"},
+    {"id": "apple_music", "label": "Apple Music"},
+    {"id": "spotify", "label": "Spotify"}
+  ],
+  "confirmation_required": false,
+  "error_code": null
+}
+```
+
+If the original command already names an allowlisted provider (for example `播放 Spotify`), the clarification step is skipped.
+
+`pause`, `media_next`, and `media_previous` continue to target the current active media session by default.
 
 Don't make iPhone parse many different formats.
 
