@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Spotify 真實播放驗收（歌曲消歧實作與 Windows + Spotify 驗收已完成，Shortcut E2E 待進行）**
+目前階段：**Spotify 消歧產品規則第二輪修正（Live 排除、繁簡正規化、最多三選一 Siri 反問）**
 
-規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制、token refresh 與本次歌曲消歧驗收。Siri Shortcut 實機端到端流程仍待重新驗證。
+先前的 studio/Live 排序實作與 Windows + Spotify 驗收已完成，但產品規則已於 2026-09-18 再次調整：一般指定歌曲不再支援 Live / 演唱會版本；真正無法判斷時，Siri 應最多列 3 首 trusted candidates 反問使用者。這些新規則尚未完成實作與實機驗收，因此現在不能直接進行最終 Shortcut E2E。
 
 ## Completed / Decided
 
@@ -38,13 +38,26 @@
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
-- 已支援自然語音可使用的 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；版本意圖使用封閉的 `live`／`studio`／`original` 值，只進 Spotify 搜尋與排序。
-- `SpotifyCatalog` 已對所有歌曲使用通用版本分類與安全排序：未指定 Live 時優先 studio/original，明確 Live 時優先 Live；不同歌手的裸歌名仍維持 ambiguous，不以搜尋第一筆代替意圖。
+- 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；但「明確 Live 時播放 Live」這部分已被新的產品決策取代，待修改。
+- 目前 `SpotifyCatalog` 已有通用版本分類、ISRC / duration 與 confidence-based matching；新的產品決策要求 Live / Concert / Tour / 演唱會 / 現場候選直接排除，不再只是降權或明確 Live 時反向加權。
 - 消歧修正的 unit tests 已通過（71 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
 - Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
+
+## New Product Decision / Pending Implementation (2026-09-18)
+
+以下是最新決策，**尚未全部實作完成**：
+
+- 一般指定歌曲播放不支援 Live / Concert / Tour / 演唱會 / 現場版本；Spotify Search 後先排除這些候選。
+- 使用者明確要求 Live / 現場版時，回覆目前只支援正式錄音版本，不播放 Live。
+- 歌名、歌手、專輯 matching 要加入繁簡中文正規化；只消除字形造成的假歧義，不得把真正不同歌手或不同錄音誤合併。
+- 排除 Live 並完成 matching 後若仍 ambiguous，最多回 3 個 trusted candidates。
+- Siri Shortcut 要朗讀這 2～3 個候選並反問使用者；若只有 2 個就只列 2 個，不湊滿 3 個。
+- 第二輪 clarification 只能在 server 建立的短效候選集合中選擇，支援「第一首／第二首／第三首／歌手／專輯」等回答；client 不得任意指定 Spotify URI 或 track ID。
+- clarification context 必須短效過期。
+- 暫時 bug 規格見 `docs/BUG_SPOTIFY_SIRI_DISAMBIGUATION.md`；完成所有實作、測試與 Siri E2E 後才刪除該檔案。
 
 ## Real-World Acceptance (2026-09-18)
 
@@ -68,8 +81,10 @@
 - 實機重現時，Siri Shortcut 實際送到 Agent 的文字只有 `播放晴天`，沒有帶歌手或專輯提示。
 - Spotify 搜尋回報 `SPOTIFY_AMBIGUOUS_TRACK`，候選包含原版 `晴天`／`葉惠美`、`2004無與倫比演唱會` 及其他 `Live` 版本；Agent 正確拒絕隨機播放。因此目前不是 OAuth、Connect 裝置或 Spotify 播放控制失敗，而是 Shortcut 語音輸入與選曲消歧尚未完成。
 - 現有 `播放周杰倫的晴天 (葉惠美)` 可作為文字測試提示，但括號形式不是可靠的語音介面；Siri 可能把括號內容念成普通詞語或改變順序。
-- 期望的語音形式包括 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`；若使用者沒有說明 Live，產品也需要明確決定是否優先選原版／正式專輯，只有明確說「現場版」時才選 Live。若仍有多個合理候選，應繼續要求補充，不得隨機播放。
-- 實作、unit tests 與 Windows + Spotify 實機驗證已完成；下一步是用自然語音重新跑 iPhone Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
+- 最新產品決策已不再支援 Live 播放：Live / Concert / Tour / 演唱會 / 現場候選應直接排除；明確要求 Live 時回覆只支援正式錄音版本。
+- 仍需補上繁簡中文 matching normalization，避免 `周杰伦` / `周杰倫`、`叶惠美` / `葉惠美` 造成假歧義。
+- 真正 ambiguous 時不再只回錯誤後結束；Shortcut 應最多列 3 首 trusted candidates 反問使用者，再以短效 clarification context 完成第二輪選擇。
+- 先完成上述新規則的實作、unit/security tests 與 Windows + Spotify 驗證，再重新跑 iPhone Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
 
 ## Current Local Acceptance Gate
 
@@ -96,16 +111,24 @@ D:\ai\windows-siri-agent\scripts\start.bat
 
 4. 若尚未授權，呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
 5. 驗證 `/spotify/status`。
-6. 尚待真實測試：
-   - 修正後重新驗證 iPhone Siri Shortcut 端到端播放
-7. Siri Shortcut 成功後，才算完成 V1 的完整播放驗收。
+6. 先完成新的消歧規則：
+   - Live / 演唱會候選直接排除
+   - 繁簡中文 normalization
+   - ambiguous 最多 3 個 trusted candidates
+   - Siri clarification 第二輪選擇
+7. 跑 unit/security tests，再部署 Windows Agent 驗證。
+8. 最後重新驗證 iPhone Siri Shortcut 端到端播放與三選一反問流程。
+9. Siri Shortcut 成功後，才算完成 V1 的完整播放驗收。
 
 ## Important: What Is NOT Yet Proven
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
-- Siri Shortcut 已完成端到端播放驗收；目前尚未重新驗證修正後的裸歌名流程。
-- Siri 以自然語音表達專輯／版本提示時，Parser 能穩定抽取並完成選曲。
+- 新的 Live 排除規則已完成實作與實機驗收。
+- 歌名／歌手／專輯的繁簡中文 normalization 已完成且不會誤合併真正不同候選。
+- ambiguous response 已限制為最多 3 個 trusted candidates。
+- Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
+- Siri Shortcut 已完成端到端播放驗收。
 
 目前這些是「下一階段驗收項目」，不是既成事實。
 
