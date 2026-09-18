@@ -267,14 +267,14 @@ expires_at
 
 若使用者未指定 Live：
 
-- studio / original release 優先
-- Live / Concert / Tour / 演唱會版本降權
-- 若有明顯優勢，可直接播放
+- Live / Concert / Tour / 演唱會版本直接排除
+- studio / original release 繼續交由 resolver 判斷
+- 若有明顯安全優勢，可直接播放
 
 若使用者明確指定 Live：
 
-- Live 候選優先
-- 若多個 Live 版本仍無明顯差異，再要求補充
+- 不重新搜尋或選擇 Live 候選
+- 回覆目前只支援正式錄音版本
 
 #### Case B — 不同歌手的同名歌曲
 
@@ -757,17 +757,17 @@ Siri Text
 只有以下條件全部成立，才算此 bug 解決：
 
 - [x] 自然中文專輯 / 版本提示解析完成
-- [ ] 歌名／歌手／專輯 matching 已加入繁簡正規化，並有對應測試
-- [ ] 已驗證繁簡正規化只消除字形造成的假歧義，不會把真正不同歌手／版本誤合併
-- [ ] Live / Concert / Tour / 演唱會 / 現場候選已改為直接排除，而不是降權排序
+- [x] 歌名／歌手／專輯 matching 已加入繁簡正規化，並有對應測試
+- [x] 已驗證繁簡正規化只消除字形造成的假歧義，不會把真正不同歌手／版本誤合併
+- [x] Live / Concert / Tour / 演唱會 / 現場候選已改為直接排除，而不是降權排序
 - [x] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
 - [x] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
 - [x] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
-- [ ] 明確要求 Live / 現場版時會回覆「目前只支援正式錄音版本」，不播放 Live
-- [ ] 真正無法判斷時最多回 3 個 trusted candidates
+- [x] 明確要求 Live / 現場版時會回覆「目前只支援正式錄音版本」，不播放 Live
+- [x] 真正無法判斷時最多回 3 個 trusted candidates
 - [ ] Siri Shortcut 已支援朗讀最多 3 首候選並反問使用者
-- [ ] clarification 第二輪可解析「第一首／第二首／第三首／歌手／專輯」並限制在原候選集合
-- [ ] clarification context 有短效過期機制，client 無法任意指定 Spotify URI / track_id
+- [x] server clarification 第二輪可解析「第一首／第二首／第三首／歌手／專輯」並限制在原候選集合
+- [x] clarification context 有短效過期機制，client 無法任意指定 Spotify URI / track_id
 - [x] 相關 unit tests 通過
 - [x] security tests 未被削弱
 - [x] 真實 Windows Spotify 驗收通過

@@ -29,13 +29,14 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - `播放葉惠美專輯的晴天` parses a leading album hint
 - `播放晴天現場版` / `播放晴天原版` parses a closed version hint
 - Spotify search ranking prefers exact title + artist matches
-- Studio/original wins against Live when no version was requested
-- Explicit Live intent wins against studio/original
-- Multiple Live versions remain ambiguous
+- Live/Concert/Tour/演唱會/現場候選在一般搜尋中直接排除
+- Explicit Live intent is rejected before Spotify search/playback
+- Traditional/Simplified normalization only collapses same-ISRC identity duplicates
 - Bare same-title tracks by different artists remain ambiguous
 - Same-ISRC release duplicates may collapse safely
 - Duration alone never resolves two candidates
 - Ambiguous Spotify search results do not auto-play an arbitrary track
+- Ambiguous results expose at most three trusted candidates and a short-lived, one-use clarification context
 - Spotify API calls are mocked in unit tests
 - Spotify access/refresh tokens are never returned or logged
 - User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs

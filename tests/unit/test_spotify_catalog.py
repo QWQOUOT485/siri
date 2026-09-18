@@ -80,7 +80,22 @@ def test_catalog_prefers_canonical_studio_over_live_for_same_artist():
     assert result.ambiguous is False
 
 
-def test_catalog_prefers_live_when_user_explicitly_requests_live():
+def test_catalog_excludes_live_candidates_when_no_formal_recording_exists():
+    client = FakeSpotifySearchClient(
+        [
+            track("live", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is False
+    assert result.candidates == ()
+
+
+def test_catalog_rejects_explicit_live_intent_without_searching():
     client = FakeSpotifySearchClient(
         [
             track("studio", "晴天", ["周杰倫"], album="葉惠美"),
@@ -91,9 +106,10 @@ def test_catalog_prefers_live_when_user_explicitly_requests_live():
 
     result = catalog.find_track("晴天", "周杰倫", version_hint="live", access_token="test-token")
 
-    assert result.track is not None
-    assert result.track.track_id == "live"
-    assert client.queries == [("test-token", "track:晴天 artist:周杰倫 live", 10)]
+    assert result.track is None
+    assert result.ambiguous is False
+    assert result.candidates == ()
+    assert client.queries == []
 
 
 def test_catalog_uses_original_as_ranking_intent_not_a_free_text_query():
@@ -112,7 +128,7 @@ def test_catalog_uses_original_as_ranking_intent_not_a_free_text_query():
     assert client.queries == [("test-token", "track:晴天 artist:周杰倫", 10)]
 
 
-def test_catalog_keeps_multiple_live_versions_ambiguous():
+def test_catalog_rejects_explicit_live_without_search_even_if_multiple_versions_exist():
     client = FakeSpotifySearchClient(
         [
             track("liveone", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
@@ -124,7 +140,9 @@ def test_catalog_keeps_multiple_live_versions_ambiguous():
     result = catalog.find_track("晴天", "周杰倫", version_hint="live", access_token="test-token")
 
     assert result.track is None
-    assert result.ambiguous is True
+    assert result.ambiguous is False
+    assert result.candidates == ()
+    assert client.queries == []
 
 
 def test_catalog_does_not_choose_between_different_artists_for_bare_title():
@@ -140,6 +158,20 @@ def test_catalog_does_not_choose_between_different_artists_for_bare_title():
 
     assert result.track is None
     assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
+def test_catalog_limits_ambiguous_candidates_to_three():
+    client = FakeSpotifySearchClient(
+        [track(str(index), "Stay", ["The Kid LAROI"], album=f"Album {index}") for index in range(5)]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert len(result.candidates) == 3
 
 
 def test_catalog_can_collapse_same_recording_releases_when_isrc_matches():
@@ -152,6 +184,22 @@ def test_catalog_can_collapse_same_recording_releases_when_isrc_matches():
     catalog = SpotifyCatalog(client)
 
     result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "original"
+    assert result.ambiguous is False
+
+
+def test_catalog_normalizes_traditional_simplified_identity_metadata():
+    client = FakeSpotifySearchClient(
+        [
+            track("original", "晴天", ["周杰倫"], album="葉惠美", isrc="TWABC2400001"),
+            track("release", "晴天", ["周杰伦"], album="叶惠美", isrc="TWABC2400001"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰伦", "叶惠美", access_token="test-token")
 
     assert result.track is not None
     assert result.track.track_id == "original"

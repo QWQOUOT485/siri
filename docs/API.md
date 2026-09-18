@@ -49,9 +49,23 @@ See [Security](SECURITY.md#api-response-security)
 
 - Requires authentication
 - Main Siri API
-- Input: text (natural language)
+- Input: `text` (natural language), plus optional server-issued `clarification_token` for a second-turn Spotify selection
 - Agent parses internally
 - All command parsing on Windows Agent, not Apple Shortcut
+
+When the response has `clarification_required=true`, the client may send the
+spoken follow-up and the returned opaque token back to this same endpoint:
+
+```json
+{
+  "text": "第二首",
+  "clarification_token": "opaque-short-lived-token"
+}
+```
+
+The token is short-lived and one-use. The client cannot use it to submit a
+Spotify URI or track ID; selection is restricted to the server-created
+candidate set.
 
 ## Response Schema
 
@@ -63,6 +77,7 @@ Unified response:
 - `candidates` (for ambiguous app results)
 - `clarification_required` (bool; for safe follow-up questions such as choosing a media provider)
 - `clarification_type` (e.g. `media_provider`)
+- `clarification_token` (opaque, short-lived server token; only present when required)
 - `options` (allowlisted choices only; never executable paths/commands/URLs)
 - `confirmation_required` (bool)
 - `confirmation_token` (for shutdown flow)
@@ -94,7 +109,7 @@ Server flow:
 1. Validate the closed action.
 2. Search Spotify for a track.
 3. Rank exact title + artist matches above weaker matches.
-4. If confidence is insufficient or several plausible tracks remain, return a clarification/error message instead of guessing.
+4. Exclude Live/Concert/Tour/演唱會/現場 candidates. If confidence is insufficient or several plausible tracks remain, return at most three trusted candidates and a short-lived clarification token instead of guessing.
 5. Resolve a trusted Spotify track URI/ID from the Spotify response.
 6. Resolve the configured/active Spotify Connect device.
 7. Start playback using the trusted Spotify URI.

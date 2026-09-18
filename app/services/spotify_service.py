@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 from app.adapters.spotify.client import SpotifyApiError
 from app.adapters.windows.base import OperationResult
 from app.domain.actions import ActionName, ValidatedAction
 from app.infrastructure.spotify_auth import SpotifyAuthError
 
+from .spotify_clarification import SpotifyClarificationStore
+
 
 class SpotifyService:
     """Resolve safe Spotify actions without exposing tokens or raw API access."""
 
-    def __init__(self, auth, catalog, player) -> None:
+    def __init__(self, auth, catalog, player, clarification_store=None) -> None:
         self.auth = auth
         self.catalog = catalog
         self.player = player
+        self.clarification_store = clarification_store or SpotifyClarificationStore()
 
     def execute(self, command: ValidatedAction) -> OperationResult:
         if command.action not in {
@@ -27,6 +30,12 @@ class SpotifyService:
             ActionName.SPOTIFY_PLAY_TRACK,
         }:
             return OperationResult(False, "不支援這個 Spotify action。", "INVALID_SPOTIFY_ACTION")
+        if command.action is ActionName.SPOTIFY_PLAY_TRACK and self._version_value(command.version_hint) == "live":
+            return OperationResult(
+                False,
+                "目前只支援正式錄音版本，不播放 Live／演唱會候選。",
+                "SPOTIFY_LIVE_UNSUPPORTED",
+            )
         try:
             access_token = self.auth.get_access_token()
         except SpotifyAuthError as exc:
@@ -46,6 +55,41 @@ class SpotifyService:
                     return self._api_error(retry_error)
             return self._api_error(exc)
 
+    def execute_clarification(self, text: str, clarification_token: str) -> OperationResult:
+        """Play only the trusted candidate selected from a live server context."""
+
+        selection = self.clarification_store.select(clarification_token, text)
+        if selection.track is None:
+            data: dict[str, Any] = {}
+            if selection.clarification_token:
+                options = self._options(selection.candidates)
+                data = self._clarification_data(selection.clarification_token, options)
+            return OperationResult(
+                False,
+                self._clarification_error_message(selection.error_code),
+                selection.error_code or "SPOTIFY_CLARIFICATION_INVALID",
+                data,
+            )
+
+        try:
+            access_token = self.auth.get_access_token()
+        except SpotifyAuthError as exc:
+            return OperationResult(False, str(exc), exc.error_code)
+
+        try:
+            return self._play_candidate(access_token, selection.track)
+        except SpotifyApiError as exc:
+            if exc.status_code == 401:
+                try:
+                    refreshed_token = self.auth.refresh_access_token()
+                except SpotifyAuthError as auth_error:
+                    return OperationResult(False, str(auth_error), auth_error.error_code)
+                try:
+                    return self._play_candidate(refreshed_token, selection.track)
+                except SpotifyApiError as retry_error:
+                    return self._api_error(retry_error)
+            return self._api_error(exc)
+
     def _execute_with_token(self, command: ValidatedAction, access_token: str) -> OperationResult:
         if command.action is ActionName.SPOTIFY_RESUME:
             return self.player.resume(access_token)
@@ -56,6 +100,13 @@ class SpotifyService:
         if command.action is ActionName.SPOTIFY_PREVIOUS:
             return self.player.previous(access_token)
 
+        if self._version_value(command.version_hint) == "live":
+            return OperationResult(
+                False,
+                "目前只支援正式錄音版本，不播放 Live／演唱會候選。",
+                "SPOTIFY_LIVE_UNSUPPORTED",
+            )
+
         resolution = self.catalog.find_track(
             command.track or "",
             command.artist,
@@ -65,31 +116,85 @@ class SpotifyService:
         )
         if resolution.track is None:
             if resolution.ambiguous:
-                candidates = [self._public_track(candidate) for candidate in resolution.candidates]
+                candidates = tuple(resolution.candidates[:3])
+                if not candidates:
+                    return OperationResult(False, f"Spotify 無法判斷歌曲 {command.track}。", "SPOTIFY_AMBIGUOUS_TRACK")
+                token = self.clarification_store.create(candidates)
+                options = self._options(candidates)
                 details = []
                 if command.album:
                     details.append(f"專輯：{command.album}")
-                if command.version_hint:
+                if command.version_hint and self._version_value(command.version_hint) != "live":
                     details.append(f"版本：{command.version_hint.value}")
                 detail_suffix = f"（{'／'.join(details)}）" if details else ""
                 return OperationResult(
                     False,
-                    f"找到多個可能的 {command.track}{detail_suffix}，請補充歌手、專輯或版本。",
-                    "SPOTIFY_AMBIGUOUS_TRACK",
-                    {"candidates": candidates},
+                    self._clarification_message(command.track or "歌曲", options, detail_suffix),
+                    "SPOTIFY_CLARIFICATION_REQUIRED",
+                    self._clarification_data(token, options),
                 )
             return OperationResult(False, f"Spotify 找不到歌曲 {command.track}。", "SPOTIFY_TRACK_NOT_FOUND")
-        result = self.player.resume(access_token, resolution.track)
+        return self._play_candidate(access_token, resolution.track)
+
+    def _play_candidate(self, access_token: str, track) -> OperationResult:
+        result = self.player.resume(access_token, track)
         if result.success:
-            result.data.setdefault("track_name", resolution.track.track_name)
-            result.data.setdefault("artist_names", list(resolution.track.artist_names))
-            result.data.setdefault("album_name", resolution.track.album_name)
+            result.data.setdefault("track_name", track.track_name)
+            result.data.setdefault("artist_names", list(track.artist_names))
+            result.data.setdefault("album_name", track.album_name)
         return result
+
+    @classmethod
+    def _clarification_data(cls, token: str, options: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "clarification_required": True,
+            "clarification_type": "spotify_track",
+            "clarification_token": token,
+            "options": options,
+            "candidates": options,
+        }
+
+    @classmethod
+    def _options(cls, tracks) -> list[dict[str, Any]]:
+        return [
+            {
+                "ordinal": index,
+                "label": cls._option_label(track),
+                "track_name": track.track_name,
+                "artist_names": list(track.artist_names),
+                "album_name": track.album_name,
+            }
+            for index, track in enumerate(tracks, start=1)
+        ]
+
+    @staticmethod
+    def _option_label(track) -> str:
+        artists = "、".join(track.artist_names)
+        album = f"（專輯：{track.album_name}）" if track.album_name else ""
+        return f"{artists} — {track.track_name}{album}"
+
+    @classmethod
+    def _clarification_message(cls, track_name: str, options: list[dict[str, Any]], detail_suffix: str) -> str:
+        option_text = "；".join(f"第{option['ordinal']}首，{option['label']}" for option in options)
+        return f"找到多個可能的 {track_name}{detail_suffix}：{option_text}。請說第一首、第二首或第三首。"
+
+    @staticmethod
+    def _clarification_error_message(error_code: str | None) -> str:
+        return {
+            "SPOTIFY_CLARIFICATION_EXPIRED": "歌曲選擇已過期，請重新說出歌曲。",
+            "SPOTIFY_CLARIFICATION_USED": "歌曲選擇已使用過，請重新說出歌曲。",
+            "SPOTIFY_CLARIFICATION_UNCLEAR": "我無法判斷你選哪一首，請說第一首、第二首、第三首，或說歌手／專輯。",
+        }.get(error_code or "", "找不到這個歌曲選擇，請重新說出歌曲。")
+
+    @staticmethod
+    def _version_value(version_hint) -> str | None:
+        if version_hint is None:
+            return None
+        return str(getattr(version_hint, "value", version_hint)).casefold()
 
     @staticmethod
     def _public_track(track) -> dict[str, Any]:
         return {
-            "track_id": track.track_id,
             "track_name": track.track_name,
             "artist_names": list(track.artist_names),
             "album_name": track.album_name,

@@ -24,6 +24,7 @@ from app.services.app_service import ApplicationService, WebsiteCatalog
 from app.services.command_parser import CommandParser
 from app.services.command_service import CommandService
 from app.services.shutdown_service import ShutdownConfirmationService
+from app.services.spotify_clarification import SpotifyClarificationStore
 from app.services.spotify_service import SpotifyService
 
 
@@ -115,7 +116,12 @@ def build_runtime(
             device_name=cfg.spotify_device_name,
             open_spotify=lambda: application_service.open_app(app_query="Spotify"),
         )
-        spotify_service = SpotifyService(spotify_auth, spotify_catalog, spotify_player)
+        spotify_service = SpotifyService(
+            spotify_auth,
+            spotify_catalog,
+            spotify_player,
+            clarification_store=SpotifyClarificationStore(),
+        )
     command_service = CommandService(
         application_service,
         media,

@@ -11,7 +11,8 @@
 - 「播放周杰倫的晴天 (葉惠美)」→ 以專輯/版本提示縮小同名歌曲結果
 - 「播放周杰倫的晴天，專輯葉惠美」→ 以自然語音提供專輯提示
 - 「播放葉惠美專輯的晴天」→ 以專輯前置語法提供專輯提示
-- 「播放晴天現場版」/「播放晴天原版」→ 提供 Live／原版版本意圖
+- 「播放晴天現場版」→ 明確回覆目前只支援正式錄音版本，不播放 Live
+- 「播放晴天原版」→ 以原版意圖搜尋正式錄音版本
 - 「暫停」/「暫停音樂」→ 暫停 Spotify
 - 「下一首」→ Spotify 下一首
 - 「上一首」→ Spotify 上一首
@@ -100,26 +101,34 @@ Start/Resume Playback
 
 搜尋 query 可以由歌名、歌手與可選的專輯/版本提示組成，但只能作為 Spotify 搜尋資料。
 
-排序原則：
+排序與版本規則：
 1. 歌名完全匹配 + 歌手完全匹配。
 2. 歌名完全匹配 + 歌手完全匹配 + 專輯完全匹配（若提供專輯提示）。
 3. 使用者明確的 `live`／`studio`／`original` 版本意圖。
-4. 未指定版本時，正式 studio/original 候選優先，Live／演唱會／次要發行候選降權。
-5. 歌名完全匹配 + 歌手高度匹配。
-6. 正規化後的強匹配。
-7. 其他候選。
+4. Live／Concert／Tour／演唱會／現場候選直接排除；它們不會因 Spotify 搜尋排序而被播放。
+5. 未指定版本時，正式 studio/original 候選優先；次要發行仍需有明顯安全優勢。
+6. 歌名完全匹配 + 歌手高度匹配。
+7. 繁簡正規化後的強匹配。
+8. 其他候選。
 
-未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手；同一歌手的 studio／Live 候選則依版本規則排序。若最高候選與第二名仍無足夠安全分差，不得播放。
+若使用者明確要求 Live／現場版，服務會在搜尋前拒絕播放。未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手。若最高候選與第二名仍無足夠安全分差，不得播放。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
 
-回傳 Siri 可朗讀訊息，例如：
+真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 
 > 找到多個可能的 Stay，請再說歌手名稱。
 
-使用者下一次可說：
+使用者下一次可用同一個 `POST /command` 傳回覆文字與 token，例如：
 
-> 播放 The Kid LAROI 的 Stay
+```json
+{
+  "text": "第二首",
+  "clarification_token": "opaque-short-lived-token"
+}
+```
+
+Agent 只會在原候選集合中解析序號、歌手或專輯；client 不得傳入 Spotify URI 或 track ID。選擇不清楚時會再次列出原候選，不會猜測。
 
 ## Trusted SpotifyTrackRef
 
@@ -224,10 +233,12 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - `播放晴天現場版` / `播放晴天原版` → closed version intent
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
-- studio/original vs Live ranking, including explicit Live intent
+- Live 候選直接排除；明確 Live intent 不搜尋、不播放
+- Traditional/Simplified identity normalization
 - bare same-title tracks by different artists remain ambiguous
 - same-ISRC release duplicates may collapse; duration alone must not auto-select
 - ambiguous results 不自動播放
+- ambiguous results 最多三個 trusted candidates，clarification token 短效且只能一次選擇
 - no results
 - token refresh
 - 401 / 403 / 429 handling

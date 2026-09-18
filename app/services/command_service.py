@@ -23,6 +23,10 @@ class ServiceResult:
     confirmation_required: bool = False
     confirmation_token: str | None = None
     data: dict[str, Any] = field(default_factory=dict)
+    clarification_required: bool = False
+    clarification_type: str | None = None
+    clarification_token: str | None = None
+    options: list[dict[str, Any]] = field(default_factory=list)
 
 
 class CommandService:
@@ -72,9 +76,19 @@ class CommandService:
             return self._operation(action, self.volume.change(action.value, command.steps))
         return ServiceResult(False, "error", action.value, "不支援這個 action。", error_code="INVALID_ACTION")
 
+    def execute_clarification(self, text: str, clarification_token: str) -> ServiceResult:
+        """Complete one Spotify selection using a server-owned context only."""
+
+        action = ActionName.SPOTIFY_PLAY_TRACK
+        if self.spotify is None:
+            return ServiceResult(False, "error", action.value, "Spotify 整合尚未設定。", error_code="SPOTIFY_NOT_CONFIGURED")
+        return self._operation(action, self.spotify.execute_clarification(text, clarification_token))
+
     @staticmethod
     def _operation(action: ActionName, result: OperationResult) -> ServiceResult:
-        candidates = result.data.get("candidates", []) if isinstance(result.data, dict) else []
+        data = result.data if isinstance(result.data, dict) else {}
+        candidates = data.get("candidates", [])
+        options = data.get("options", [])
         return ServiceResult(
             success=result.success,
             status="ok" if result.success else "error",
@@ -82,5 +96,9 @@ class CommandService:
             message=result.message,
             error_code=result.error_code,
             candidates=candidates if isinstance(candidates, list) else [],
-            data=result.data,
+            clarification_required=bool(data.get("clarification_required", False)),
+            clarification_type=data.get("clarification_type") if isinstance(data.get("clarification_type"), str) else None,
+            clarification_token=data.get("clarification_token") if isinstance(data.get("clarification_token"), str) else None,
+            options=options if isinstance(options, list) else [],
+            data=data,
         )

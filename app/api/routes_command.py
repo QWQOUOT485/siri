@@ -15,6 +15,19 @@ router = APIRouter()
 async def command(request: Request, body: CommandRequest, _=Depends(require_api_key)):
     runtime = request.app.state.runtime
     started = time.perf_counter()
+    if body.clarification_token:
+        result = runtime.command_service.execute_clarification(body.text, body.clarification_token)
+        audit_event(
+            runtime.logger,
+            client_ip=request.client.host if request.client else None,
+            action=result.action,
+            target="spotify_clarification",
+            success=result.success,
+            duration_ms=(time.perf_counter() - started) * 1000,
+            error_code=result.error_code,
+        )
+        return response_payload(result)
+
     parsed = runtime.parser.parse(body.text)
     if not parsed.accepted or parsed.action is None:
         audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action="parse_command", target=None, success=False, duration_ms=(time.perf_counter() - started) * 1000, error_code=parsed.error_code)

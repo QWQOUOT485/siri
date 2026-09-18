@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import re
-import unicodedata
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.domain.chinese import normalize_chinese_text
 
 
 class SpotifyTrackRef(BaseModel):
@@ -55,9 +56,13 @@ class SpotifyCatalog:
             query += f" album:{album}"
         hint = self._hint_value(version_hint)
         if hint == "live":
-            query += " live"
+            return TrackResolution(track=None, ambiguous=False)
         payloads = self.client.search_tracks(access_token, query, limit=10)
-        refs = tuple(ref for item in payloads if (ref := self._to_ref(item)) is not None)
+        refs = tuple(
+            ref
+            for item in payloads
+            if (ref := self._to_ref(item)) is not None and self._classify_version(ref) != "live"
+        )
         if not refs:
             return TrackResolution(track=None, ambiguous=False)
 
@@ -73,13 +78,13 @@ class SpotifyCatalog:
                 if ref.artist_names and self._normalize(ref.artist_names[0])
             }
             if len(artist_groups) > 1:
-                return TrackResolution(track=None, ambiguous=True, candidates=tuple(title_matches[:5]))
+                return TrackResolution(track=None, ambiguous=True, candidates=tuple(title_matches[:3]))
         if album:
             exact_album_matches = [
                 ref for ref in exact_track_matches if self._normalize(ref.album_name) == self._normalize(album)
             ]
             if len(exact_album_matches) == 1:
-                return TrackResolution(track=exact_album_matches[0], ambiguous=False, candidates=tuple(ranked[:5]))
+                return TrackResolution(track=exact_album_matches[0], ambiguous=False, candidates=tuple(ranked[:3]))
             if len(exact_album_matches) > 1:
                 album_ranked = sorted(
                     exact_album_matches,
@@ -87,8 +92,8 @@ class SpotifyCatalog:
                     reverse=True,
                 )
                 if self._same_recording_group(album_ranked):
-                    return TrackResolution(track=album_ranked[0], ambiguous=False, candidates=tuple(album_ranked[:5]))
-                return TrackResolution(track=None, ambiguous=True, candidates=tuple(album_ranked[:5]))
+                    return TrackResolution(track=album_ranked[0], ambiguous=False, candidates=tuple(album_ranked[:3]))
+                return TrackResolution(track=None, ambiguous=True, candidates=tuple(album_ranked[:3]))
         if best_score < 0.70 or (second_score is not None and best_score - second_score < 0.08):
             close_candidates = [
                 ref
@@ -96,9 +101,9 @@ class SpotifyCatalog:
                 if best_score - self._score(ref, track, artist, album, hint) < 0.08
             ]
             if best_score >= 0.70 and close_candidates and self._same_recording_group(close_candidates + [ranked[0]]):
-                return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:5]))
-            return TrackResolution(track=None, ambiguous=True, candidates=tuple(ranked[:5]))
-        return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:5]))
+                return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
+            return TrackResolution(track=None, ambiguous=True, candidates=tuple(ranked[:3]))
+        return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
 
     @classmethod
     def _to_ref(cls, item: Any) -> SpotifyTrackRef | None:
@@ -250,6 +255,4 @@ class SpotifyCatalog:
 
     @staticmethod
     def _normalize(value: str) -> str:
-        normalized = unicodedata.normalize("NFKC", value).casefold()
-        normalized = re.sub(r"[^\w\u4e00-\u9fff]+", " ", normalized, flags=re.UNICODE)
-        return " ".join(normalized.split())
+        return normalize_chinese_text(value)

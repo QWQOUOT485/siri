@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.adapters.windows.base import OperationResult
 from app.main import create_app
 
 
@@ -65,3 +66,44 @@ def test_shutdown_api_requires_confirmation_and_rejects_replay(fake_runtime):
     replay = client.post("/action", headers=headers, json={"action": "confirm_shutdown", "confirmation_token": token}).json()
     assert replay["success"] is False
     assert replay["error_code"] == "SHUTDOWN_TOKEN_REUSED"
+
+
+def test_command_clarification_token_routes_only_to_server_owned_spotify_context(fake_runtime):
+    runtime, launcher, process, media, volume, system = fake_runtime
+    calls = []
+
+    class FakeClarificationSpotify:
+        def execute_clarification(self, text, clarification_token):
+            calls.append((text, clarification_token))
+            return OperationResult(True, "已播放 Stay。", data={"track_name": "Stay"})
+
+    runtime.command_service.spotify = FakeClarificationSpotify()
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={"text": "第二首", "clarification_token": "opaque-server-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["action"] == "spotify_play_track"
+    assert calls == [("第二首", "opaque-server-token")]
+
+
+def test_command_clarification_request_rejects_client_track_targets(fake_runtime):
+    runtime, launcher, process, media, volume, system = fake_runtime
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={
+            "text": "第一首",
+            "clarification_token": "opaque-server-token",
+            "track_uri": "spotify:track:client-supplied",
+        },
+    )
+
+    assert response.status_code == 422

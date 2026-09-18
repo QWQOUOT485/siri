@@ -70,6 +70,7 @@ class CommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     text: str = Field(min_length=1, max_length=300)
+    clarification_token: str | None = Field(default=None, min_length=1, max_length=512)
 
 
 class SearchRequest(BaseModel):
@@ -85,10 +86,15 @@ def response_payload(result) -> dict[str, Any]:
         "action": result.action,
         "message": result.message,
         "candidates": result.candidates,
+        "clarification_required": result.clarification_required,
+        "clarification_type": result.clarification_type,
+        "options": result.options,
         "confirmation_required": result.confirmation_required,
         "error_code": result.error_code,
         "data": result.data,
     }
     if result.confirmation_token:
         payload["confirmation_token"] = result.confirmation_token
+    if result.clarification_token:
+        payload["clarification_token"] = result.clarification_token
     return payload
