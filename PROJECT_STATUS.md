@@ -134,6 +134,7 @@
 - 先加入會重現「同一首被重播」的 red regression test，再修正為 Next 在 skip 前後讀取曲目 identity；只有曲目真的改變且新曲目未播放時才 Resume。
 - 完整 tests 已通過：90 passed；compileall、pip check 與 diff check 也通過。
 - 修正部署到 Windows Agent 後，真實單曲播放（`context_uri` 為空、沒有下一首）測試回傳 `SPOTIFY_NO_NEXT_TRACK`；播放中的晴天由 1041 ms 前進到 1861 ms，前後 track ID 相同，沒有跳回 0 秒或暫停。
+- 使用者完成最新實機測試並確認修正成功：沒有播放佇列時執行 `下一首` 不再重播目前歌曲，也不會造成暫停。
 - queued / context 有下一首且曲目真的改變的路徑目前由 unit tests 覆蓋，尚未以使用者的 Spotify 播放佇列做額外實機驗收。
 
 ## Current Local Acceptance Gate
