@@ -56,3 +56,14 @@ def test_rate_limit_error_preserves_retry_after_without_leaking_the_access_token
     assert error.value.status_code == 429
     assert error.value.retry_after_seconds == 7
     assert "super-secret-access-token" not in str(error.value)
+
+
+def test_playback_controls_accept_successful_non_json_responses():
+    def handler(request: httpx.Request):
+        assert request.url.path in {"/v1/me/player/pause", "/v1/me/player/next"}
+        return httpx.Response(200, content=b"Playback command accepted")
+
+    client = client_for(handler)
+
+    client.pause("access-token")
+    client.next("access-token")

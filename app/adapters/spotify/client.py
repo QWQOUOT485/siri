@@ -59,21 +59,22 @@ class SpotifyApiClient:
             "/me/player",
             access_token=access_token,
             json={"device_ids": [device_id], "play": play},
+            allow_non_json_success=True,
         )
 
     def start_resume(self, access_token: str, *, device_id: str | None = None, track_uri: str | None = None) -> None:
         params = {"device_id": device_id} if device_id else None
         body = {"uris": [track_uri]} if track_uri else None
-        self._api_json("PUT", "/me/player/play", access_token=access_token, params=params, json=body)
+        self._api_json("PUT", "/me/player/play", access_token=access_token, params=params, json=body, allow_non_json_success=True)
 
     def pause(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("PUT", "/me/player/pause", access_token=access_token, params=self._device_params(device_id))
+        self._api_json("PUT", "/me/player/pause", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
 
     def next(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("POST", "/me/player/next", access_token=access_token, params=self._device_params(device_id))
+        self._api_json("POST", "/me/player/next", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
 
     def previous(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("POST", "/me/player/previous", access_token=access_token, params=self._device_params(device_id))
+        self._api_json("POST", "/me/player/previous", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
 
     def exchange_code(self, client_id: str, code: str, redirect_uri: str, code_verifier: str) -> dict[str, Any]:
         return self._accounts_json(
@@ -99,11 +100,17 @@ class SpotifyApiClient:
     def _device_params(device_id: str | None) -> Mapping[str, str] | None:
         return {"device_id": device_id} if device_id else None
 
-    def _api_json(self, method: str, path: str, *, access_token: str, **kwargs) -> dict[str, Any]:
+    def _api_json(self, method: str, path: str, *, access_token: str, allow_non_json_success: bool = False, **kwargs) -> dict[str, Any]:
         headers = dict(kwargs.pop("headers", {}) or {})
         headers["Authorization"] = f"Bearer {access_token}"
         headers.setdefault("Accept", "application/json")
-        return self._request_json(method, f"{self.api_base_url}{path}", headers=headers, **kwargs)
+        return self._request_json(
+            method,
+            f"{self.api_base_url}{path}",
+            headers=headers,
+            allow_non_json_success=allow_non_json_success,
+            **kwargs,
+        )
 
     def _accounts_json(self, method: str, path: str, *, data: Mapping[str, str]) -> dict[str, Any]:
         return self._request_json(
@@ -113,7 +120,15 @@ class SpotifyApiClient:
             data=data,
         )
 
-    def _request_json(self, method: str, url: str, *, headers: Mapping[str, str] | None = None, **kwargs) -> dict[str, Any]:
+    def _request_json(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+        allow_non_json_success: bool = False,
+        **kwargs,
+    ) -> dict[str, Any]:
         try:
             response = self.http_client.request(method, url, headers=headers, **kwargs)
         except httpx.HTTPError as exc:
@@ -132,6 +147,8 @@ class SpotifyApiClient:
         try:
             payload = response.json()
         except ValueError as exc:
+            if allow_non_json_success and 200 <= response.status_code < 300:
+                return {}
             raise SpotifyApiError(response.status_code, "Spotify 回應格式無效。") from exc
         return payload if isinstance(payload, dict) else {}
 
