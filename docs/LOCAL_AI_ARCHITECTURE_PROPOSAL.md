@@ -822,8 +822,24 @@ If the user did not clearly select one, return unknown.
 
 Phase 4 must compare:
 
-1. LM Studio structured / schema-constrained output when supported by the selected model/runtime
+1. LM Studio structured / schema-constrained output **when the selected model/runtime actually supports it reliably**
 2. prompt-only JSON output followed by strict server validation
+
+Important LM Studio constraint: structured output is not guaranteed to work well for every model, and LM Studio's own documentation specifically warns that smaller models may not reliably support structured output. Because this project intentionally evaluates very small ~0.5B–1.5B models, structured output is an optimization to test, **not a required assumption**.
+
+Therefore V1 must always retain this safe path:
+
+```text
+prompt requests tiny JSON
+        ↓
+parse JSON
+        ↓
+strict Pydantic schema
+        ↓
+deterministic slot grounding
+        ↓
+ValidatedAction / unknown
+```
 
 Choose the mechanism with the lowest measured invalid-output and semantic-error rate.
 
@@ -925,10 +941,13 @@ Conceptual LM Studio CLI operations:
 ```text
 lms server status
 lms server start
-lms load <configured-model>
+lms ps
+lms load <configured-model> --identifier=<stable-agent-model-id>
 ```
 
-The exact CLI arguments must be verified against the installed LM Studio version during implementation.
+Current LM Studio documentation confirms `lms server status`, `lms server start`, loaded-model inspection through `lms ps`, and stable model identifiers via `lms load ... --identifier=...`.
+
+Do **not** hardcode an undocumented bind flag into `start.bat`; the exact server/listen configuration must be verified against the installed LM Studio version and its server settings during implementation.
 
 ### 17.2 No duplicate server
 
@@ -1145,6 +1164,23 @@ Possible response extension:
 Do not expose internal Spotify URI or OAuth data in options.
 
 The exact response schema should be reviewed against existing `docs/API.md` before implementation.
+
+### LM Studio reference points
+
+Implementation should verify behavior against current LM Studio documentation:
+
+- OpenAI-compatible endpoints: `/v1/models`, `/v1/chat/completions`
+- CLI server lifecycle: `lms server start`, `lms server status`
+- loaded model inspection: `lms ps`
+- model loading / stable identifier: `lms load ... --identifier=...`
+- structured output support where model-compatible
+
+Official docs:
+- https://lmstudio.ai/docs/developer/openai-compat
+- https://lmstudio.ai/docs/developer/openai-compat/structured-output
+- https://lmstudio.ai/docs/cli
+- https://lmstudio.ai/docs/cli/serve/server-status
+
 
 ## 25. Clarification storage
 
