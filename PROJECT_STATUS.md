@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Spotify OAuth + 真實播放驗收**
+目前階段：**Spotify 真實播放驗收（指定歌曲已通過，其他控制與 Shortcut 待驗收）**
 
-規格層已完成 Spotify-only 設計；下一個真正的驗收關卡不是再改文件，而是讓目前安裝在 Windows 的 Agent 完成 Spotify 授權，並實際播放歌曲。
+規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置與一個帶專輯提示的指定歌曲播放驗收。下一個關卡是驗證其他播放控制與 Siri Shortcut 端到端流程。
 
 ## Completed / Decided
 
@@ -37,6 +37,17 @@
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
+- `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
+
+## Real-World Acceptance (2026-09-18)
+
+以下結果來自目前安裝的 `D:\ai\windows-siri-agent`，不是 mock test：
+
+- `/spotify/status` 回報已授權，scope 為目前播放控制所需的兩項 scope。
+- Spotify Connect 裝置已被 Agent 找到。
+- `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
+- 測試完成後 Agent 已停止，8000 port 已釋放。
+- API key 未出現在測試 log 中。
 
 ## Current Local Acceptance Gate
 
@@ -46,50 +57,36 @@
 D:\ai\windows-siri-agent
 ```
 
-下一步依序驗收：
+目前設定與 OAuth 已完成；若要在另一台 Windows 重建環境，仍需依下列步驟設定：
 
-1. 在 Spotify Developer Dashboard 建立/設定 App。
-2. Redirect URI 設為：
+1. 在 Spotify Developer Dashboard 將 Redirect URI 設為：
 
 ```text
 http://127.0.0.1:8000/spotify/callback
 ```
 
-3. 只使用 Client ID，不需要把 Client Secret 提供給 Agent。
-4. 在：
-
-```text
-D:\ai\windows-siri-agent\.env
-```
-
-加入：
-
-```text
-SPOTIFY_CLIENT_ID=<你的 Client ID>
-```
-
-5. 啟動：
+2. 只使用 Client ID，不需要把 Client Secret 提供給 Agent；在 `.env` 設定 `SPOTIFY_CLIENT_ID`。
+3. 啟動：
 
 ```text
 D:\ai\windows-siri-agent\scripts\start.bat
 ```
 
-6. 呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
-7. 驗證 `/spotify/status`。
-8. 真實測試：
-   - 「播放晴天」
+4. 若尚未授權，呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
+5. 驗證 `/spotify/status`。
+6. 尚待真實測試：
    - 「暫停」
    - 「下一首」
-9. 以上成功後，再做 iPhone Siri Shortcut 的最終驗收。
+   - 未指定專輯的「播放晴天」在實際帳號上的選曲結果
+7. 以上成功後，再做 iPhone Siri Shortcut 的最終驗收。
 
 ## Important: What Is NOT Yet Proven
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
-- Spotify OAuth 已成功。
 - Spotify token refresh 已在真實帳號驗證。
-- Windows Spotify Connect device 已成功被 Agent 找到。
-- 「播放晴天」已真的在 Windows Spotify 播放。
+- 「暫停」與「下一首」已在真實帳號驗證。
+- 未指定專輯的「播放晴天」已在真實帳號驗證。
 - Siri Shortcut 已完成端到端播放驗收。
 
 目前這些是「下一階段驗收項目」，不是既成事實。
@@ -122,7 +119,7 @@ Siri Text
 → Adapter
 ```
 
-Spotify 的歌名 / 歌手是搜尋資料，只能進 Spotify Search API；不得變成：
+Spotify 的歌名 / 歌手 / 專輯版本提示是搜尋資料，只能進 Spotify Search API；不得變成：
 
 - shell command
 - CMD / PowerShell
