@@ -4,14 +4,15 @@ Behavior rules for coding agents working on this project.
 
 ## Before Coding
 1. Read docs/SECURITY.md — highest priority
-2. Read docs/SPEC.md for product requirements
-3. Read docs/ARCHITECTURE.md for system design
-4. If modifying Windows Adapters → read docs/WINDOWS.md
-5. If modifying Parser → read docs/SPEC.md
-6. If modifying API → read docs/API.md + docs/SECURITY.md
-7. If modifying networking → read docs/NETWORKING.md
-8. If modifying Spotify/music playback → read docs/SPOTIFY.md + docs/SECURITY.md
-9. After completing work → run relevant tests per docs/TESTING.md
+2. Read PROJECT_STATUS.md — current phase, completed work, and real-world acceptance status; this is a handoff summary, not a security/spec override
+3. Read docs/SPEC.md for product requirements
+4. Read docs/ARCHITECTURE.md for system design
+5. If modifying Windows Adapters → read docs/WINDOWS.md
+6. If modifying Parser → read docs/SPEC.md
+7. If modifying API → read docs/API.md + docs/SECURITY.md
+8. If modifying networking → read docs/NETWORKING.md
+9. If modifying Spotify/music playback → read docs/SPOTIFY.md + docs/SECURITY.md
+10. After completing work → run relevant tests per docs/TESTING.md
 
 ## Document Priority
 ```
