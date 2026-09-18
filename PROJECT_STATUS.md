@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-目前階段：**Local AI Phase 0.5 可行性 PoC 準備 + Siri clarification E2E 待驗收**
+目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過 + Siri clarification E2E 待驗收**
 
 先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。正式接入前先做獨立 Phase 0.5 模型可行性 PoC；iPhone Siri Shortcut 的候選朗讀、token 保存與第二輪選擇仍未完成 E2E。
 
@@ -63,11 +63,22 @@
 
 - 已新增隔離的 `scripts/ai_model_poc.py`、`tests/fixtures/ai_intent_cases.json`（103 筆固定測資）與 `tests/unit/test_ai_model_poc.py`。
 - PoC 目前只呼叫 LM Studio OpenAI-compatible API，使用 strict Pydantic schema、OpenCC canonical grounding、hostile-input fail-closed 檢查與本地 CSV/JSONL/SUMMARY 輸出；未接入 `/command`、`app.main`、Spotify 播放、Windows adapters、shutdown、firewall 或 `start.bat`。
-- 新增 PoC unit test 6 passed；完整 `tests/unit` 為 92 passed，保留 2 個既有 dependency deprecation warnings。
+- 新增 PoC unit test 7 passed；完整 `tests/unit` 為 93 passed，保留 2 個既有 dependency deprecation warnings。
 - 實機 preflight 的最後讀回為：`http://192.168.0.199:1234/v1/models` 僅回傳 `text-embedding-nomic-embed-text-v1.5`；`lms ps` 顯示沒有載入模型；`lms load qwen3.5-0.8b --identifier=qwen3.5-0.8b -y` 回報找不到目前 indexed model key。
-- 三個候選 GGUF 實體仍存在於 `D:\ai` 下，且固定前 4 bytes 均為 `GGUF`：Qwen3.5 0.8B（529,297,312 bytes）、Qwen3 4B（2,497,280,800 bytes）、Qwen2.5 Coder 1.5B Instruct（986,048,576 bytes）。目前 LM Studio library / `lms ls` / `/v1/models` 沒有列出它們；因此現況較符合「外部下載檔尚未被目前 LM Studio library 登記/匯入」，不是檔案已刪除。
-- 因此三個候選 LLM 的 benchmark 尚未執行，沒有任何模型通過、沒有 production model recommendation，也沒有 Local AI production integration claim。
-- Blocker / 下一步：使用 LM Studio 的 import/rescan 流程把現有 GGUF 納入目前 models library（優先採保留原檔的 copy/link 方式，尚未執行），再讀回 exact `/v1/models` ID，依 runbook 用同一份 103-case fixture 執行 prompt/schema 兩種模式。不得把 embedding 模型當候選或重新下載相同檔案。
+- 使用者確認根因是 LM Studio 在索引目錄超過 7000 個檔案後停止索引；將模型目錄移到較小的位置後，model library 已恢復。
+- 修正後唯讀讀回已確認 `lms ls --llm` 與 `/v1/models` 都列出三個候選 exact IDs：`qwen3.5-0.8b`、`qwen2.5-coder-1.5b-instruct`、`qwen3-4b`；三者目前尚未載入記憶體（`lms ps` 顯示 No models are currently loaded）。
+- LM Studio index blocker 已解除；benchmark execution 結果見下節。
+
+## Local AI Phase 0.5 Benchmark Result (2026-09-19)
+
+- Final artifacts：`runtime/ai_poc/2026-09-19-full-v2/`（runtime/ 為 ignored local output）；同一份 103-case fixture 已對三個實際 indexed LLM 各跑 prompt-only JSON 與 structured-output，temperature=0、max_tokens=512、timeout=5 秒、一次只載入一個模型。
+- Environment：Windows 11 `10.0.26200`、Python `3.14.7`、AMD64 Family 25 Model 97、約 32 GB RAM；LM Studio `0.4.20+1` / ProductVersion `0.4.20.0`，CLI commit `71bd99c`；endpoint 為開發用 LAN `http://192.168.0.199:1234/v1`，不是 production loopback acceptance。
+- 實際模型與量化：`qwen3.5-0.8b`（Q4_K_M、529.30 MB；不是原規劃的 Qwen3 0.6B exact model）、`qwen2.5-coder-1.5b-instruct`（Q4_K_M、986.05 MB；是 Coder variant，不是原規劃的 plain Qwen2.5 1.5B Instruct）、`qwen3-4b`（Q4_K_M、2.50 GB）。
+- `qwen2.5-coder-1.5b-instruct`：prompt/schema semantic accuracy 都 `67.96%`、clarification `76.92%`、P95 `201.6/207.4 ms`；post-grounding false accept `2.91%`、false execution `0.97%`。
+- `qwen3-4b`：prompt/schema semantic accuracy 都 `66.99%`、clarification `30.77%`、JSON success `81.55%`、P95 `3313.3/3306.7 ms`；post-grounding false accept `1.94%`、false execution `0.97%`。
+- `qwen3.5-0.8b`：prompt/schema semantic accuracy `6.80%/7.77%`、clarification `15.38%`、JSON success `11.65%`、P95 `1722.3/1814.6 ms`；未出現 false execution 或 post-grounding false accept，但主要原因是大量 reasoning-only / non-JSON output，不代表可用安全通過。
+- Phase 0.5 benchmark execution 已完成，但三個實際模型都未達初始 hard safety（false execution=0、post-grounding false accept=0）與 quality targets（semantic/clarification >=90%、P95 <=2 秒）；summary 明確寫入 **no tested model met all initial PoC thresholds; do not proceed to production integration**。不選 production model、不接入 `/command` 或正式 Agent。
+- 後續若要繼續 Local AI，最小下一步是先針對 failure corpus 改善 prompt / clarification-context / deterministic grounding，另開下一輪可比 PoC；目前不能因 benchmark 完成而宣稱 production readiness。
 
 ## Local AI Product Decision (2026-09-18)
 
@@ -204,7 +215,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 
 - Local AI 已接入正式 Agent 或已通過模型可行性驗收。
 - LM Studio 已完成 production loopback-only 安全配置。
-- Phase 0.5 的 Qwen3 0.6B / Qwen2.5 1.5B Instruct / Qwen3 4B 模型比較已完成。
+- 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
 - Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
 - Siri Shortcut 已完成包含歌曲消歧、候選反問與第二輪選擇的完整端到端播放驗收。
 
