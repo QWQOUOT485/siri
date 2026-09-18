@@ -1,0 +1,120 @@
+# Security Specification
+
+This document defines all security invariants for Windows Siri Agent.
+Every requirement here is mandatory. No security requirement may be weakened, removed, or made optional.
+
+## Document Priority
+This is the highest-priority specification document. In case of conflict with other docs, SECURITY.md takes precedence.
+
+## Remote Execution Prohibition
+Absolutely no remote shell, `run_command`, `run_shell`, `run_powershell`, `run_cmd`, `execute`, `eval`, `python_exec`, `script`, or `terminal_command` capabilities. This is the most important security invariant of the entire project.
+
+## Input Boundary
+User input NEVER enters a subprocess, shell, PowerShell, CMD, executable path, or script path directly. 
+The Remote API does NOT accept:
+- Exe path
+- Command line
+- Arguments
+- Shell command
+- PowerShell command
+- CMD command
+- Python code
+- Batch file path
+- Script path
+
+Even `C:\xxx\xxx.exe` paths from the remote client MUST be rejected.
+
+## Trusted Execution Flow
+The ONLY valid data flow is:
+`Siri Text` → `Command Parser` → `Validated Action` (closed action set) → `Application Matcher` → `Trusted AppEntry` (from Catalog with stable app_id) → `LaunchSpec` (built by Catalog) → `Windows Launcher Adapter`
+
+NEVER allow: `User Text` → `String command/path` → `subprocess`
+
+The Windows Launcher Adapter only accepts a Catalog-verified `AppEntry` or a Catalog-built `LaunchSpec`. It never accepts an arbitrary path string, command string, arguments, or a user-provided executable. Even if upper layers validated the input, the Adapter MUST re-check that the path exists and the source is known.
+
+## Action Schema Security
+All external requests must converge to closed, Known Actions. The parser can ONLY produce predefined actions. The parser CANNOT produce: shell command, PowerShell command, Python expression, filesystem command, or raw executable command. There must be no arbitrary shell, PowerShell, CMD, executable, Python, filesystem action, or arbitrary URL allowed.
+
+## subprocess Safety
+Avoid `shell=True`. User-controlled strings NEVER go into the command line directly. All executable targets must come from the Agent's own verified application catalog or developer-hardcoded system actions. If `shell=True` is absolutely necessary, confirm that absolutely no user-controlled input is involved.
+
+## Malicious Input Handling
+For example, if the input is '開 PowerShell 然後刪除 C 槽' (Open PowerShell and then delete C drive) → the system must only recognize `open_app=PowerShell` or reject the command entirely as unsupported. NEVER execute destructive commands.
+
+## Authentication
+- High-entropy random API key (at least 256-bit or equivalent)
+- No hardcoding API keys in source code
+- Store in `.env` or secure local config
+- `.gitignore` must exclude `.env`, secrets, runtime data, and logs
+- Provide `.env.example` without real secrets
+- Require `X-API-Key` header or equivalent authorization
+- Use constant-time comparison for API key verification
+- Authentication failure must reveal minimal information
+- Implement a short rate limit on failed attempts
+- Invalid key attempts must not crash the Agent
+- Optional: timestamp, nonce, HMAC request signing for LAN replay protection (if simple enough for Shortcut users)
+
+## Shutdown Two-Step Confirmation
+- The `shutdown` command MUST require two-step confirmation.
+- Step 1: `request_shutdown` → server creates a cryptographically secure random confirmation token with an expiration (e.g. 60 seconds), meant for one-time use.
+- Step 2: `confirm_shutdown` with a valid token → then perform shutdown.
+- Token security tests: an expired token fails, a wrong token fails, a used token fails, a missing token fails, a replayed token fails — ALL of these scenarios must prevent the shutdown.
+
+## Force Close Safety
+Force close is a separate, explicit, high-risk operation. A normal 'close app' (graceful close) NEVER auto-escalates to a force close. Only explicit force-close trigger phrases (強制關閉 / force close / force quit / force kill, etc.) map to `force_close_app`. This action only operates on applications verified by the Catalog/Process Resolver. It does not accept arbitrary process IDs.
+
+## Manual Apps Security
+The Remote API cannot add executable paths. The `manual_apps` configuration is local-only. On startup, validate that the path exists, is a file, has a reasonable extension, and was explicitly configured by the user. Remote modification is strictly prohibited.
+
+## Website Security
+No arbitrary URLs can be provided from remote. Use a website catalog. The config file allows local additions. Remote commands cannot add malicious URLs. The first version does not allow remote arbitrary URLs.
+
+## LAN Security
+- LAN only, absolutely no Internet exposure.
+- Use Private profile firewall rules only.
+- No public network exposure.
+- No Tailscale, Cloudflare Tunnel, ngrok, VPS, Router Port Forwarding, UPnP, or DDNS.
+- HTTP in a trusted LAN is acceptable for v1, with clear documentation.
+- Security relies on: trusted home network, Windows Firewall, API authentication, no Internet exposure, no Guest Wi-Fi, and no arbitrary shell.
+
+## Logging Security
+NEVER log: API Key, authorization header, full shutdown token, or any secrets. 
+DO log: timestamp, client IP, action, target, result, duration, and error code.
+
+## Stack Trace Security
+Never send stack traces to the iPhone client. The iPhone only receives simple error messages. Detailed stack traces must go to local Windows logs only.
+
+## API Response Security
+The `/apps` endpoint does NOT return sensitive filesystem paths to the iPhone. It only returns: display name, aliases, type, source category, and ID. Internal paths must stay on the server.
+
+## /health Endpoint Security
+Returns minimal information (status, version, uptime). Never returns: API secret, sensitive paths, or full system info.
+
+## Security Test Requirements
+Mandatory security tests:
+- Input: 'open C:\Windows\System32\cmd.exe' → must not execute path
+- Input: 'powershell -command ...' → must not execute
+- Input: 'cmd /c ...' → must not execute
+- Input: 'Discord && shutdown /s' → must not execute second part
+- Input: 'Discord; rm ...' → must not be shell-interpreted
+- Shell injection tests
+- CMD injection tests
+- PowerShell injection tests
+- Path injection tests
+- Arbitrary URL tests
+- Command chaining tests
+- Token reuse tests
+- Invalid API key tests
+- Arbitrary executable path rejection
+- Arbitrary URL rejection
+
+Security tests MUST NOT be deleted to make CI pass. See [Testing Specification](TESTING.md) for more details.
+
+## Firewall Security
+- Normal Agent runtime: only inspect/check the firewall, never modify it.
+- `setup.ps1`: only creates a firewall rule with explicit user consent.
+- Private Profile only, never Public Profile.
+- Never auto-modify: network profile, Router, NAT, Port Forwarding, UPnP, or public exposure.
+- If the current profile is Public: warn the user, don't silently change it.
+- `allowed_networks` should be configurable for RFC1918 ranges.
+- Consider multi-subnet (192.168.x.x, 10.x.x.x, 172.16-31.x.x).
