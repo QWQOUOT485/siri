@@ -82,7 +82,7 @@
 - 使用者實機回報 iPhone Shortcut 的「暫停音樂」沒有作用；原 parser 只有 exact alias `暫停`，因此請求未進入 Spotify pause service。
 - 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；完整 unit tests 為 71 passed，保留既有 2 個 dependency deprecation warnings。
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
-- 這是 Windows Agent 直接驗收，不等同於 iPhone Siri Shortcut E2E；Shortcut 仍需重新測試。
+- 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
 ## Known Blocker: Siri Shortcut 歌名／現場版本歧義 (2026-09-18)
 
@@ -92,7 +92,7 @@
 - 最新產品決策已不再支援 Live 播放：Live / Concert / Tour / 演唱會 / 現場候選應直接排除；明確要求 Live 時回覆只支援正式錄音版本。
 - 仍需補上繁簡中文 matching normalization，避免 `周杰伦` / `周杰倫`、`叶惠美` / `葉惠美` 造成假歧義。
 - 真正 ambiguous 時不再只回錯誤後結束；Shortcut 應最多列 3 首 trusted candidates 反問使用者，再以短效 clarification context 完成第二輪選擇。
-- 先完成上述新規則的實作、unit/security tests 與 Windows + Spotify 驗證，再重新跑 iPhone Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
+- 基本 Spotify Shortcut 控制路徑已有「播放原版」「下一首」「暫停音樂」成功紀錄；仍需完成上述新規則的實作、unit/security tests 與 Windows + Spotify 驗證，再驗證歌曲消歧／三選一 clarification E2E。完成前不得把完整 Shortcut 驗收標成成功。
 
 ## Current Local Acceptance Gate
 
@@ -136,7 +136,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - 歌名／歌手／專輯的繁簡中文 normalization 已完成且不會誤合併真正不同候選。
 - ambiguous response 已限制為最多 3 個 trusted candidates。
 - Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
-- Siri Shortcut 已完成端到端播放驗收。
+- Siri Shortcut 已完成包含歌曲消歧、候選反問與第二輪選擇的完整端到端播放驗收。
 
 目前這些是「下一階段驗收項目」，不是既成事實。
 
