@@ -426,7 +426,8 @@ AI proposes semantic slots
 server grounds every proposed slot against original/normalized user text
     ↓
 grounded → keep
-not grounded → force null / reject interpretation
+artist/album not grounded → force null
+track not grounded for spotify_play_track → reject the AI interpretation as unknown
 ```
 
 Example:
@@ -469,7 +470,7 @@ track  = 晴天
 artist = 周杰倫
 ```
 
-The server may keep `artist=周杰倫`, but `track=晴天` is not grounded and must be removed. The correct behavior is to ask which song, not use the model's music knowledge.
+The server may recognize that `artist=周杰倫` is grounded, but because `track=晴天` is not grounded, the entire AI-produced `spotify_play_track` interpretation is invalid. The correct behavior is to return `unknown` / ask which song, not construct a partial play action and not use the model's music knowledge.
 
 ### 8.2 Grounding rules
 
@@ -477,21 +478,39 @@ The model must not be allowed to certify its own evidence.
 
 A model-generated quote/span/confidence may be useful for diagnostics but is never authoritative.
 
-Initial deterministic checks:
+Initial deterministic grounding should be **boundary-aware**, not merely "substring exists".
 
-1. normalized exact substring
-2. Traditional/Simplified-normalized exact substring
-3. punctuation/whitespace-insensitive exact match
-4. bounded fuzzy grounding only if empirical testing later proves it necessary
+Checks should consider:
+
+1. normalized exact span in the utterance
+2. Traditional/Simplified-normalized exact span
+3. punctuation/whitespace-insensitive exact span
+4. parser-known command boundaries such as `播放`, `的`, `專輯`, separators, and suffix markers
+5. bounded fuzzy grounding only if empirical testing proves it necessary
+
+Important: do **not** impose a blanket "minimum 2 Chinese characters" rule. Legitimate one-character song titles can exist. The real problem is accepting a partial substring as if it were a complete semantic slot.
+
+Examples:
+
+```text
+我要播放光
+AI track=光
+→ may be valid because 光 occupies the complete track span
+
+我要播放晴天
+AI track=天
+→ reject; 天 is only a partial substring of the track span 晴天
+```
 
 Fuzzy grounding must be conservative:
 
-- no broad fuzzy acceptance for very short strings
+- no broad fuzzy acceptance for short strings
 - no acceptance based only on a high similarity score
 - no cross-slot inference
 - no use of Spotify search results to retroactively justify a hallucinated user slot
+- no nickname/entity expansion such as `杰伦` → `周杰倫` unless that behavior is separately and deterministically specified
 
-When uncertain, force the slot to `null` or return `unknown`.
+When uncertain, reject the AI interpretation or force optional slots to `null`.
 
 ### 8.3 Catalog facts remain catalog facts
 
@@ -646,11 +665,14 @@ The AI never receives authority to invent candidate 4 or a Spotify URI.
 - 1-based ordinal only: 1–3
 - context expires
 - token is random / unguessable
-- token is one-time use
+- token has a short TTL
 - token is not bound to client IP in V1
-- API authentication + short TTL + one-time use are preferred over brittle IP affinity
 - selection may only reference the stored server-side set
-- used/expired contexts are invalid
+- successful selection consumes the context
+- failed/unknown clarification does not immediately destroy the context
+- each failed attempt increments a bounded attempt counter
+- reaching the attempt limit invalidates the context
+- expired / consumed / exhausted contexts are invalid
 - no client-provided track ID
 - no client-provided URI
 - no free-form playback target at the selection layer
@@ -1130,6 +1152,10 @@ Spotify deterministic resolver
 
 Normalization should happen both before AI input and after AI output for comparison consistency, while the untouched raw utterance remains available for grounding/audit logic.
 
+Implementation should use a maintained conversion library such as **OpenCC or an equivalent well-tested library**, not a hand-written character table.
+
+Because Simplified↔Traditional conversion can be one-to-many or context-sensitive, the matching layer should choose one canonical comparison form and use it consistently. The exact direction (for example, Traditional→Simplified or context-aware Simplified→Traditional) should be selected through tests with real Siri/Spotify strings rather than by assuming a one-character mapping is reversible.
+
 ## 24. API changes
 
 Possible `POST /command` request extension:
@@ -1197,7 +1223,9 @@ clarification_token
   expires_at,
   type,
   trusted candidates,
-  used=false
+  failed_attempts,
+  max_attempts,
+  consumed=false
 }
 ```
 
@@ -1207,10 +1235,14 @@ Properties:
 - short TTL
 - bounded maximum entries
 - automatic cleanup
-- one-shot use only
+- consume on successful candidate selection
+- bounded failed attempts, initially 2–3
+- invalidate after attempt exhaustion
 - server restart invalidates contexts
 
-Do not bind the token to client IP in V1. On a home LAN, short TTL + API authentication + one-time use is simpler and avoids failure when the phone's LAN address changes.
+Do not bind the token to client IP in V1. On a home LAN, short TTL + API authentication + bounded attempts is simpler and avoids failure when the phone's LAN address changes.
+
+This differs intentionally from shutdown confirmation tokens. Music clarification has lower consequence and Siri ASR may mishear a valid follow-up; one recognition failure should not force the user to restart the entire Spotify search.
 
 This is acceptable for Siri clarification because losing a context only means the user repeats the command.
 
@@ -1240,9 +1272,10 @@ Do not ask the model to rank Spotify results.
 
 Initial UX budget for evaluation:
 
-- target end-to-end Siri command response: approximately 2–3 seconds when practical
-- initial AI inference budget: approximately 1 second
-- these are evaluation targets, not hard-coded constants until measured on the real Windows host
+- ordinary non-clarification end-to-end Siri command: aim for roughly 2–5 seconds on the real host
+- initial hard AI inference timeout candidate: ~2 seconds
+- clarification flows will naturally take longer because they include a second Siri dictation round
+- these are evaluation targets, not permanent constants until measured on the real Windows host
 
 If AI exceeds its timeout, fall back safely instead of extending the execution path indefinitely.
 
@@ -1409,14 +1442,17 @@ Measure:
 
 - intent accuracy
 - slot extraction accuracy
+- raw-model hallucinated-slot rate
 - slot-grounding acceptance/rejection accuracy
-- hallucinated-slot rate
-- false positive action rate
+- **post-grounding hallucinated-slot false-accept rate**
+- **false execution rate**
+- clarification selection accuracy
 - unknown/reject rate
-- latency
-- memory usage
+- P95 inference latency
+- end-to-end Siri latency
+- RAM / VRAM usage
 
-For this project, false positive execution is more serious than returning `unknown`.
+For this project, model hallucination by itself is tolerable if deterministic grounding rejects it. The critical metrics are post-grounding false acceptance and false execution, which should be driven as close to zero as practical.
 
 If Tier A fails the fixed acceptance targets, evaluate Tier B rather than weakening grounding or schema validation.
 
@@ -1429,6 +1465,28 @@ If Tier A fails the fixed acceptance targets, evaluate Tier B rather than weaken
 - confirm whether local AI is desired
 - select first runtime/model for testing
 - no product-state claim yet
+
+### Phase 0.5 — LM Studio model feasibility PoC
+
+Before building the full integration, run a standalone evaluation script against LM Studio.
+
+Test the same fixed Chinese/Siri-like dataset against at least:
+
+```text
+Candidate A: ~0.5B–0.8B
+Candidate B: ~1B–1.5B
+Candidate C: ~3B capability baseline
+```
+
+The 3B candidate is not automatically a deployment target. It is a reference ceiling:
+
+- if ~1.5B ≈ 3B, prefer the smaller model
+- if all sizes fail similarly, investigate prompt/task design instead of only increasing model size
+- if <=1.5B cannot meet safety/accuracy targets, decide explicitly whether a larger model is acceptable or whether AI integration should be abandoned
+
+PoC output must include accuracy, hallucination, post-grounding rejection, latency, and memory measurements.
+
+Do not proceed to full AI integration solely because a model can produce syntactically valid JSON.
 
 ### Phase 1 — Adapter + schema, AI disabled by default
 
@@ -1470,10 +1528,9 @@ Implement:
 Run:
 
 - unit/security suite
-- real local-model test dataset
+- repeat/regression test on the fixed local-model dataset
 - structured-output vs prompt-only JSON comparison
-- Tier A resource/accuracy measurements
-- Tier B measurements only if Tier A fails acceptance targets
+- verify the selected PoC model still meets acceptance targets after full integration
 - Windows Agent test
 - Spotify real account test
 - Siri Shortcut E2E
@@ -1531,7 +1588,7 @@ The first external review is accepted as follows:
 1. AI remains fallback-only.
 2. Slot hallucination is controlled by deterministic grounding, not prompt trust.
 3. Clarification uses a separate `ClarificationSelection` model rather than overloading `ValidatedAction`.
-4. Clarification token is one-time use.
+4. Clarification contexts use short TTL + bounded attempts; successful selection consumes the context.
 5. Clarification token is not bound to client IP in V1.
 6. In-memory TTL storage is sufficient.
 7. V1 AI scope is Spotify only.
@@ -1543,24 +1600,39 @@ The first external review is accepted as follows:
 13. Clarification remains on `POST /command` with an optional token rather than adding a new endpoint.
 14. Only minimal safe candidate display metadata may enter LM Studio; secrets never do.
 15. Traditional/Simplified normalization occurs before AI input and after AI output/comparison, while raw input is preserved.
-16. Tier A (~0.5B–0.8B) is preferred; Tier B (~1B–1.5B) is the planned fallback if measured accuracy is insufficient.
+16. Model selection starts with a pre-integration PoC across ~0.5B–0.8B, ~1B–1.5B, and a ~3B capability baseline; deployment size is decided from measurements.
 17. LM Studio is the V1 local runtime.
 18. `start.bat` should preflight/start LM Studio when AI is enabled, but AI startup failure must not prevent Agent startup.
 
-### Remaining questions for second review
+### Accepted decisions from Opus 4.6 feasibility review
 
-Claude / reviewer should now focus on unresolved implementation details:
+The second review is incorporated as follows:
 
-1. Is the proposed deterministic slot-grounding algorithm strict enough, especially for Chinese word segmentation and fuzzy matching?
-2. Should `track` being ungrounded invalidate the whole `spotify_play_track` interpretation rather than merely setting it to null?
-3. What TTL and one-time-consumption moment should clarification tokens use: on receipt, on successful selection, or on any attempted use?
-4. What exact LM Studio API feature should enforce structured output for the selected model/version?
-5. How should `start.bat` discover the configured LM Studio model reliably without coupling to a GUI display name?
-6. If LM Studio remains reachable at `192.168.0.199:1234`, what firewall/authentication controls are required, or should acceptance require rebinding to loopback?
-7. Should model warm-up be initiated by `start.bat` or by the Agent after its own API becomes healthy?
-8. What concrete thresholds should Tier A have to meet before Tier B is considered?
-9. Is one strict retry for malformed AI output useful, or does it add latency without enough benefit?
-10. Are there any ways clarification candidate display text could itself cause prompt-injection behavior that bypasses selection constraints?
+1. Add a model-feasibility PoC before full integration.
+2. Production same-host LM Studio acceptance requires loopback unless LAN exposure receives separate security approval.
+3. A `spotify_play_track` result with an ungrounded `track` is invalid and becomes `unknown`.
+4. Chinese grounding becomes boundary-aware; do not use a blanket >=2-character rule.
+5. Clarification contexts use short TTL + bounded attempts + consume-on-success, rather than burning the context on the first ASR failure.
+6. Use OpenCC or an equivalent maintained library for Chinese canonicalization; do not maintain a hand-written Simplified/Traditional character map.
+7. Structured output improves transport reliability but is never a security boundary.
+8. Model PoC compares ~0.5B–0.8B, ~1B–1.5B, and ~3B baseline candidates.
+9. Evaluate post-grounding false acceptance and false execution separately from raw model hallucination.
+10. Shortcut clarification latency/UX is itself an acceptance target, not merely an implementation detail.
+11. Candidate display strings given to AI are treated as untrusted data; model output remains ordinal-only and must cross the same strict schema.
+12. AI timeout starts with an approximately 2-second hard budget candidate and is tuned from real measurements.
+
+### Remaining questions for next review / implementation design
+
+1. What exact boundary-aware grounding algorithm should be implemented for Chinese song/artist/album spans?
+2. Which OpenCC conversion profile gives the best canonical comparison behavior for Siri input vs Spotify metadata?
+3. What exact clarification TTL and max-attempt count should V1 use?
+4. Should an invalid clarification attempt return the remaining attempt count to the Shortcut, or keep that internal?
+5. Which LM Studio model identifiers should be included in the Phase 0.5 PoC?
+6. What concrete post-grounding false-accept / false-execution thresholds are required before enabling AI?
+7. Should candidate display-label sanitization remove only control characters, or also quote-like/prompt-like punctuation?
+8. Should malformed JSON receive one retry within the same ~2-second inference budget, or fail immediately?
+9. What exact LM Studio server setting/process is required to guarantee production loopback-only binding on the installed version?
+10. Should the PoC be committed as a developer script/test fixture or remain an external evaluation artifact?
 
 ## 34. Recommended initial scope
 
@@ -1632,12 +1704,18 @@ Do not enable Local AI by default until all applicable items are proven:
 - [ ] Traditional/Simplified normalization remains deterministic
 - [ ] max-three clarification context implemented
 - [ ] arbitrary candidate/track IDs rejected
-- [ ] clarification expiry/replay behavior tested
-- [ ] hallucinated track/artist/album deterministic grounding tested
+- [ ] clarification TTL / bounded-attempt / consume-on-success behavior tested
+- [ ] boundary-aware deterministic grounding for track/artist/album tested
+- [ ] ungrounded track invalidates spotify_play_track AI interpretation
+- [ ] post-grounding hallucinated-slot false acceptance measured
+- [ ] false execution rate measured
 - [ ] unit/security tests pass
 - [ ] LM Studio integration/startup preflight tested
-- [ ] Tier A model evaluated on fixed Chinese test set
-- [ ] Tier B evaluated only if Tier A misses acceptance targets
+- [ ] Phase 0.5 LM Studio model PoC completed
+- [ ] ~0.5B–0.8B candidate evaluated
+- [ ] ~1B–1.5B candidate evaluated
+- [ ] ~3B capability baseline evaluated
+- [ ] deployment model selected from measured safety/accuracy/latency/resource results
 - [ ] Windows real-machine test passes
 - [ ] Spotify real-account test passes
 - [ ] Siri Shortcut E2E passes
