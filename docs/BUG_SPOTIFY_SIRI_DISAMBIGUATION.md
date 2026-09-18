@@ -191,7 +191,116 @@ concert version
 - Studio 候選降權
 - 如果有多場演唱會版本仍然接近，再要求補充
 
-### D. 播放次數 / 熱門度只能當輔助訊號
+### D. 所有歌曲都必須使用同一套通用消歧策略
+
+本問題不能以 `晴天`、周杰倫或任何特定歌曲建立 hardcoded 特例。
+
+所有 Spotify 指定歌曲都應先把候選分類，再決定是否可以安全自動選擇。
+
+至少區分以下三種 ambiguity：
+
+#### Case A — 同一歌手、同一歌曲、不同版本
+
+例如：
+
+```text
+告白氣球 — 周杰倫 — 周杰倫的床邊故事
+告白氣球 — 周杰倫 — 地表最強世界巡迴演唱會
+```
+
+這屬於 version ambiguity。
+
+若使用者未指定 Live：
+
+- studio / original release 優先
+- Live / Concert / Tour / 演唱會版本降權
+- 若有明顯優勢，可直接播放
+
+若使用者明確指定 Live：
+
+- Live 候選優先
+- 若多個 Live 版本仍無明顯差異，再要求補充
+
+#### Case B — 不同歌手的同名歌曲
+
+例如：
+
+```text
+I Will Always Love You — Whitney Houston
+I Will Always Love You — Dolly Parton
+```
+
+這不是「原版 vs Live」問題，而是不同作品 / 不同表演者之間的 artist ambiguity。
+
+如果使用者沒有提供歌手，而且不同歌手都有合理候選：
+
+- 不得只因某一首比較熱門就自動選擇
+- 不得把 Spotify 第一筆結果當成使用者意圖
+- 應要求使用者補充歌手
+
+例如可回：
+
+```text
+找到不同歌手的同名歌曲，請再說歌手名稱。
+```
+
+如果使用者已說歌手，則該歌手的 exact / strong match 必須明顯高於其他歌手。
+
+#### Case C — 同一歌手、同一錄音、不同發行版本
+
+例如同一錄音可能同時存在於：
+
+```text
+Original album
+Deluxe edition
+Remaster
+Anniversary edition
+Reissue
+Compilation
+```
+
+這些候選不一定代表使用者能感知到的不同表演版本。
+
+若能合理判定為同一錄音族群，可：
+
+- 優先 original / canonical studio album
+- 把 Deluxe / Remaster / Anniversary / Reissue 視為次要發行差異
+- 不需要因每一個 re-release 都向使用者詢問
+
+但如果 metadata 不足以安全判定它們屬於同一錄音，仍應保留 ambiguous，而不是猜。
+
+#### 通用候選處理流程
+
+建議所有歌曲走相同流程：
+
+```text
+Spotify Search candidates
+        ↓
+track title normalization / exactness
+        ↓
+artist grouping
+        ↓
+version classification
+studio / live / acoustic / remix / remaster / etc.
+        ↓
+album / release context
+        ↓
+依使用者明確語意重新排序
+        ↓
+confidence gap 足夠 → 播放
+confidence gap 不足 → 詢問
+```
+
+核心原則：
+
+- 不為特定歌曲 hardcode album / artist / track ID
+- 不以「熱門」代替 artist / version 意圖
+- 同歌手不同版本可以使用版本規則排序
+- 不同歌手同名通常需要使用者補充
+- 同一錄音的 reissue/remaster 不必無條件視為完全不同歌曲
+- 最終仍以「有明顯安全優勢才自動選，沒有就問」為準
+
+### E. 播放次數 / 熱門度只能當輔助訊號
 
 不要把「播放次數最高」當成「原版」。
 
@@ -212,7 +321,7 @@ concert version
 > 熱門度輔助
 ```
 
-### E. 可考慮本機個人播放偏好
+### F. 可考慮本機個人播放偏好
 
 可選做，不應成為本次 blocker 的必要條件。
 
