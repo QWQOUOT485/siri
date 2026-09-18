@@ -8,7 +8,7 @@
 
 ## 它可以做什麼？
 - **開啟/關閉應用程式**（例如：Discord, Chrome, Steam 等）
-- **媒體控制**（播放、暫停、上一首、下一首）
+- **Spotify 音樂控制**（播放、暫停、上一首、下一首，以及「播放周杰倫的晴天」這類指定歌曲播放）
 - **音量控制**（調高、調低、靜音）
 - **系統控制**（鎖定電腦、關機。關機會有防呆兩步確認）
 
@@ -27,7 +27,10 @@ iPhone → Siri → Apple Shortcuts (捷徑) → 家中區域網路 (LAN) → Wi
 1. 執行 `start.bat` 來啟動 Agent 伺服器。
 2. （選擇性）你可以將其設定為透過「工作排程器 (Task Scheduler)」開機自動啟動。
 
-### 第三步：設定 Siri 捷徑
+### 第三步：連結 Spotify
+指定歌曲播放使用 Spotify Web API，需要 Spotify Premium 與一次性的 Spotify OAuth 授權。Spotify Token 只保存在 Windows 本機，不放進 iPhone 捷徑。詳細規格請見：[Spotify 整合](docs/SPOTIFY.md)。
+
+### 第四步：設定 Siri 捷徑
 1. 在 iPhone 上建立一個名為「控制電腦」的捷徑。
 2. 詳細設定步驟請參考：[Siri 捷徑設定教學](docs/SIRI_SHORTCUT.md)。
 
@@ -77,6 +80,7 @@ iPhone → Siri → Apple Shortcuts (捷徑) → 家中區域網路 (LAN) → Wi
 - [安全性說明](docs/SECURITY.md)
 - [產品規格](docs/SPEC.md)
 - [Siri 捷徑設定](docs/SIRI_SHORTCUT.md)
+- [Spotify 整合](docs/SPOTIFY.md)
 - [網路連線疑難排解](docs/NETWORKING.md)
 - [Windows 整合](docs/WINDOWS.md)
 - [測試規範](docs/TESTING.md)
