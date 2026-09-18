@@ -300,7 +300,59 @@ confidence gap 不足 → 詢問
 - 同一錄音的 reissue/remaster 不必無條件視為完全不同歌曲
 - 最終仍以「有明顯安全優勢才自動選，沒有就問」為準
 
-### E. 播放次數 / 熱門度只能當輔助訊號
+### E. 繁體 / 簡體正規化與「假歧義」
+
+目前 parser 已對部分控制詞同時支援繁體與簡體，例如：
+
+```text
+專輯 / 专辑
+演唱會 / 演唱会
+現場 / 现场
+錄音室 / 录音室
+```
+
+但歌曲、歌手、專輯本身的 matching 仍不能假設 Siri 與 Spotify 一定回傳相同字形。
+
+例如：
+
+```text
+周杰伦 ↔ 周杰倫
+叶惠美 ↔ 葉惠美
+听妈妈的话 ↔ 聽媽媽的話
+后来 ↔ 後來
+```
+
+Unicode NFKC 並不會完成繁簡轉換，因此只靠目前 normalization / fuzzy similarity 可能造成：
+
+- 本來是同一歌手卻被當成不同 artist group
+- 本來是同一專輯卻失去 exact album match
+- title similarity 被不必要地拉低
+- 產生不必要的 `SPOTIFY_AMBIGUOUS_TRACK`
+
+建議在 Spotify matching 使用的 comparison key 加入一致的繁簡 normalization，例如統一轉成同一種中文書寫形式，再進行：
+
+```text
+Unicode normalization
+→ Traditional/Simplified normalization
+→ casefold
+→ punctuation cleanup
+→ whitespace normalization
+```
+
+注意：繁簡 normalization 只能消除「字形差異造成的假歧義」，**不能用來掩蓋真正的歌曲歧義**。
+
+做完繁簡統一後，以下情況仍然應保持 ambiguous：
+
+- 不同歌手的真正同名歌曲
+- 同一歌手的多個 Live / Concert 版本且沒有明顯優勢
+- 不同錄音或不同版本無法由 ISRC / version / album 等 metadata 安全區分
+- Spotify metadata 本身不足或互相衝突
+
+因此正確目標不是「讓所有 ambiguous 都消失」，而是：
+
+> 消除可以確定只是繁簡字形差異造成的假歧義；真正無法判斷的候選仍必須安全詢問使用者。
+
+### F. 播放次數 / 熱門度只能當輔助訊號
 
 不要把「播放次數最高」當成「原版」。
 
@@ -321,7 +373,7 @@ confidence gap 不足 → 詢問
 > 熱門度輔助
 ```
 
-### F. 可考慮本機個人播放偏好
+### G. 可考慮本機個人播放偏好
 
 可選做，不應成為本次 blocker 的必要條件。
 
@@ -648,6 +700,8 @@ Siri Text
 只有以下條件全部成立，才算此 bug 解決：
 
 - [x] 自然中文專輯 / 版本提示解析完成
+- [ ] 歌名／歌手／專輯 matching 已加入繁簡正規化，並有對應測試
+- [ ] 已驗證繁簡正規化只消除字形造成的假歧義，不會把真正不同歌手／版本誤合併
 - [x] studio / original vs Live ranking 規則完成
 - [x] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
 - [x] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
