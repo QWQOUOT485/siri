@@ -10,6 +10,7 @@ def test_chinese_and_english_commands():
     assert parser().parse("開啟 Discord").action.action is ActionName.OPEN_APP
     assert parser().parse("close Discord").action.action is ActionName.CLOSE_APP
     assert parser().parse("播放音樂").action.action is ActionName.SPOTIFY_RESUME
+    assert parser().parse("暫停音樂").action.action is ActionName.SPOTIFY_PAUSE
     assert parser().parse("next track").action.action is ActionName.SPOTIFY_NEXT
     assert parser().parse("音量大一點").action.action is ActionName.VOLUME_UP
     assert parser().parse("鎖定電腦").action.action is ActionName.LOCK

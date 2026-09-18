@@ -259,7 +259,7 @@ Invoke-RestMethod http://127.0.0.1:8000/spotify/status -Headers @{ 'X-API-Key' =
 播放周杰倫的晴天
 播放周杰倫的晴天 (葉惠美)
 Play Blinding Lights by The Weeknd
-暫停
+暫停音樂
 下一首
 上一首
 ```

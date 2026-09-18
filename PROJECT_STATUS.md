@@ -31,7 +31,7 @@
   - 「播放」
   - 「播放晴天」
   - 「播放周杰倫的晴天」
-  - 「暫停」
+  - 「暫停」/「暫停音樂」
   - 「下一首」
   - 「上一首」
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
@@ -45,6 +45,7 @@
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
+- `暫停`、`暫停音樂`、`pause music` 與簡體 `暂停音乐` 都收斂到封閉的 `spotify_pause` action；不回退到通用系統媒體控制。
 
 ## New Product Decision / Pending Implementation (2026-09-18)
 
@@ -75,6 +76,13 @@
 - 本次最新實機測試最後再次 `暫停` 成功；修正後 Agent 目前仍在 `D:\ai\windows-siri-agent` 運行，供下一步 Shortcut 測試。
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - API key 未出現在測試 log 中。
+
+## Resolved Bug: `暫停音樂` parser alias (2026-09-18)
+
+- 使用者實機回報 iPhone Shortcut 的「暫停音樂」沒有作用；原 parser 只有 exact alias `暫停`，因此請求未進入 Spotify pause service。
+- 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；完整 unit tests 為 71 passed，保留既有 2 個 dependency deprecation warnings。
+- 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
+- 這是 Windows Agent 直接驗收，不等同於 iPhone Siri Shortcut E2E；Shortcut 仍需重新測試。
 
 ## Known Blocker: Siri Shortcut 歌名／現場版本歧義 (2026-09-18)
 
