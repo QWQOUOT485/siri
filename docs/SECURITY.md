@@ -69,6 +69,21 @@ The Remote API cannot add executable paths. The `manual_apps` configuration is l
 ## Website Security
 No arbitrary URLs can be provided from remote. Use a website catalog. The config file allows local additions. Remote commands cannot add malicious URLs. The first version does not allow remote arbitrary URLs.
 
+## Media Provider Security
+Playback provider clarification uses a closed allowlist only. V1 provider IDs are `youtube_music`, `apple_music`, and `spotify`.
+
+A provider selected by Siri/Shortcut is data, not executable input. It must be validated against the allowlist and mapped to a trusted internal Catalog/system definition before any Windows action occurs.
+
+Remote provider input MUST NOT become:
+- an executable path
+- a shell/CMD/PowerShell command
+- process ID
+- command-line arguments
+- script path
+- arbitrary URL
+
+Unknown provider values must be rejected. A bare `play` request must ask for clarification rather than guessing or falling back to arbitrary execution.
+
 ## LAN Security
 - LAN only, absolutely no Internet exposure.
 - Use Private profile firewall rules only.

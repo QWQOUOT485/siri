@@ -21,6 +21,11 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Volume limit validation
 - Website allowlist
 - Media parser
+- Bare `play` / 「播放」 returns media-provider clarification instead of guessing
+- Explicit `播放 Spotify` / Apple Music / YouTube Music skips clarification
+- Media-provider allowlist validation: only `youtube_music`, `apple_music`, `spotify`
+- Unknown/arbitrary provider strings are rejected and never become executable paths, commands, arguments, or URLs
+- Pause / next / previous keep active-media-session behavior
 - Lock parsing
 - Malicious command rejection
 - Arbitrary executable path rejection

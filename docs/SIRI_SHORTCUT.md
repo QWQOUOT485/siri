@@ -46,7 +46,44 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 
 ---
 
-## 3. 關機的二次確認流程 (進階安全)
+## 3. 播放時選擇播放器
+
+為避免只說「播放」時 Windows 不知道要控制哪個播放器，第一版加入簡單的播放器釐清流程。
+
+### 使用者只說「播放」時
+
+Agent 會回傳：
+
+- `clarification_required = true`
+- `clarification_type = media_provider`
+- `message = 要使用 YouTube Music、Apple Music，還是 Spotify？`
+- `options`：YouTube Music、Apple Music、Spotify
+
+捷徑收到這個回應後：
+
+1. 檢查 `clarification_required` 是否為 `true`。
+2. 如果 `clarification_type` 是 `media_provider`，朗讀 `message`。
+3. 使用「聽寫文字」讓使用者回答播放器名稱，或使用「從選單中選擇」提供三個固定選項：
+   - YouTube Music
+   - Apple Music
+   - Spotify
+4. 把選擇結果再次送到 `POST /command`，例如：
+   - `播放 YouTube Music`
+   - `播放 Apple Music`
+   - `播放 Spotify`
+5. Agent 驗證 provider 白名單後再執行播放。
+
+如果使用者第一次就說「播放 Spotify」或「用 Apple Music 播放」，Agent 不需要再次詢問。
+
+> 安全要求：捷徑只應使用 Agent 回傳的固定 provider 選項，不能把任意路徑、命令或 URL 當成播放器送出。
+
+### 暫停 / 上一首 / 下一首
+
+「暫停」、「上一首」、「下一首」不需要再次選擇播放器；它們預設控制 Windows 目前的 active media session。
+
+---
+
+## 4. 關機的二次確認流程 (進階安全)
 
 為了防止誤觸關機指令，Windows Siri Agent 內建了「二次確認」機制。如果您希望捷徑能支援此功能，您可以在取得回應後加入一個簡單的 `If` 判斷：
 
@@ -59,7 +96,7 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 
 ---
 
-## 4. 區域網路權限提醒
+## 5. 區域網路權限提醒
 
 當您第一次執行這個捷徑時，iPhone 可能會跳出提示，詢問是否允許「捷徑」存取您的**區域網路 (Local Network)**。
 
@@ -68,7 +105,7 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 
 ---
 
-## 5. 常見的 Siri 回應與錯誤訊息
+## 6. 常見的 Siri 回應與錯誤訊息
 
 您的捷徑會自動朗讀以下幾種 Windows 傳回的訊息：
 
@@ -84,14 +121,16 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 
 ---
 
-## 6. 語音指令範例
+## 7. 語音指令範例
 
 您可以嘗試對 Siri 說以下指令：
 
 **中文指令：**
 - 「開啟 Discord」 / 「打開 YouTube Music」
 - 「關閉 Chrome」
-- 「播放音樂」 / 「暫停」 / 「下一首」
+- 「播放」→ 若未指定播放器，Siri 會詢問 YouTube Music / Apple Music / Spotify
+- 「播放 Spotify」 / 「用 Apple Music 播放」 / 「YouTube Music 播放」
+- 「暫停」 / 「下一首」 / 「上一首」
 - 「音量大一點」 / 「靜音」
 - 「鎖定電腦」
 - 「重新掃描程式」
@@ -100,7 +139,9 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 **英文指令 (English Commands):**
 - "Open Discord" / "Launch Photoshop"
 - "Close Chrome"
-- "Play" / "Pause" / "Next track"
+- "Play" → if no provider is specified, Siri asks for YouTube Music / Apple Music / Spotify
+- "Play Spotify" / "Play with Apple Music" / "Play YouTube Music"
+- "Pause" / "Next track" / "Previous track"
 - "Volume up" / "Mute"
 - "Lock PC"
 - "Refresh apps"
