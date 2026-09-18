@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過 + Siri clarification E2E 待驗收**
+目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過 + Siri clarification iPhone E2E 已以文字輸入 workaround 驗收，完整 hands-free Siri 第二輪語音仍待解**
 
-先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。正式接入前先做獨立 Phase 0.5 模型可行性 PoC；iPhone Siri Shortcut 的候選朗讀、token 保存與第二輪選擇仍未完成 E2E。
+先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。Phase 0.5 benchmark 已完成但沒有模型通過門檻。2026-09-19 iPhone Shortcut 已實機完成候選回傳、token 保存、第二輪 selection + token 回送與真實 Spotify 播放；目前穩定 workaround 使用「關閉 Siri 並繼續」後以文字輸入第二輪，因此完整 hands-free Siri clarification 仍未通過。
 
 ## Completed / Decided
 
@@ -150,6 +150,18 @@
 - 已加入排查分流：Agent 沒收到 POST → iPhone/Shortcut 問題；收到 `text=下一週` → Siri ASR 問題；收到 `text=下一首` 但未執行 → Agent parser/service 問題。
 - 這只是文件與操作流程修正，**尚未完成 iPhone 實機 clarification E2E 驗收**。
 
+## Siri Shortcut Clarification E2E Acceptance / Remaining Siri Limitation (2026-09-19)
+
+- 使用者已在 iPhone 實機完成第一輪歌曲指令 → Agent 回傳最多三個候選與 `clarification_token` → Shortcut 保存 token → 第二輪以「第一首」+ token POST → Agent 選取原 trusted candidate 並真實播放 Spotify。
+- 第二次 POST 的 `text` 與 `clarification_token` wiring 已確認正確；播放成功證明 server-side clarification selection 與 player path 已被 iPhone E2E 觸發。
+- Shortcut HTTP response 在實機上可能先以文字呈現，必須先用「從 URL 內容取得辭典」再取 `message` / `clarification_token`。
+- iOS Shortcut 的 If 實作改以「clarification_token 是否包含任何數值」判斷是否進入 clarification，避免把 boolean false 當成「有值」。
+- 從「嘿 Siri」啟動 Shortcut 時，第二輪短語音仍可能被 Siri 原生語意攔截並追問「要設在什麼時候」；手動從 Shortcuts App 執行則正常，因此這不是 Windows Agent / Spotify clarification service 的失敗。
+- 「關閉 Siri 並繼續（Dismiss Siri and Continue）」已由使用者實機確認能避開 Siri 攔截，但後續「要求輸入」會退為文字輸入。故目前穩定版本可完成 E2E，但不是完整 hands-free voice clarification。
+- 詳細實機報告見 `docs/SIRI_SHORTCUT_CLARIFICATION_E2E_REPORT.md`。
+- 實機也觀察到不帶歌手的模糊歌名會出現偏冷門候選；目前 `SpotifyCatalog` ranking 沒有 popularity tie-breaker，Search request 也未指定 `market=TW`。這是後續搜尋品質工作，不應以降低 ambiguity safety 為代價。
+- 本輪截圖曾顯示部分 API key；不得把 secret 寫入 Git/log，建議旋轉 API key。
+
 ## Known Blocker: Siri Shortcut clarification E2E (2026-09-18)
 
 - 實機重現時，Siri Shortcut 實際送到 Agent 的文字只有 `播放晴天`，沒有帶歌手或專輯提示。
@@ -216,10 +228,10 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - Local AI 已接入正式 Agent 或已通過模型可行性驗收。
 - LM Studio 已完成 production loopback-only 安全配置。
 - 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
-- Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
-- Siri Shortcut 已完成包含歌曲消歧、候選反問與第二輪選擇的完整端到端播放驗收。
+- 完整 hands-free Siri Shortcut 已能在不退出 Siri session 的情況下穩定接住第二輪語音 clarification；目前可用 E2E 依賴「關閉 Siri 並繼續」+ 文字輸入 workaround。
+- Spotify 模糊歌曲候選排序品質已完成 market/popularity 改善；目前仍可能把偏冷門同名歌曲排進前三候選。
 
-另外，server 端實際完成第二輪選擇播放的 Windows + Spotify E2E 尚未在本輪執行；目前由 unit tests 與 API/token 邊界測試覆蓋。以上仍是「下一階段驗收項目」，不是既成事實。
+server 端第二輪選擇播放已由 iPhone Shortcut 在本輪實機觸發並成功完成真實 Spotify 播放；仍未完成的是不依賴文字輸入 workaround 的完整 hands-free Siri 第二輪語音。
 
 ## Source / Document Priority
 
