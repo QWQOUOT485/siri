@@ -74,8 +74,8 @@ Simple deterministic commands should remain fast and local to normal code:
 ```text
 播放
 暫停
-下一首
-上一首
+下一首歌
+上一首歌
 靜音
 音量大一點
 開啟 Chrome

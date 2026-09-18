@@ -35,8 +35,8 @@
 - **Spotify 基本播放控制**：
   - 「播放」/「播放音樂」/ `Play`：恢復 Spotify 目前播放。
   - 「暫停」/「暫停音樂」/ `Pause`：暫停 Spotify。
-  - 「下一首」/ `Next track`：Spotify 下一首。
-  - 「上一首」/ `Previous track`：Spotify 上一首。
+  - 「下一首歌」/ `Next track`：Spotify 下一首歌曲。
+  - 「上一首歌」/ `Previous track`：Spotify 上一首歌曲。
 - **指定歌曲播放 (`spotify_play_track`)**：
   - 「播放晴天」
   - 「播放周杰倫的晴天」

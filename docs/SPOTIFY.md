@@ -14,8 +14,8 @@
 - 「播放晴天現場版」→ 明確回覆目前只支援正式錄音版本，不播放 Live
 - 「播放晴天原版」→ 以原版意圖搜尋正式錄音版本
 - 「暫停」/「暫停音樂」→ 暫停 Spotify
-- 「下一首」→ Spotify 下一首
-- 「上一首」→ Spotify 上一首
+- 「下一首歌」→ Spotify 下一首歌曲
+- 「上一首歌」→ Spotify 上一首歌曲
 
 ## 前提
 
@@ -39,7 +39,7 @@
 ### Scopes
 
 遵循 least privilege，只要求目前功能需要的 scopes：
-- `user-modify-playback-state`：播放、暫停、下一首、上一首、Transfer Playback。
+- `user-modify-playback-state`：播放、暫停、下一首歌、上一首歌、Transfer Playback。
 - `user-read-playback-state`：讀取目前播放狀態與 Spotify Connect 裝置。
 
 若未來新增功能需要更多 scopes，必須先更新本規格與 SECURITY.md，不可預先要求不必要權限。

@@ -409,7 +409,7 @@ Include:
 暫停音樂
 暂停音乐
 下一首
-上一首
+上一首歌
 pause music
 next track
 previous track

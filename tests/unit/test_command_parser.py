@@ -17,6 +17,22 @@ def test_chinese_and_english_commands():
     assert parser().parse("重新掃描程式").action.action is ActionName.REFRESH_APPS
 
 
+def test_chinese_skip_commands_require_the_explicit_song_word():
+    next_song = parser().parse("下一首歌")
+    assert next_song.accepted is True
+    assert next_song.action is not None
+    assert next_song.action.action is ActionName.SPOTIFY_NEXT
+
+    previous_song = parser().parse("上一首歌")
+    assert previous_song.accepted is True
+    assert previous_song.action is not None
+    assert previous_song.action.action is ActionName.SPOTIFY_PREVIOUS
+
+    for text in ("下一首", "下一曲", "上一首", "上一曲"):
+        parsed = parser().parse(text)
+        assert parsed.accepted is False, text
+
+
 def test_website_and_force_close_are_explicit():
     assert parser().parse("打開 YouTube Music").action.action is ActionName.OPEN_WEBSITE
     force = parser().parse("強制關閉 Discord")

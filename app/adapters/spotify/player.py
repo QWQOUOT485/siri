@@ -54,7 +54,7 @@ class SpotifyPlayer:
         return self._control(
             access_token,
             "next",
-            "已切換到 Spotify 下一首。",
+            "已切換到 Spotify 下一首歌曲。",
             transfer_play=True,
             resume_after=True,
             require_track_change=True,
@@ -64,7 +64,7 @@ class SpotifyPlayer:
         return self._control(
             access_token,
             "previous",
-            "已切換到 Spotify 上一首。",
+            "已切換到 Spotify 上一首歌曲。",
             transfer_play=True,
             resume_after=True,
         )
@@ -102,7 +102,7 @@ class SpotifyPlayer:
             if not after_track_id or (before_track_id and after_track_id == before_track_id):
                 return OperationResult(
                     False,
-                    "Spotify 沒有可切換的下一首，已保留目前歌曲。",
+                    "Spotify 沒有可切換的下一首歌曲，已保留目前歌曲。",
                     "SPOTIFY_NO_NEXT_TRACK",
                     data={"device_name": device.name},
                 )

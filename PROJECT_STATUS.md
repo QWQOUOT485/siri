@@ -32,15 +32,15 @@
   - 「播放晴天」
   - 「播放周杰倫的晴天」
   - 「暫停」/「暫停音樂」
-  - 「下一首」
-  - 「上一首」
+  - 「下一首歌」
+  - 「上一首歌」
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
-- 消歧修正與播放控制回歸測試的完整 unit/security tests 已通過（90 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
+- 消歧修正與播放控制回歸測試的完整 unit/security tests 已通過（91 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
 - Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
@@ -90,7 +90,7 @@
 - `/spotify/status` 回報已授權，scope 為目前播放控制所需的兩項 scope。
 - Spotify Connect 裝置已被 Agent 找到。
 - `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
-- `暫停` 實際回傳成功；沒有播放 context 的單曲 `下一首` 現在會安全回傳 `SPOTIFY_NO_NEXT_TRACK`，不再重置歌曲。
+- `暫停` 實際回傳成功；上一輪舊口令 `下一首` 的單曲重播 bug 已修正，新口令 `下一首歌` 尚未重新完成 Siri 實機驗證。
 - 部署消歧修正後，直接對 Windows Agent 的自然語句 `播放周杰倫的晴天，專輯葉惠美` 實際播放 `晴天` / `葉惠美`。
 - 部署消歧修正後，直接對 Windows Agent 的 `播放周杰倫的晴天原版` 實際播放 `晴天` / `葉惠美`，證明原版意圖不會把搜尋帶到無關的 `Original Soundtrack` 結果。
 - 先前直接對 Windows Agent 的 `播放周杰倫的晴天` 實際播放 `晴天` / `葉惠美`，證明同歌手 studio 優先規則生效；這些都不是 Siri Shortcut 端到端結果。
@@ -104,7 +104,14 @@
 ## Resolved Bug: `暫停音樂` parser alias (2026-09-18)
 
 - 使用者實機回報 iPhone Shortcut 的「暫停音樂」沒有作用；原 parser 只有 exact alias `暫停`，因此請求未進入 Spotify pause service。
-- 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；目前完整 unit tests 為 90 passed，保留既有 2 個 dependency deprecation warnings。
+- 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；目前完整 unit tests 為 91 passed，保留既有 2 個 dependency deprecation warnings。
+
+## Changed Command Wording: `下一首歌` / `上一首歌` only (2026-09-18)
+
+- 為降低 Siri 把「下一首」聽成「下一週」、把「上一首」聽錯的風險，中文 parser 現在只接受精確口令 `下一首歌` / `上一首歌`，分別對應 `spotify_next` / `spotify_previous`。
+- `下一首`、`下一曲`、`上一首` 與 `上一曲` 已從 closed alias 移除並由 regression test 拒絕；英文 `next track` / `previous track` 等既有英文閉集合保留。
+- README、SPEC、Spotify、Siri Shortcut 與本地 AI 測試文件已同步改用完整中文口令；原始唯讀 `docs/SOURCE_SPEC.md` 未修改。
+- source parser tests 已通過；部署後 runtime parser 直接驗證 `下一首歌` / `上一首歌` 可解析，四個舊中文短口令均回傳 `INVALID_COMMAND`。新的 Siri 端到端口令尚未重新驗證，完成前不把新口令標成 Siri acceptance。
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
@@ -116,14 +123,14 @@
 - 最新產品決策已不再支援 Live 播放：Live / Concert / Tour / 演唱會 / 現場候選應直接排除；明確要求 Live 時回覆只支援正式錄音版本。
 - 繁簡中文 matching normalization、Live 排除、最多三首 trusted candidates 與短效 clarification context 已完成 source/runtime 驗證。
 - 目前仍未驗證 iPhone Shortcut 能朗讀候選、保存 token、把第二輪「第一首／第二首／第三首／歌手／專輯」與 token 一起送回，並完成真實播放。完成前不得把完整 Shortcut 驗收標成成功。
-- 基本 Spotify Shortcut 控制路徑已有「播放原版」「暫停音樂」成功紀錄；`下一首` 的 Siri 端到端流程先不列為目前驗收目標，歌曲消歧／三選一 clarification E2E 仍待使用者實機重測。
+- 基本 Spotify Shortcut 控制路徑已有「播放原版」「暫停音樂」成功紀錄；`下一首歌` / `上一首歌` 的 Siri 端到端流程尚未重新驗證，歌曲消歧／三選一 clarification E2E 仍待使用者實機重測。
 
 ## Resolved Bug: `下一首` 切到 0 秒後暫停 (2026-09-18)
 
 - 使用者實機回報「下一首」後歌曲跳到 0 秒並暫停；Agent log 顯示請求與 Spotify endpoint 都回傳 success，但直接讀取 Spotify playback state 得到 `is_playing=false`、`progress_ms=0`。
 - 根因是播放器在非 active 裝置轉移時固定使用 `play=false`，且 skip 後沒有恢復播放；因此「成功切歌」不等於「成功繼續播放」。
 - 先加入會重現該狀態的 red regression tests，再修正為 Next／Previous 轉移時使用 `play=true`，並在 skip 後呼叫 trusted Start/Resume；Pause 保持不自動恢復。
-- 先前針對有播放 context 的切歌恢復流程已由 regression tests 覆蓋；後續發現的無 context 單曲 edge case 已在下一節修正。完整 tests 為 90 passed；iPhone Shortcut 仍需重新實機確認。
+- 先前針對有播放 context 的切歌恢復流程已由 regression tests 覆蓋；後續發現的無 context 單曲 edge case 已在下一節修正。完整 tests 為 91 passed；iPhone Shortcut 仍需重新實機確認。
 
 ## Resolved Bug: 無播放佇列時 `下一首` 重新開始目前歌曲 (2026-09-18)
 
@@ -132,7 +139,7 @@
 - 測試後直接讀取 Spotify playback state 得到 `is_playing=true`，目前曲目為 `物語`，`repeat_state=off`，`context_uri` 為空；這符合指定單曲播放沒有可用下一首的情況。
 - 舊版 `SpotifyPlayer` 在每次 Next / Previous 後都無條件呼叫 Start/Resume；若 Spotify 沒有前進到新曲目，這個 Resume 會把同一首歌曲從 0 秒重新開始。
 - 先加入會重現「同一首被重播」的 red regression test，再修正為 Next 在 skip 前後讀取曲目 identity；只有曲目真的改變且新曲目未播放時才 Resume。
-- 完整 tests 已通過：90 passed；compileall、pip check 與 diff check 也通過。
+- 完整 tests 已通過：91 passed；compileall、pip check 與 diff check 也通過。
 - 修正部署到 Windows Agent 後，真實單曲播放（`context_uri` 為空、沒有下一首）測試回傳 `SPOTIFY_NO_NEXT_TRACK`；播放中的晴天由 1041 ms 前進到 1861 ms，前後 track ID 相同，沒有跳回 0 秒或暫停。
 - 使用者完成最新實機測試並確認修正成功：沒有播放佇列時執行 `下一首` 不再重播目前歌曲，也不會造成暫停。
 - queued / context 有下一首且曲目真的改變的路徑目前由 unit tests 覆蓋，尚未以使用者的 Spotify 播放佇列做額外實機驗收。
