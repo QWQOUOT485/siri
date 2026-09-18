@@ -132,6 +132,48 @@ For playback, resolve the configured or active Spotify Connect device. If the de
 
 Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes; token handling belongs in infrastructure, not domain. See [SPOTIFY.md](SPOTIFY.md).
 
+## Local AI Semantic Fallback (V1 allowed, gated)
+
+V1 may use a small **local-only LLM** through LM Studio to improve free-form Spotify language understanding and clarification replies.
+
+This does not replace the rule parser or the trusted execution pipeline.
+
+```text
+Siri text
+  ↓
+Rule-based Parser
+  ├─ confident supported command → ValidatedAction
+  └─ unresolved/free-form Spotify language
+          ↓
+     Local AI semantic parser
+          ↓
+     strict closed schema
+          ↓
+     deterministic slot grounding
+          ↓
+     ValidatedAction / ClarificationSelection
+          ↓
+     existing deterministic Spotify resolver
+          ↓
+     trusted SpotifyTrackRef
+          ↓
+     SpotifyPlayer
+```
+
+V1 Local AI constraints:
+
+- fallback-only; deterministic rules stay first
+- Spotify scope only for the initial integration
+- local LM Studio runtime; production same-host deployment should use loopback
+- no cloud LLM fallback
+- AI output is untrusted until strict schema validation and deterministic grounding pass
+- AI cannot create executable paths, shell commands, URLs, process IDs, Spotify URIs/track IDs, or trusted catalog objects
+- shutdown, shutdown confirmation, force-close, firewall, and system-administration actions never use AI parsing
+- if AI is unavailable or times out, existing deterministic behavior continues
+- model capability must be proven by the Phase 0.5 feasibility PoC before production integration
+
+See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md).
+
 ## Directory Structure (v2)
 
 ```text
@@ -216,6 +258,7 @@ windows-siri-agent/
 7. **Catalog 使用穩定 `app_id`**：Matcher 找到程式後，後續流程（`/apps/search` 回傳、`/action` 執行）盡量透過 `app_id` 傳遞，避免重複用 display name 比對造成同名程式、大小寫、fuzzy match 不一致的問題。
 8. **Windows 內建工具走 `system_apps` mapping**：Task Manager、Settings、Calculator 等視為 Trusted Launch Source 的固定入口，不依賴一般 Discovery，也不算「把所有應用程式寫死」。
 9. **測試分兩類**：`tests/unit/`（mock 化，可在任何環境含本容器完整執行）與 `tests/integration_windows/`（只能在真實 Windows 執行，且明確禁止 shutdown / lock / force kill 等破壞性操作，只做唯讀或安全的探測）。
-10. **V1 音樂來源固定為 Spotify**：`play` 恢復 Spotify；指定歌名使用 `spotify_play_track` 搜尋 Spotify Catalog 並播放可信 track URI。取消 YouTube Music / Apple Music provider 選擇流程。歌名與歌手僅能進 Spotify 搜尋，不可形成 executable path、command、argument 或 arbitrary URL。
+10. **V1 音樂來源固定為 Spotify**：`play` 恢復 Spotify；指定歌名使用 `spotify_play_track` 搜尋 Spotify Catalog 並播放可信 track URI。取消 YouTube Music / Apple Music provider 選擇流程。歌名與歌手僅能進 Spotify搜尋，不可形成 executable path、command、argument 或 arbitrary URL。
+11. **V1 允許 Local LLM semantic fallback，但不是 execution engine**：Rule parser 仍優先；AI 僅處理經批准的低風險 Spotify 語意/clarification，輸出必須通過 closed schema + deterministic grounding。高風險操作永久 deterministic-only；LM Studio/模型不可直接產生 trusted execution target。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).
