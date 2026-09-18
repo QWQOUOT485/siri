@@ -22,6 +22,8 @@ class SpotifyTrackRef(BaseModel):
     artist_names: tuple[str, ...] = Field(min_length=1, max_length=10)
     album_name: str = Field(default="", max_length=300)
     album_type: str = Field(default="", max_length=30)
+    isrc: str = Field(default="", max_length=30)
+    duration_ms: int | None = Field(default=None, ge=0, le=86_400_000)
 
 
 @dataclass(frozen=True)
@@ -52,8 +54,8 @@ class SpotifyCatalog:
         if album:
             query += f" album:{album}"
         hint = self._hint_value(version_hint)
-        if hint:
-            query += f" {hint}"
+        if hint == "live":
+            query += " live"
         payloads = self.client.search_tracks(access_token, query, limit=10)
         refs = tuple(ref for item in payloads if (ref := self._to_ref(item)) is not None)
         if not refs:
@@ -79,8 +81,22 @@ class SpotifyCatalog:
             if len(exact_album_matches) == 1:
                 return TrackResolution(track=exact_album_matches[0], ambiguous=False, candidates=tuple(ranked[:5]))
             if len(exact_album_matches) > 1:
-                return TrackResolution(track=None, ambiguous=True, candidates=tuple(exact_album_matches[:5]))
+                album_ranked = sorted(
+                    exact_album_matches,
+                    key=lambda ref: self._score(ref, track, artist, album, hint),
+                    reverse=True,
+                )
+                if self._same_recording_group(album_ranked):
+                    return TrackResolution(track=album_ranked[0], ambiguous=False, candidates=tuple(album_ranked[:5]))
+                return TrackResolution(track=None, ambiguous=True, candidates=tuple(album_ranked[:5]))
         if best_score < 0.70 or (second_score is not None and best_score - second_score < 0.08):
+            close_candidates = [
+                ref
+                for ref in ranked[1:]
+                if best_score - self._score(ref, track, artist, album, hint) < 0.08
+            ]
+            if best_score >= 0.70 and close_candidates and self._same_recording_group(close_candidates + [ranked[0]]):
+                return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:5]))
             return TrackResolution(track=None, ambiguous=True, candidates=tuple(ranked[:5]))
         return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:5]))
 
@@ -92,6 +108,12 @@ class SpotifyCatalog:
         album = item.get("album")
         if not isinstance(artists, list) or not isinstance(album, dict):
             return None
+        external_ids = item.get("external_ids")
+        if not isinstance(external_ids, dict):
+            external_ids = {}
+        duration_ms = item.get("duration_ms")
+        if isinstance(duration_ms, bool) or not isinstance(duration_ms, int) or duration_ms < 0:
+            duration_ms = None
         names = tuple(
             str(artist.get("name", "")).strip()
             for artist in artists
@@ -105,6 +127,8 @@ class SpotifyCatalog:
                 artist_names=names,
                 album_name=str(album.get("name", "")).strip(),
                 album_type=str(album.get("album_type", "")).strip(),
+                isrc=str(external_ids.get("isrc", "")).strip(),
+                duration_ms=duration_ms,
             )
         except Exception:
             return None
@@ -200,6 +224,19 @@ class SpotifyCatalog:
             return None
         value = getattr(version_hint, "value", version_hint)
         return str(value).casefold()
+
+    @classmethod
+    def _same_recording_group(cls, refs: list[SpotifyTrackRef]) -> bool:
+        """Resolve duplicate releases only when Spotify supplies the same ISRC."""
+
+        if not refs or any(not ref.isrc for ref in refs):
+            return False
+        isrcs = {ref.isrc.casefold() for ref in refs}
+        if len(isrcs) != 1:
+            return False
+        title_keys = {cls._normalize(ref.track_name) for ref in refs}
+        artist_keys = {cls._normalize(ref.artist_names[0]) for ref in refs if ref.artist_names}
+        return len(title_keys) == 1 and len(artist_keys) == 1
 
     @classmethod
     def _similarity(cls, left: str, right: str) -> float:

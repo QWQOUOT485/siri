@@ -40,7 +40,8 @@
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 已支援自然語音可使用的 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；版本意圖使用封閉的 `live`／`studio`／`original` 值，只進 Spotify 搜尋與排序。
 - `SpotifyCatalog` 已對所有歌曲使用通用版本分類與安全排序：未指定 Live 時優先 studio/original，明確 Live 時優先 Live；不同歌手的裸歌名仍維持 ambiguous，不以搜尋第一筆代替意圖。
-- 消歧修正的 unit tests 已通過（68 passed，2 個既有 dependency deprecation warnings）；這不等同於 Windows 或 Siri 實機驗收。
+- 消歧修正的 unit tests 已通過（71 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
+- Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
@@ -54,9 +55,11 @@
 - `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
 - `暫停` 與 `下一首` 實際回傳成功。
 - 部署消歧修正後，直接對 Windows Agent 的自然語句 `播放周杰倫的晴天，專輯葉惠美` 實際播放 `晴天` / `葉惠美`。
-- 部署消歧修正後，直接對 Windows Agent 的裸歌名 `播放周杰倫的晴天` 實際播放 `晴天` / `葉惠美`，證明同歌手 studio 優先規則生效；這不是 Siri Shortcut 端到端結果。
+- 部署消歧修正後，直接對 Windows Agent 的 `播放周杰倫的晴天原版` 實際播放 `晴天` / `葉惠美`，證明原版意圖不會把搜尋帶到無關的 `Original Soundtrack` 結果。
+- 先前直接對 Windows Agent 的 `播放周杰倫的晴天` 實際播放 `晴天` / `葉惠美`，證明同歌手 studio 優先規則生效；這些都不是 Siri Shortcut 端到端結果。
 - `播放晴天現場版` 實際回傳 `SPOTIFY_AMBIGUOUS_TRACK`，候選是多個 Live 發行；Agent 沒有選第一筆或誤播 studio，符合安全規則。
-- 本次實機測試最後再次 `暫停` 成功；修正後 Agent 目前仍在 `D:\ai\windows-siri-agent` 運行，供下一步 Shortcut 測試。
+- 不帶歌手的 `播放葉惠美專輯的晴天` 若 Spotify 回傳不同歌手的同名／同專輯候選，實際回傳 `SPOTIFY_AMBIGUOUS_TRACK`，沒有猜測歌手；帶歌手的自然專輯句已成功。
+- 本次最新實機測試最後再次 `暫停` 成功；修正後 Agent 目前仍在 `D:\ai\windows-siri-agent` 運行，供下一步 Shortcut 測試。
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - API key 未出現在測試 log 中。
 

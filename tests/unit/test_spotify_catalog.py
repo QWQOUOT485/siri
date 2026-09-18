@@ -14,14 +14,21 @@ class FakeSpotifySearchClient:
         return self.tracks
 
 
-def track(track_id, name, artists, album="Album"):
-    return {
+def track(track_id, name, artists, album="Album", *, isrc=None, duration_ms=None, album_type=None):
+    payload = {
         "id": track_id,
         "uri": f"spotify:track:{track_id}",
         "name": name,
         "artists": [{"name": artist} for artist in artists],
         "album": {"name": album},
     }
+    if isrc is not None:
+        payload["external_ids"] = {"isrc": isrc}
+    if duration_ms is not None:
+        payload["duration_ms"] = duration_ms
+    if album_type is not None:
+        payload["album"]["album_type"] = album_type
+    return payload
 
 
 def test_catalog_returns_exact_track_and_artist_as_trusted_reference():
@@ -89,6 +96,22 @@ def test_catalog_prefers_live_when_user_explicitly_requests_live():
     assert client.queries == [("test-token", "track:晴天 artist:周杰倫 live", 10)]
 
 
+def test_catalog_uses_original_as_ranking_intent_not_a_free_text_query():
+    client = FakeSpotifySearchClient(
+        [
+            track("live", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
+            track("studio", "晴天", ["周杰倫"], album="葉惠美"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", version_hint="original", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "studio"
+    assert client.queries == [("test-token", "track:晴天 artist:周杰倫", 10)]
+
+
 def test_catalog_keeps_multiple_live_versions_ambiguous():
     client = FakeSpotifySearchClient(
         [
@@ -114,6 +137,37 @@ def test_catalog_does_not_choose_between_different_artists_for_bare_title():
     catalog = SpotifyCatalog(client)
 
     result = catalog.find_track("Stay", None, access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+
+
+def test_catalog_can_collapse_same_recording_releases_when_isrc_matches():
+    client = FakeSpotifySearchClient(
+        [
+            track("original", "Stay", ["The Kid LAROI"], album="Album", isrc="USABC2400001"),
+            track("release", "Stay", ["The Kid LAROI"], album="Another Release", isrc="USABC2400001"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "original"
+    assert result.ambiguous is False
+
+
+def test_catalog_does_not_use_duration_alone_to_guess_a_recording():
+    client = FakeSpotifySearchClient(
+        [
+            track("one", "Stay", ["The Kid LAROI"], album="Album One", duration_ms=180000),
+            track("two", "Stay", ["The Kid LAROI"], album="Album Two", duration_ms=180000),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
 
     assert result.track is None
     assert result.ambiguous is True

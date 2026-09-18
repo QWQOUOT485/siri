@@ -517,6 +517,12 @@ duration 的用途：
 - 不因此建立 generic Spotify proxy
 - 不改變既有 TrustedAction / SpotifyTrackRef 安全邊界
 
+### V1 對 ISRC / duration 的決定
+
+Spotify Search 的 track metadata 可提供 `external_ids.isrc` 與 `duration_ms`；本專案將它們解析到 server-side `SpotifyTrackRef`，但不接受 caller 提供這些欄位。非空且相同的 ISRC 只在歌名與主要歌手也相同、候選分數接近時，作為「同一錄音的不同 release」證據，讓 canonical 候選勝出；不同 ISRC 或缺少 ISRC 時仍保留 ambiguity。`duration_ms` 只作為可信 metadata 保存與測試訊號，不單獨決定播放，避免兩首剛好同長度的歌曲被誤合併。
+
+參考：[Spotify Track Object](https://developer.spotify.com/documentation/web-api/reference/get-track)、[Spotify Search](https://developer.spotify.com/documentation/web-api/reference/search)。
+
 ## 建議的 Ranking 概念
 
 以下只是設計方向，不要求直接照分數硬編碼：
@@ -644,7 +650,7 @@ Siri Text
 - [x] 自然中文專輯 / 版本提示解析完成
 - [x] studio / original vs Live ranking 規則完成
 - [x] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
-- [ ] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
+- [x] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
 - [x] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
 - [x] 未指定 Live 時，不會因為存在 Live 候選就一律報 ambiguous
 - [x] 明確指定 Live 時能優先 Live 版本；多個 Live 仍安全回 ambiguous

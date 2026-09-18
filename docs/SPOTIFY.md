@@ -131,7 +131,9 @@ SpotifyTrackRef
 ├── track_uri
 ├── track_name
 ├── artist_names
-└── album_name
+├── album_name
+├── isrc (optional metadata from Spotify)
+└── duration_ms (optional metadata from Spotify)
 ```
 
 只有由 Spotify API 回傳並通過 validation 的 `SpotifyTrackRef` 才能進入 player adapter。
@@ -224,6 +226,7 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - exact track + artist ranking
 - studio/original vs Live ranking, including explicit Live intent
 - bare same-title tracks by different artists remain ambiguous
+- same-ISRC release duplicates may collapse; duration alone must not auto-select
 - ambiguous results 不自動播放
 - no results
 - token refresh

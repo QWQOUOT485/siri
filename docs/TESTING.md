@@ -33,6 +33,8 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Explicit Live intent wins against studio/original
 - Multiple Live versions remain ambiguous
 - Bare same-title tracks by different artists remain ambiguous
+- Same-ISRC release duplicates may collapse safely
+- Duration alone never resolves two candidates
 - Ambiguous Spotify search results do not auto-play an arbitrary track
 - Spotify API calls are mocked in unit tests
 - Spotify access/refresh tokens are never returned or logged
