@@ -44,9 +44,10 @@ Spotify 搜尋可能同時出現：
 
 期望行為：
 
-- 使用者沒有說「Live / 現場版」時，優先正式錄音室 / 原始專輯版本
-- 使用者明確說「現場版 / Live」時，才優先 Live 候選
-- 若仍然存在多個合理候選，才要求使用者補充資訊
+- 一般指定歌曲播放不支援 Live / 演唱會版本
+- Spotify Search 回傳後，先排除明確 Live / Concert / Tour / 演唱會 / 現場候選
+- 剩餘正式錄音候選再做 artist / album / ISRC / duration / confidence matching
+- 若仍無法安全判斷，Siri 最多列出 3 首候選並反問使用者要哪一首
 - 不得單純取 Spotify 搜尋結果第一筆後直接播放
 
 ## 根本原因
@@ -160,36 +161,90 @@ version_hint = live
 
 **絕對不可**因此放寬既有安全邊界。
 
-### B. 建立「未指定 Live 時，正式版本優先」規則
+### B. Live / 演唱會版本直接排除
 
-當使用者沒有明確指定 Live / 現場版時，ranking 建議：
+本產品的預設指定歌曲播放不支援 Live / 演唱會版本。
 
-1. 歌名 exact match
-2. artist exact / strong match
-3. album exact match（若有提供）
-4. 正式 studio album 候選加權
-5. 明顯 Live / Concert / Tour / 演唱會候選降權
-6. Compilation / Karaoke / Tribute / Cover 等非主要版本降權
-7. 若 top candidate 與第二名仍過近，再回 ambiguous
-
-不可只因為有兩個 exact track names 就直接 ambiguous。
-
-### C. 明確支援 Live 意圖
-
-若使用者說：
+Spotify Search 取得候選後，應先把明確符合以下版本特徵的候選排除：
 
 ```text
-現場版
-live
-演唱會版
-concert version
+Live
+Concert
+Tour
+演唱會
+演唱会
+現場
+现场
 ```
 
-應反向：
+這些 marker 應保留在 classifier 中，但用途改成「排除候選」，不是降權或反向加權。
 
-- Live 候選加權
-- Studio 候選降權
-- 如果有多場演唱會版本仍然接近，再要求補充
+排除 Live 後，再依序處理：
+
+1. 歌名 exact / strong match
+2. artist exact / strong match
+3. album exact match（若有提供）
+4. ISRC / release identity
+5. duration 輔助
+6. confidence gap
+
+若使用者明確說：
+
+```text
+播放晴天現場版
+播放晴天 Live
+```
+
+不應重新啟用 Live 搜尋；應回覆目前只支援正式錄音版本。
+
+Remaster / Deluxe / Anniversary / Reissue / Compilation 不得與 Live 一起無條件刪除，因為正式 studio 錄音可能只存在於這些 release 中，仍應交由 identity / confidence resolver 處理。
+
+### C. 真正無法判斷時由 Siri 反問，最多列 3 首
+
+如果排除 Live、完成繁簡正規化與既有 matching 後，仍有多個可信候選且沒有足夠 confidence gap，系統不得猜測。
+
+Siri 應最多列出 3 首候選並直接反問使用者：
+
+```text
+找到三首可能的歌曲：
+第一首，Whitney Houston 的 I Will Always Love You
+第二首，Dolly Parton 的 I Will Always Love You
+第三首，另一個候選
+你要哪一首？
+```
+
+如果只有 2 首，就只列 2 首；不要為了湊滿 3 首加入低品質候選。
+
+使用者可以回答：
+
+```text
+第一首
+第二首
+Whitney Houston 那首
+專輯葉惠美那首
+```
+
+第二輪選擇必須限制在 server 已建立的候選集合中。
+
+建議 ambiguity response 建立短效 clarification context：
+
+```text
+clarification_id
+candidate 1
+candidate 2
+candidate 3
+expires_at
+```
+
+安全要求：
+
+- 最多 3 個候選
+- client 不得任意指定 Spotify URI
+- client 不得任意指定 track_id
+- 第二輪文字只能用來選擇既有 trusted candidates
+- clarification context 必須短效過期
+- 候選要用適合 Siri 朗讀的簡短資訊，例如歌手或專輯
+- 若第二輪回答仍無法辨識，應再次要求選「第一首／第二首／第三首」，不得猜
 
 ### D. 所有歌曲都必須使用同一套通用消歧策略
 
@@ -281,7 +336,7 @@ track title normalization / exactness
 artist grouping
         ↓
 version classification
-studio / live / acoustic / remix / remaster / etc.
+live filtering → studio / acoustic / remix / remaster / etc. classification
         ↓
 album / release context
         ↓
@@ -295,7 +350,7 @@ confidence gap 不足 → 詢問
 
 - 不為特定歌曲 hardcode album / artist / track ID
 - 不以「熱門」代替 artist / version 意圖
-- 同歌手不同版本可以使用版本規則排序
+- Live / 演唱會版本先排除；其他版本再使用版本規則排序
 - 不同歌手同名通常需要使用者補充
 - 同一錄音的 reissue/remaster 不必無條件視為完全不同歌曲
 - 最終仍以「有明顯安全優勢才自動選，沒有就問」為準
@@ -344,7 +399,7 @@ Unicode normalization
 做完繁簡統一後，以下情況仍然應保持 ambiguous：
 
 - 不同歌手的真正同名歌曲
-- 同一歌手的多個 Live / Concert 版本且沒有明顯優勢
+- 排除 Live 後仍存在的不同正式錄音／發行候選
 - 不同錄音或不同版本無法由 ISRC / version / album 等 metadata 安全區分
 - Spotify metadata 本身不足或互相衝突
 
@@ -586,8 +641,7 @@ Exact track title
 + User requested version match
 + Likely studio/original release
 
-- Explicit Live mismatch
-- Concert / Tour / 演唱會 when user did not request Live
+- Live / Concert / Tour / 演唱會 / 現場候選直接排除
 - Karaoke / Tribute / Cover
 - Weak fuzzy title
 - Weak artist match
@@ -613,14 +667,16 @@ Exact track title
 
 Spotify Catalog mocked cases：
 
-1. studio + live 同名，未指定版本 → studio 勝出
-2. studio + live 同名，指定 live → live 勝出
-3. 多個 live 且無明顯優勢 → ambiguous
+1. studio + live 同名 → Live 候選先被排除，studio 候選繼續 resolver
+2. 使用者明確要求 live / 現場版 → 回覆目前只支援正式錄音版本，不播放 Live
+3. 排除 Live 後仍有不同歌手同名 → ambiguous clarification
 4. album 明確指定 → exact album 勝出
 5. artist 明確指定 → 不得被其他歌手同名版本取代
-6. popularity / result order 不得覆蓋明確版本語意
+6. popularity / result order 不得覆蓋明確 artist / album / identity
 7. injection-like track / artist / album/version 字串只能進 Spotify search，不得進 shell/path/URL
-8. 仍無法明確判斷時必須回 `SPOTIFY_AMBIGUOUS_TRACK`
+8. 真正無法判斷時最多回 3 個候選
+9. clarification 第二輪只能選 server 建立的候選，不得接受任意 URI / track_id
+10. 使用者回答「第一首／第二首／第三首」可以完成 trusted candidate selection
 
 ## 建議驗收案例
 
@@ -658,15 +714,16 @@ Spotify Catalog mocked cases：
 播放晴天現場版
 ```
 
-應優先 Live / 演唱會版本。
+應明確回覆目前只支援正式錄音版本，不播放 Live / 演唱會候選。
 
 ### Case 5 — 真正歧義
 
-若仍有多個合理且無明顯優勢的候選：
+若排除 Live 後仍有多個合理且無明顯優勢的候選：
 
 - 不得亂播
-- 回傳清楚的 Siri 可朗讀訊息
-- 要求使用者補充歌手 / 專輯 / 版本
+- 最多列出 3 首 Siri 可朗讀候選
+- 直接反問使用者要第一首、第二首或第三首
+- 第二輪回答只能在該次 trusted candidate set 中選擇
 
 ## 安全要求
 
@@ -702,13 +759,15 @@ Siri Text
 - [x] 自然中文專輯 / 版本提示解析完成
 - [ ] 歌名／歌手／專輯 matching 已加入繁簡正規化，並有對應測試
 - [ ] 已驗證繁簡正規化只消除字形造成的假歧義，不會把真正不同歌手／版本誤合併
-- [x] studio / original vs Live ranking 規則完成
+- [ ] Live / Concert / Tour / 演唱會 / 現場候選已改為直接排除，而不是降權排序
 - [x] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
 - [x] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
 - [x] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
-- [x] 未指定 Live 時，不會因為存在 Live 候選就一律報 ambiguous
-- [x] 明確指定 Live 時能優先 Live 版本；多個 Live 仍安全回 ambiguous
-- [x] 真正無法判斷時仍會安全回 ambiguous
+- [ ] 明確要求 Live / 現場版時會回覆「目前只支援正式錄音版本」，不播放 Live
+- [ ] 真正無法判斷時最多回 3 個 trusted candidates
+- [ ] Siri Shortcut 已支援朗讀最多 3 首候選並反問使用者
+- [ ] clarification 第二輪可解析「第一首／第二首／第三首／歌手／專輯」並限制在原候選集合
+- [ ] clarification context 有短效過期機制，client 無法任意指定 Spotify URI / track_id
 - [x] 相關 unit tests 通過
 - [x] security tests 未被削弱
 - [x] 真實 Windows Spotify 驗收通過
