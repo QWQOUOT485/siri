@@ -139,8 +139,8 @@ The initial AI backend must be local to the Windows machine.
 
 Requirements:
 
-- listen on `127.0.0.1` only
-- never expose AI runtime directly to LAN
+- prefer loopback-only access: `127.0.0.1:1234`
+- never intentionally expose the AI runtime directly to the LAN in the approved V1 design
 - no router port forwarding
 - no tunnel
 - no cloud fallback
@@ -148,6 +148,26 @@ Requirements:
 - Windows Agent is the only component allowed to call the AI runtime
 
 The iPhone continues to call only the Windows Agent.
+
+#### Current environment observation
+
+The current LM Studio server has been reported reachable at:
+
+```text
+http://192.168.0.199:1234
+```
+
+This is a private-LAN address, **not loopback**.
+
+If LM Studio and Windows Siri Agent run on the same Windows PC, the preferred production configuration is still:
+
+```text
+http://127.0.0.1:1234
+```
+
+The LAN address may be used temporarily for testing, but it must not silently become the security baseline.
+
+If the project intentionally keeps LM Studio reachable through `192.168.0.199:1234`, then the design is no longer "Agent-only localhost AI". That requires an explicit follow-up security decision covering firewall scope, unauthenticated LAN access, and whether LM Studio exposes endpoints beyond the narrow inference API used by the Agent.
 
 ## 4. Proposed top-level architecture
 
@@ -206,10 +226,13 @@ The iPhone continues to call only the Windows Agent.
 Local AI side channel:
 
 IntentResolver
-    ↓ localhost only
-LocalAIAdapter
+    ↓ localhost preferred
+LMStudioLocalAIAdapter
     ↓
-Ollama / llama.cpp-compatible runtime
+LM Studio OpenAI-compatible API
+    ↓
+127.0.0.1:1234 preferred
+(current test endpoint reported as 192.168.0.199:1234)
     ↓
 small local instruct model
 ```
@@ -234,7 +257,7 @@ app/
 ├── adapters/
 │   ├── ai/
 │   │   ├── base.py               # LocalAIAdapter interface
-│   │   ├── ollama.py             # optional first implementation
+│   │   ├── lmstudio.py           # V1: narrow LM Studio HTTP adapter
 │   │   └── disabled.py           # no-AI fallback implementation
 │   ├── spotify/
 │   └── windows/
@@ -253,7 +276,7 @@ services
 adapters / infrastructure
 ```
 
-Domain models must not import Ollama or another runtime.
+Domain models must not import LM Studio, an OpenAI client, or another runtime-specific dependency.
 
 ## 6. AI output schema
 
@@ -278,7 +301,7 @@ Conceptual schema:
 
 Allowed initial intents should remain small.
 
-Example allowlist:
+Initial V1 Local AI allowlist:
 
 ```text
 spotify_play_track
@@ -287,20 +310,16 @@ spotify_pause
 spotify_next
 spotify_previous
 
-open_app
-close_app
-
-volume_up
-volume_down
-mute
-unmute
-
 select_candidate
 
 unknown
 ```
 
-High-risk actions such as shutdown and force-close should initially remain deterministic-only.
+V1 AI scope is Spotify only.
+
+App open/close and volume control remain deterministic even though they are comparatively low risk.
+
+Shutdown, shutdown confirmation, force-close, firewall/setup behavior, and any future destructive/system-administration action are **permanently excluded from AI parsing** unless a future security review explicitly changes this invariant.
 
 The AI output schema must have **no fields** for:
 
@@ -382,15 +401,116 @@ Bad behavior:
 
 if the user never said the artist or album.
 
-The safest initial rule is:
+### 8.1 Deterministic slot grounding is mandatory
 
-- AI may normalize obvious text form
-- AI may interpret syntax
-- AI may identify a candidate ordinal from clarification context
-- AI must leave unspecified artist / album as `null`
-- catalog metadata must come from Spotify, not the model
+Prompt instructions are not enough. Every AI-proposed Spotify slot must be grounded back to the user's utterance by deterministic server-side code.
 
-For Traditional/Simplified Chinese identity matching, deterministic normalization code remains required. AI understanding is not a replacement for data normalization.
+This applies to all user-content slots:
+
+- `track`
+- `artist`
+- `album`
+
+Required flow:
+
+```text
+raw Siri text
+    ↓
+preserve original text unchanged
+    ↓
+build deterministic normalized comparison text
+NFKC + Traditional/Simplified normalization + punctuation/space normalization
+    ↓
+AI proposes semantic slots
+    ↓
+server grounds every proposed slot against original/normalized user text
+    ↓
+grounded → keep
+not grounded → force null / reject interpretation
+```
+
+Example:
+
+```text
+User:
+我要听周杰伦的晴天
+
+AI proposes:
+track  = 晴天
+artist = 周杰倫
+album  = 葉惠美
+
+Grounding:
+晴天   → present after normalization → ACCEPT
+周杰倫 → 周杰伦 normalizes to the same comparison form → ACCEPT
+葉惠美 → not present in user input → FORCE NULL
+```
+
+Final semantic result:
+
+```json
+{
+  "track": "晴天",
+  "artist": "周杰倫",
+  "album": null
+}
+```
+
+Grounding also applies to `track`.
+
+Example:
+
+```text
+User:
+放周杰倫那首
+
+AI proposes:
+track  = 晴天
+artist = 周杰倫
+```
+
+The server may keep `artist=周杰倫`, but `track=晴天` is not grounded and must be removed. The correct behavior is to ask which song, not use the model's music knowledge.
+
+### 8.2 Grounding rules
+
+The model must not be allowed to certify its own evidence.
+
+A model-generated quote/span/confidence may be useful for diagnostics but is never authoritative.
+
+Initial deterministic checks:
+
+1. normalized exact substring
+2. Traditional/Simplified-normalized exact substring
+3. punctuation/whitespace-insensitive exact match
+4. bounded fuzzy grounding only if empirical testing later proves it necessary
+
+Fuzzy grounding must be conservative:
+
+- no broad fuzzy acceptance for very short strings
+- no acceptance based only on a high similarity score
+- no cross-slot inference
+- no use of Spotify search results to retroactively justify a hallucinated user slot
+
+When uncertain, force the slot to `null` or return `unknown`.
+
+### 8.3 Catalog facts remain catalog facts
+
+AI may:
+
+- interpret syntax
+- normalize obvious linguistic form
+- identify a candidate ordinal inside a trusted clarification context
+
+AI may not:
+
+- invent a missing track
+- invent a missing artist
+- invent a missing album
+- use music knowledge to complete unstated user intent
+
+Catalog metadata must come from Spotify.
+
+For Traditional/Simplified Chinese identity matching, deterministic normalization remains required. AI understanding is not a replacement for data normalization.
 
 ## 9. Spotify interaction
 
@@ -526,9 +646,11 @@ The AI never receives authority to invent candidate 4 or a Spotify URI.
 - 1-based ordinal only: 1–3
 - context expires
 - token is random / unguessable
-- token is scoped to one client/session if practical
+- token is one-time use
+- token is not bound to client IP in V1
+- API authentication + short TTL + one-time use are preferred over brittle IP affinity
 - selection may only reference the stored server-side set
-- used/expired contexts should be invalid
+- used/expired contexts are invalid
 - no client-provided track ID
 - no client-provided URI
 - no free-form playback target at the selection layer
@@ -568,9 +690,11 @@ The Shortcut must not store:
 
 It may temporarily pass back an opaque clarification token created by the Agent.
 
-## 12. Local AI adapter
+## 12. Local AI adapter — LM Studio first
 
-Define a narrow interface so the project is not permanently coupled to Ollama.
+V1 uses **LM Studio** as the concrete local runtime.
+
+The Agent should call LM Studio through a narrow HTTP adapter. Runtime-specific SDK objects must not leak into domain/service models.
 
 Conceptual interface:
 
@@ -585,17 +709,28 @@ class LocalAIAdapter(Protocol):
         ...
 ```
 
-Implementation candidates:
+V1 implementations:
 
 ```text
-OllamaLocalAIAdapter
-LlamaCppLocalAIAdapter
+LMStudioLocalAIAdapter
 DisabledLocalAIAdapter
 ```
 
-V1 implementation can support only one runtime.
+Preferred endpoint:
 
-The abstraction is to protect the service/domain architecture, not to create a plugin ecosystem.
+```text
+http://127.0.0.1:1234/v1
+```
+
+Current test environment has reported:
+
+```text
+http://192.168.0.199:1234
+```
+
+LM Studio exposes an OpenAI-compatible API, so the adapter can use the standard chat-completions-shaped HTTP contract without introducing a heavyweight runtime-specific dependency.
+
+The abstraction exists only to protect service/domain boundaries and preserve a disabled fallback. V1 does not need a general multi-runtime plugin ecosystem.
 
 ## 13. Model constraints
 
@@ -613,26 +748,49 @@ Target profile:
 - no need for tool calling
 - no need for long-form reasoning
 
-Initial class of model to evaluate:
+Model selection is empirical and tiered:
 
 ```text
-Qwen-family ~0.5B–0.8B instruct model
-quantized GGUF / local runtime equivalent
+Tier A — preferred
+~0.5B–0.8B quantized instruct model
+goal: smallest memory footprint and fastest latency
+
+Tier B — fallback if Tier A misses accuracy targets
+~1B–1.5B quantized instruct model
+accept higher RAM / latency only if measurements justify it
+
+Tier C — exceptional
+>1.5B
+consider only if Tier A/B cannot meet safety + accuracy targets
 ```
 
 The architecture must not hardcode one exact model name into domain logic.
 
-Config example:
+Suggested config:
 
 ```text
 LOCAL_AI_ENABLED=false
-LOCAL_AI_BASE_URL=http://127.0.0.1:11434
-LOCAL_AI_MODEL=<local-model-name>
+LOCAL_AI_BACKEND=lmstudio
+LOCAL_AI_BASE_URL=http://127.0.0.1:1234/v1
+LOCAL_AI_MODEL=<LM-Studio-model-identifier>
 LOCAL_AI_TIMEOUT_SECONDS=<small timeout>
 LOCAL_AI_MAX_OUTPUT_TOKENS=<small limit>
 ```
 
-The exact model should be selected by empirical tests, not by architecture assumption.
+For the currently reported environment, a local override may temporarily point to `http://192.168.0.199:1234/v1`, but production acceptance should prefer loopback unless LAN exposure is explicitly approved.
+
+Model promotion from Tier A to Tier B should depend on fixed evaluation metrics:
+
+- intent accuracy
+- slot extraction accuracy
+- clarification accuracy
+- hallucinated-slot rate
+- false-positive action rate
+- P95 inference latency
+- end-to-end Siri latency
+- RAM / VRAM usage
+
+For this project, a false-positive executable action is more serious than returning `unknown`.
 
 ## 14. Prompt strategy
 
@@ -662,9 +820,14 @@ You may choose only candidate 1, 2, or 3.
 If the user did not clearly select one, return unknown.
 ```
 
-Prefer runtime-enforced structured JSON / grammar when supported.
+Phase 4 must compare:
 
-Even with grammar enforcement, Pydantic validation remains mandatory.
+1. LM Studio structured / schema-constrained output when supported by the selected model/runtime
+2. prompt-only JSON output followed by strict server validation
+
+Choose the mechanism with the lowest measured invalid-output and semantic-error rate.
+
+Even with runtime-enforced structure, Pydantic validation and deterministic slot grounding remain mandatory.
 
 ## 15. Inference settings
 
@@ -729,29 +892,80 @@ unknown
 
 AI failure must never convert into a less-safe execution path.
 
-## 17. Availability and startup
+## 17. Availability and startup — LM Studio + `start.bat`
 
-The Windows Agent should not fail to start because the local AI runtime is missing.
+The Windows Agent must not fail to start because LM Studio is missing, stopped, or unable to load the configured model.
 
-Recommended startup behavior:
+### 17.1 Startup responsibility
+
+When `LOCAL_AI_ENABLED=true`, `scripts/start.bat` should perform a lightweight LM Studio preflight.
+
+Target flow:
 
 ```text
-Agent starts
-    ↓
-load config
-    ↓
-AI enabled?
-  ├─ no  → normal deterministic mode
-  └─ yes → health check local AI
-             ├─ available   → mark ready
-             └─ unavailable → warning + fallback mode
+Task Scheduler / manual start
+        ↓
+scripts/start.bat
+        ↓
+check lms CLI availability
+        ↓
+check LM Studio server status
+        ├─ already running → continue
+        └─ stopped         → start server
+                              ↓
+                        bind loopback if possible
+                              ↓
+check/load configured model
+        ↓
+start Windows Siri Agent regardless of AI success
 ```
 
-Possible optional optimization:
+Conceptual LM Studio CLI operations:
 
-- warm the model after Agent startup
-- do not block health endpoint on model loading
-- expose only a minimal safe AI availability flag in authenticated `/info` if needed
+```text
+lms server status
+lms server start
+lms load <configured-model>
+```
+
+The exact CLI arguments must be verified against the installed LM Studio version during implementation.
+
+### 17.2 No duplicate server
+
+`start.bat` must not blindly launch a second LM Studio server if one is already running.
+
+### 17.3 AI startup failure is non-fatal
+
+Expected behavior:
+
+```text
+LM Studio ready
+→ AI fallback available
+
+LM Studio unavailable / model load failed
+→ warning
+→ Windows Siri Agent still starts
+→ deterministic parser continues working
+```
+
+AI is an enhancement, not a hard startup dependency.
+
+### 17.4 Warm-up
+
+After the Agent is operational, it may perform a non-blocking warm-up inference.
+
+Requirements:
+
+- do not block `/health`
+- do not prevent Agent startup
+- no user secrets in warm-up prompt
+- warm-up failure only disables AI fallback temporarily
+
+### 17.5 Current LAN endpoint caveat
+
+The reported `192.168.0.199:1234` endpoint can be used for development connectivity checks, but the final same-host deployment should attempt to use `127.0.0.1:1234`.
+
+If that is impossible because LM Studio is intentionally configured as a LAN server, document and review that exposure before acceptance.
 
 ## 18. Privacy boundary
 
@@ -787,7 +1001,7 @@ Recommended logs:
 
 ```text
 ai_enabled=true
-ai_backend=ollama
+ai_backend=lmstudio
 ai_model=<configured name>
 ai_result=intent_parsed | unknown | timeout | invalid_schema
 ai_duration_ms=<number>
@@ -826,33 +1040,30 @@ The architecture must assume the model can hallucinate or be prompt-injected.
 
 ## 21. High-risk commands
 
-Initial proposal:
+**Hard security rule: AI does not parse or authorize high-risk actions.**
 
-**Do not use AI to authorize high-risk actions.**
-
-Keep these deterministic-only:
+Keep permanently deterministic-only:
 
 - shutdown request / confirmation
 - force close
 - firewall/setup behavior
-- any future destructive action
+- any future destructive or system-administration action
 
-If a user says a vague phrase that AI interprets as shutdown, that interpretation should not directly trigger shutdown.
+If a vague utterance could mean shutdown or force-close, AI must not turn it into that action.
 
-Future expansion would require a separate security review.
+Changing this rule requires an explicit future security review and corresponding update to `docs/SECURITY.md`.
 
-## 22. Application commands
+## 22. Application commands — out of V1 AI scope
 
-For app control, AI may eventually normalize natural phrasing:
+Application open/close remains deterministic in the first AI version.
 
-```text
-幫我把 Discord 打開
-→ open_app("Discord")
-```
+Reason:
 
-But it only produces `app_query`.
+- current app grammar is comparatively simple
+- Spotify clarification provides much more UX value
+- keeping AI scope narrow reduces false-positive surface
 
-The existing flow remains:
+A future proposal may add AI-assisted `app_query` normalization, but the existing trusted flow must remain:
 
 ```text
 app_query
@@ -884,15 +1095,21 @@ Reasons:
 - behavior must work when AI is disabled
 - Spotify metadata comparison must not depend on model output consistency
 
-Therefore:
+Accepted review decision:
 
 ```text
-AI semantic understanding
-+
-deterministic Traditional/Simplified normalization
+raw text preserved
+        ↓
+deterministic normalization before AI
+        ↓
+AI semantic interpretation
+        ↓
+deterministic normalization + grounding after AI
+        ↓
+Spotify deterministic resolver
 ```
 
-not one or the other.
+Normalization should happen both before AI input and after AI output for comparison consistency, while the untouched raw utterance remains available for grounding/audit logic.
 
 ## 24. API changes
 
@@ -944,7 +1161,6 @@ clarification_token
   expires_at,
   type,
   trusted candidates,
-  optional client identity binding,
   used=false
 }
 ```
@@ -955,8 +1171,10 @@ Properties:
 - short TTL
 - bounded maximum entries
 - automatic cleanup
-- one-shot or explicitly controlled reuse
+- one-shot use only
 - server restart invalidates contexts
+
+Do not bind the token to client IP in V1. On a home LAN, short TTL + API authentication + one-time use is simpler and avoids failure when the phone's LAN address changes.
 
 This is acceptable for Siri clarification because losing a context only means the user repeats the command.
 
@@ -984,9 +1202,17 @@ Do not run the model for every Spotify candidate.
 
 Do not ask the model to rank Spotify results.
 
+Initial UX budget for evaluation:
+
+- target end-to-end Siri command response: approximately 2–3 seconds when practical
+- initial AI inference budget: approximately 1 second
+- these are evaluation targets, not hard-coded constants until measured on the real Windows host
+
+If AI exceeds its timeout, fall back safely instead of extending the execution path indefinitely.
+
 ## 27. Resource strategy
 
-Because the model target is <= 1 GB, keep the AI process modest:
+Tier A targets <= 1 GB model files, but <= 1 GB is a preferred resource target rather than a permanent architecture limit. Keep the AI process modest:
 
 - one loaded model
 - one request at a time is acceptable for V1
@@ -1006,16 +1232,16 @@ Suggested configuration surface:
 
 ```text
 LOCAL_AI_ENABLED=false
-LOCAL_AI_BACKEND=ollama
-LOCAL_AI_BASE_URL=http://127.0.0.1:11434
+LOCAL_AI_BACKEND=lmstudio
+LOCAL_AI_BASE_URL=http://127.0.0.1:1234/v1
 LOCAL_AI_MODEL=<name>
 LOCAL_AI_TIMEOUT_SECONDS=<value>
 ```
 
 Security validation:
 
-- base URL must be loopback
-- reject non-loopback URLs for V1
+- production same-host base URL should be loopback
+- the currently reported `192.168.0.199:1234` LAN endpoint is development-only unless separately approved
 - model name is local configuration only
 - remote API cannot change model/backend/base URL
 - remote API cannot edit prompts
@@ -1089,9 +1315,15 @@ Input:
 播放晴天
 ```
 
-The system must not accept an AI-invented artist/album as trusted user intent.
+The system must not accept an AI-invented track, artist, or album as trusted user intent.
 
-Implementation may need a field-grounding check or prompt/schema rule to enforce this.
+Required tests must verify deterministic grounding, including:
+
+- AI invents artist → artist forced null
+- AI invents album → album forced null
+- AI invents track → track forced null / request clarification
+- Simplified input + Traditional AI output still grounds correctly
+- short-string fuzzy false positives are rejected
 
 ### 29.5 Security tests
 
@@ -1141,12 +1373,16 @@ Measure:
 
 - intent accuracy
 - slot extraction accuracy
+- slot-grounding acceptance/rejection accuracy
+- hallucinated-slot rate
 - false positive action rate
 - unknown/reject rate
 - latency
 - memory usage
 
 For this project, false positive execution is more serious than returning `unknown`.
+
+If Tier A fails the fixed acceptance targets, evaluate Tier B rather than weakening grounding or schema validation.
 
 ## 30. Rollout plan
 
@@ -1177,11 +1413,11 @@ Enable AI only after deterministic parser cannot confidently resolve the command
 
 Scope:
 
-- Spotify natural language
-- low-risk playback controls
-- low-risk app open/close if approved
+- Spotify free-form play-track requests
+- low-risk Spotify playback controls if needed
+- no app open/close AI parsing in V1
 
-Keep high-risk actions deterministic-only.
+High-risk actions remain permanently deterministic-only.
 
 ### Phase 3 — Spotify clarification
 
@@ -1199,6 +1435,9 @@ Run:
 
 - unit/security suite
 - real local-model test dataset
+- structured-output vs prompt-only JSON comparison
+- Tier A resource/accuracy measurements
+- Tier B measurements only if Tier A fails acceptance targets
 - Windows Agent test
 - Spotify real account test
 - Siri Shortcut E2E
@@ -1235,8 +1474,8 @@ Prefer:
 
 ```text
 Agent
-→ narrow localhost HTTP adapter
-→ local runtime
+→ narrow HTTP adapter
+→ LM Studio local server
 ```
 
 over deeply coupling runtime-specific libraries throughout the project.
@@ -1249,25 +1488,43 @@ Any new package must be reviewed for:
 - Windows compatibility
 - transitive dependency size
 
-## 33. Open design questions for review
+## 33. Accepted decisions from first Claude review
 
-Claude / reviewer should specifically challenge the following:
+The first external review is accepted as follows:
 
-1. Should AI be fallback-only, or should all free-form Spotify requests use AI?
-2. How do we prevent slot hallucination beyond prompt instructions?
-3. Should `select_candidate` be an AI intent, or a separate clarification domain model outside `ValidatedAction`?
-4. Should clarification tokens be one-use or reusable until expiry?
-5. Should clarification context bind to client IP in addition to API authentication?
-6. Is in-memory TTL storage sufficient?
-7. Should app open/close be included in the first AI scope, or Spotify only?
-8. Should shutdown / force-close be permanently excluded from AI parsing?
-9. Which structured-output mechanism is most reliable for the selected local runtime?
-10. What latency threshold should trigger fallback to deterministic `unknown`?
-11. Should a model be warmed at startup or loaded lazily?
-12. What is the safest way to verify that artist/album fields were actually grounded in the user's utterance?
-13. Is the current `/command` API the right place for clarification follow-up, or should a dedicated endpoint be used?
-14. Are there security risks in sending candidate display metadata to the local model that are not covered here?
-15. Should Traditional/Simplified normalization happen before AI input, after AI output, or both?
+1. AI remains fallback-only.
+2. Slot hallucination is controlled by deterministic grounding, not prompt trust.
+3. Clarification uses a separate `ClarificationSelection` model rather than overloading `ValidatedAction`.
+4. Clarification token is one-time use.
+5. Clarification token is not bound to client IP in V1.
+6. In-memory TTL storage is sufficient.
+7. V1 AI scope is Spotify only.
+8. Shutdown / confirmation / force-close remain permanently outside AI parsing.
+9. Structured-output mechanism is selected empirically; LM Studio schema-constrained output and prompt-only JSON are both evaluated.
+10. Initial AI inference target is ~1 second, with ~2–3 second end-to-end Siri UX as a practical evaluation goal.
+11. Model warm-up is non-blocking after startup.
+12. `track`, `artist`, and `album` all require deterministic grounding.
+13. Clarification remains on `POST /command` with an optional token rather than adding a new endpoint.
+14. Only minimal safe candidate display metadata may enter LM Studio; secrets never do.
+15. Traditional/Simplified normalization occurs before AI input and after AI output/comparison, while raw input is preserved.
+16. Tier A (~0.5B–0.8B) is preferred; Tier B (~1B–1.5B) is the planned fallback if measured accuracy is insufficient.
+17. LM Studio is the V1 local runtime.
+18. `start.bat` should preflight/start LM Studio when AI is enabled, but AI startup failure must not prevent Agent startup.
+
+### Remaining questions for second review
+
+Claude / reviewer should now focus on unresolved implementation details:
+
+1. Is the proposed deterministic slot-grounding algorithm strict enough, especially for Chinese word segmentation and fuzzy matching?
+2. Should `track` being ungrounded invalidate the whole `spotify_play_track` interpretation rather than merely setting it to null?
+3. What TTL and one-time-consumption moment should clarification tokens use: on receipt, on successful selection, or on any attempted use?
+4. What exact LM Studio API feature should enforce structured output for the selected model/version?
+5. How should `start.bat` discover the configured LM Studio model reliably without coupling to a GUI display name?
+6. If LM Studio remains reachable at `192.168.0.199:1234`, what firewall/authentication controls are required, or should acceptance require rebinding to loopback?
+7. Should model warm-up be initiated by `start.bat` or by the Agent after its own API becomes healthy?
+8. What concrete thresholds should Tier A have to meet before Tier B is considered?
+9. Is one strict retry for malformed AI output useful, or does it add latency without enough benefit?
+10. Are there any ways clarification candidate display text could itself cause prompt-injection behavior that bypasses selection constraints?
 
 ## 34. Recommended initial scope
 
@@ -1277,10 +1534,11 @@ For the first implementation, keep scope intentionally narrow:
 AI handles:
 - free-form Spotify play-track intent
 - clarification candidate selection
-- optionally low-risk Spotify controls
+- optionally simple Spotify playback controls
 
 AI does not handle:
-- shutdown
+- app open/close in V1
+- shutdown / shutdown confirmation
 - force close
 - firewall
 - arbitrary websites
@@ -1326,7 +1584,7 @@ Do not enable Local AI by default until all applicable items are proven:
 
 - [ ] architecture/security review completed
 - [ ] strict AI output schema implemented
-- [ ] AI runtime restricted to loopback
+- [ ] LM Studio runtime is loopback-only in accepted production config, or LAN exposure has separate explicit security approval
 - [ ] AI unavailable does not break Agent
 - [ ] cloud fallback does not exist
 - [ ] no secrets sent to AI runtime
@@ -1339,9 +1597,11 @@ Do not enable Local AI by default until all applicable items are proven:
 - [ ] max-three clarification context implemented
 - [ ] arbitrary candidate/track IDs rejected
 - [ ] clarification expiry/replay behavior tested
-- [ ] hallucinated artist/album handling tested
+- [ ] hallucinated track/artist/album deterministic grounding tested
 - [ ] unit/security tests pass
-- [ ] selected local model evaluated on fixed Chinese test set
+- [ ] LM Studio integration/startup preflight tested
+- [ ] Tier A model evaluated on fixed Chinese test set
+- [ ] Tier B evaluated only if Tier A misses acceptance targets
 - [ ] Windows real-machine test passes
 - [ ] Spotify real-account test passes
 - [ ] Siri Shortcut E2E passes
@@ -1351,7 +1611,7 @@ Do not enable Local AI by default until all applicable items are proven:
 
 ## Review request
 
-Please review this proposal as an architecture and security design, not as a finished implementation.
+Please perform a **second-round** architecture and security review. The first Claude review has been incorporated into Section 33; treat those items as proposed accepted decisions and challenge them if any are unsafe or internally inconsistent. This is still not a finished implementation.
 
 In particular, identify:
 
