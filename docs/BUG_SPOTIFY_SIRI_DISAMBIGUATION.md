@@ -342,6 +342,181 @@ track + artist -> trusted Spotify track_id
 - 不允許 remote client 直接指定 track URI
 - trusted track reference 仍必須來自 Spotify API
 
+## 開源實作研究與可借鑑方向
+
+本問題不應完全從零設計。實作前應研究現有開源專案中成熟的音樂 matching / version resolution 思路，再以本專案既有安全架構重新實作。
+
+重點不是直接引入大型 dependency，而是借鑑可驗證的 matching 方法。
+
+### Music Assistant
+
+可研究其 track / album identity 與 provider matching 設計，特別是：
+
+- external IDs
+- ISRC
+- artist identity
+- album identity
+- version
+- duration
+- 跨 provider 的同一錄音辨識
+
+對本專案最重要的價值是：
+
+> 不要只看顯示名稱；能取得穩定 identity metadata 時，應優先使用它協助判斷「是否為同一錄音」。
+
+### GuessSong 類型的 matching
+
+可借鑑：
+
+- title qualifier normalization
+- artist collaboration / feat. 拆解
+- title + artist + duration 的多欄位比對
+- 不把搜尋結果第一筆直接視為正確答案
+
+例如：
+
+```text
+Karma Police
+Karma Police - Remastered 2011
+```
+
+應把版本 qualifier 與核心 title 分開理解，而不是單純把整串 title 當不同歌曲。
+
+### SpotiSync 類型的 version classifier
+
+可研究其對常見版本文字的辨識方式，建立本專案自己的封閉 version classifier。
+
+至少考慮：
+
+```text
+Live
+Concert
+Tour
+演唱會
+現場版
+Acoustic
+Remix
+Remastered
+Remaster
+Demo
+Instrumental
+Radio Edit
+Deluxe
+Anniversary
+Reissue
+Karaoke
+Tribute
+Cover
+Sped Up
+Slowed
+```
+
+這些字串只能用於 metadata classification / ranking。
+
+不得因此產生任何可執行命令。
+
+### Confidence-based matching
+
+應從單一條件判斷：
+
+```python
+if multiple_exact_titles:
+    ambiguous
+```
+
+升級成多訊號 resolver。
+
+建議概念流程：
+
+```text
+Spotify candidates
+        ↓
+core title normalization
+        ↓
+artist grouping / matching
+        ↓
+version classifier
+        ↓
+album context
+        ↓
+ISRC / external identity（若可取得）
+        ↓
+duration similarity（若可取得）
+        ↓
+candidate score
+        ↓
+top-1 vs top-2 confidence gap
+        ↓
+差距足夠 → 自動播放
+差距不足 → 要求使用者補充
+```
+
+### ISRC
+
+若 Spotify Search / Track metadata 可安全取得 ISRC，應考慮把它納入「同一錄音」判斷。
+
+ISRC 特別適合處理：
+
+```text
+original album
+deluxe edition
+compilation
+reissue
+anniversary edition
+```
+
+如果多個候選：
+
+- artist 相同
+- core title 相同
+- ISRC 相同
+
+則很可能是同一錄音在不同 release 中重複出現。
+
+此時不應因 album 名稱不同就一律要求 Siri 釐清。
+
+但 ISRC 也不能單獨代表「使用者要的版本」，因為：
+
+- Live recording 通常應視為不同錄音
+- remaster / rerelease metadata 可能存在平台差異
+- metadata 可能缺失
+
+因此 ISRC 應是高價值 identity signal，而不是唯一判定條件。
+
+### Duration
+
+若候選 metadata 可取得 duration，可作為弱 identity signal。
+
+例如：
+
+```text
+studio: 269 sec
+live:   347 sec
+```
+
+即使 title 相同，duration 差距明顯也可以協助判斷不是同一錄音。
+
+duration 的用途：
+
+- 協助區分 studio / live
+- 協助判斷同一錄音的不同 release
+- 輔助 confidence scoring
+
+不可把 duration 當成唯一依據。
+
+### Dependency 原則
+
+研究上述專案時：
+
+- 優先借設計與演算法
+- 不因為某專案已實作 matching 就整包引入
+- 若只需要少量 normalization / scoring 邏輯，直接在本專案實作
+- 引用或移植程式碼前必須確認 license
+- 保持 V1 rule-based、deterministic、可測試
+- 不因此加入 LLM
+- 不因此建立 generic Spotify proxy
+- 不改變既有 TrustedAction / SpotifyTrackRef 安全邊界
+
 ## 建議的 Ranking 概念
 
 以下只是設計方向，不要求直接照分數硬編碼：
@@ -468,6 +643,9 @@ Siri Text
 
 - [ ] 自然中文專輯 / 版本提示解析完成
 - [ ] studio / original vs Live ranking 規則完成
+- [ ] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
+- [ ] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
+- [ ] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
 - [ ] 未指定 Live 時，不會因為存在 Live 候選就一律報 ambiguous
 - [ ] 明確指定 Live 時能優先 Live 版本
 - [ ] 真正無法判斷時仍會安全回 ambiguous
