@@ -6,13 +6,13 @@
 
 ## Current Phase
 
-目前階段：**Spotify 消歧產品規則第二輪修正（Live 排除、繁簡正規化、最多三選一 Siri 反問）**
+目前階段：**Local AI Phase 0.5 可行性 PoC 準備 + Siri clarification E2E 待驗收**
 
-先前的 studio/Live 排序實作與 Windows + Spotify 驗收已完成。2026-09-18 新規則的 source implementation、unit/security tests 與 Windows Agent 直接驗證已完成；目前仍不能把 iPhone Siri Shortcut 的候選朗讀、token 保存與第二輪選擇標成完成。
+先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。正式接入前先做獨立 Phase 0.5 模型可行性 PoC；iPhone Siri Shortcut 的候選朗讀、token 保存與第二輪選擇仍未完成 E2E。
 
 ## Completed / Decided
 
-- V1 使用 Rule-based Parser，不使用 LLM。
+- V1 保留 Rule-based Parser 為第一層，並允許 Local LLM 作 fallback semantic parser；AI 不得直接執行或繞過 ValidatedAction / deterministic resolver / trusted-object 邊界。
 - Windows Agent 必須執行在目前登入使用者的 interactive session。
 - 自動啟動使用 Task Scheduler `At log on`。
 - Remote API 不是 remote shell；不允許任意 CMD / PowerShell / executable path / arbitrary URL。
@@ -46,6 +46,17 @@
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
 - `暫停`、`暫停音樂`、`pause music` 與簡體 `暂停音乐` 都收斂到封閉的 `spotify_pause` action；不回退到通用系統媒體控制。
+
+## Local AI Product Decision (2026-09-18)
+
+- 舊規則「V1 不得加入 LLM integration」已取消。
+- V1 允許 **Local LLM**，目前指定 runtime 方向為 LM Studio；不使用雲端 LLM fallback。
+- AI 採 rule-first / fallback-only；第一版 AI scope 只處理 Spotify free-form semantic parsing 與 clarification selection。
+- AI 輸出必須通過 strict closed schema 與 deterministic slot grounding；`track` 未 grounded 時不得建立 `spotify_play_track`。
+- shutdown / shutdown confirmation / force-close / firewall / system-administration 永久不交給 AI 解析。
+- LM Studio 若與 Agent 同機，production acceptance 目標為 loopback (`127.0.0.1:1234`)；目前使用者回報的 `192.168.0.199:1234` 只視為開發/測試 endpoint，尚未視為正式安全配置。
+- 完整架構提案見 `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md`。
+- 下一步是獨立 **Phase 0.5 model feasibility PoC**；此決策不代表 Local AI 已接入正式 Agent。
 
 ## New Product Decision / Implementation State (2026-09-18)
 
@@ -136,6 +147,9 @@ D:\ai\windows-siri-agent\scripts\start.bat
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
+- Local AI 已接入正式 Agent 或已通過模型可行性驗收。
+- LM Studio 已完成 production loopback-only 安全配置。
+- Phase 0.5 的 0.5–0.8B / 1–1.5B / ~3B baseline 模型比較已完成。
 - Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
 - Siri Shortcut 已完成包含歌曲消歧、候選反問與第二輪選擇的完整端到端播放驗收。
 
