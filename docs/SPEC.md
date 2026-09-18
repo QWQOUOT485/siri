@@ -14,7 +14,7 @@
 
 ## 2. 核心功能與指令 (Core Features & Commands)
 
-本產品內建基於規則的指令解析器 (Rule-based Command Parser)，**不使用 AI/LLM**（無 OpenAI、Claude 等付費 API）。支援繁體中文與基本英文指令。
+本產品保留基於規則的指令解析器 (Rule-based Command Parser) 作為第一層，並允許在 Windows 本機加入小型 Local LLM 作為 **fallback 語意解析器**。Local LLM 僅可將自然語言收斂成封閉 schema，不得直接控制 Windows、Spotify、shell、URL、executable path 或其他執行目標。V1 不使用雲端付費 LLM API；高風險操作（shutdown / force-close / firewall / system administration）永久維持 deterministic-only。詳細設計見 `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md`。
 
 ### 2.1 應用程式操作 (Application Control)
 - **開啟程式 (open_app)**：安全啟動應用程式。
@@ -115,7 +115,7 @@ Agent 會自動找出 Windows 電腦上已安裝的應用程式，建立「應�
 - **診斷功能 (Diagnostics)**：提供應用程式探索的本機診斷日誌，方便排查未找到特定程式的原因。
 
 ## 6. 產品演進與架構擴充 (Future Extensibility)
-第一版架構著重於安全與核心體驗。未來可彈性擴充整合 LLM 智慧解析、智慧家庭 (Smart Home) 及更進階的電腦自動化控制，但首發版本將暫不實作。
+第一版架構仍以安全與核心體驗為優先，但 Local LLM 語意 fallback 已允許納入 V1，前提是先通過獨立模型 PoC、schema/grounding/security 測試與實機驗收。AI 不是執行引擎，現有 deterministic resolver 與 trusted-object execution boundary 不得被取代。未來仍可擴充智慧家庭 (Smart Home) 及更進階的自動化控制，但任何高風險 AI 執行能力都需要另行安全審查。
 
 ## 7. 開發原則
 - 優先順序：安全 > 能正常使用 > Siri Shortcut 簡單 > 自動辨識已安裝程式 > LAN 跨 Wi-Fi/subnet > 穩定 > 容易安裝 > 容易維護 > UI 漂亮。
