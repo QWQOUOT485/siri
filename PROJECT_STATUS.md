@@ -59,6 +59,16 @@
 - 實測預計由 Codex 在真實 Windows + LM Studio 環境依 runbook 執行；尚未執行前，不得把任何模型標成通過。
 - 目前 LM Studio 開發 endpoint 由使用者回報為 `http://192.168.0.199:1234`；production same-host target 仍為 loopback `127.0.0.1:1234`。
 
+## Local AI Phase 0.5 PoC Execution Attempt (2026-09-19)
+
+- 已新增隔離的 `scripts/ai_model_poc.py`、`tests/fixtures/ai_intent_cases.json`（103 筆固定測資）與 `tests/unit/test_ai_model_poc.py`。
+- PoC 目前只呼叫 LM Studio OpenAI-compatible API，使用 strict Pydantic schema、OpenCC canonical grounding、hostile-input fail-closed 檢查與本地 CSV/JSONL/SUMMARY 輸出；未接入 `/command`、`app.main`、Spotify 播放、Windows adapters、shutdown、firewall 或 `start.bat`。
+- 新增 PoC unit test 6 passed；完整 `tests/unit` 為 92 passed，保留 2 個既有 dependency deprecation warnings。
+- 實機 preflight 的最後讀回為：`http://192.168.0.199:1234/v1/models` 僅回傳 `text-embedding-nomic-embed-text-v1.5`；`lms ps` 顯示沒有載入模型；`lms load qwen3.5-0.8b --identifier=qwen3.5-0.8b -y` 回報找不到目前 indexed model key。
+- 三個候選 GGUF 實體仍存在於 `D:\ai` 下，且固定前 4 bytes 均為 `GGUF`：Qwen3.5 0.8B（529,297,312 bytes）、Qwen3 4B（2,497,280,800 bytes）、Qwen2.5 Coder 1.5B Instruct（986,048,576 bytes）。目前 LM Studio library / `lms ls` / `/v1/models` 沒有列出它們；因此現況較符合「外部下載檔尚未被目前 LM Studio library 登記/匯入」，不是檔案已刪除。
+- 因此三個候選 LLM 的 benchmark 尚未執行，沒有任何模型通過、沒有 production model recommendation，也沒有 Local AI production integration claim。
+- Blocker / 下一步：使用 LM Studio 的 import/rescan 流程把現有 GGUF 納入目前 models library（優先採保留原檔的 copy/link 方式，尚未執行），再讀回 exact `/v1/models` ID，依 runbook 用同一份 103-case fixture 執行 prompt/schema 兩種模式。不得把 embedding 模型當候選或重新下載相同檔案。
+
 ## Local AI Product Decision (2026-09-18)
 
 - 舊規則「V1 不得加入 LLM integration」已取消。
@@ -113,6 +123,11 @@
 - README、SPEC、Spotify、Siri Shortcut 與本地 AI 測試文件已同步改用完整中文口令；原始唯讀 `docs/SOURCE_SPEC.md` 未修改。
 - source parser tests 已通過；部署後 runtime parser 直接驗證 `下一首歌` / `上一首歌` 可解析，四個舊中文短口令均回傳 `INVALID_COMMAND`。新的 Siri 端到端口令尚未重新驗證，完成前不把新口令標成 Siri acceptance。
 - 最新一次 iPhone 嘗試沒有在 Agent log 產生 `spotify_previous`；手機端出現 `parse_command` 的 `INVALID_COMMAND`，其他相鄰請求仍是 `spotify_next`。因此「上一首歌」的 Siri → Shortcut 交接仍未通過，不能把 Siri 的「設在什麼時候」誤判成 Spotify 播放錯誤。
+
+## Scope Decision: 暫停上下歌 Siri 功能 (2026-09-19)
+
+- 使用者決定放棄 Siri 的下一首／上一首控制，不再追查 Siri 將語音攔截為原生媒體或排程指令的問題。
+- V1 目前聚焦播放、暫停與指定歌曲；既有 `spotify_next` / `spotify_previous` closed actions 暫保留在 Agent code，不列入後續 Siri acceptance，也不因 Siri 問題擴大 alias。
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
