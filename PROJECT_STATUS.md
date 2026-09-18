@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Spotify 真實播放驗收（Windows Agent 控制與 token refresh 已通過，Shortcut 待驗收）**
+目前階段：**Spotify 真實播放驗收（Windows Agent 控制與 token refresh 已通過，Shortcut 因歌名歧義待修正後驗收）**
 
-規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制與 token refresh 驗收。下一個關卡是 Siri Shortcut 端到端流程。
+規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制與 token refresh 驗收。Siri Shortcut 實機流程已發現語音內容不足以消除同名現場版本歧義，需先修正語音輸入／選曲策略，再完成端到端驗收。
 
 ## Completed / Decided
 
@@ -50,10 +50,18 @@
 - Spotify Connect 裝置已被 Agent 找到。
 - `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
 - `暫停` 與 `下一首` 實際回傳成功。
-- 未指定專輯的 `播放晴天` 實際回傳成功並選到 `晴天` / `葉惠美`；測試最後再次暫停。
+- 直接對 Windows Agent 測試未指定專輯的 `播放晴天` 曾實際回傳成功並選到 `晴天` / `葉惠美`；測試最後再次暫停。這不是 Siri Shortcut 端到端結果。
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - 測試完成後 Agent 已停止，8000 port 已釋放。
 - API key 未出現在測試 log 中。
+
+## Known Blocker: Siri Shortcut 歌名／現場版本歧義 (2026-09-18)
+
+- 實機重現時，Siri Shortcut 實際送到 Agent 的文字只有 `播放晴天`，沒有帶歌手或專輯提示。
+- Spotify 搜尋回報 `SPOTIFY_AMBIGUOUS_TRACK`，候選包含原版 `晴天`／`葉惠美`、`2004無與倫比演唱會` 及其他 `Live` 版本；Agent 正確拒絕隨機播放。因此目前不是 OAuth、Connect 裝置或 Spotify 播放控制失敗，而是 Shortcut 語音輸入與選曲消歧尚未完成。
+- 現有 `播放周杰倫的晴天 (葉惠美)` 可作為文字測試提示，但括號形式不是可靠的語音介面；Siri 可能把括號內容念成普通詞語或改變順序。
+- 期望的語音形式包括 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`；若使用者沒有說明 Live，產品也需要明確決定是否優先選原版／正式專輯，只有明確說「現場版」時才選 Live。若仍有多個合理候選，應繼續要求補充，不得隨機播放。
+- 下一步：新增並測試自然中文的歌手／歌名／專輯或版本解析，定義「未指定 Live 時」的安全排序規則，再重新跑實際 Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
 
 ## Current Local Acceptance Gate
 
@@ -81,14 +89,15 @@ D:\ai\windows-siri-agent\scripts\start.bat
 4. 若尚未授權，呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
 5. 驗證 `/spotify/status`。
 6. 尚待真實測試：
-   - iPhone Siri Shortcut 端到端播放
+   - 修正歌手／歌名／專輯或版本提示後，重新驗證 iPhone Siri Shortcut 端到端播放
 7. Siri Shortcut 成功後，才算完成 V1 的完整播放驗收。
 
 ## Important: What Is NOT Yet Proven
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
-- Siri Shortcut 已完成端到端播放驗收。
+- Siri Shortcut 已完成端到端播放驗收；目前已知裸歌名 `播放晴天` 可能因原版／現場版候選歧義而被安全拒絕。
+- Siri 以自然語音表達專輯／版本提示時，Parser 能穩定抽取並完成選曲。
 
 目前這些是「下一階段驗收項目」，不是既成事實。
 
