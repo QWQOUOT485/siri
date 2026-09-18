@@ -102,7 +102,22 @@ Windows built-in tools (Task Manager, Settings, Calculator, etc.) maintained as 
 
 ## Media Control
 
-Best-effort. Acts on current active media session. Cannot guarantee single-app control. V1 has no specific app selection logic. README must explain.
+Media transport remains best-effort at the Windows layer. `pause`, next, and previous normally act on the current active media session and cannot guarantee single-app control.
+
+Playback adds one constrained provider-selection flow:
+
+1. Parser receives a bare `play` request with no provider.
+2. CommandService returns a clarification result instead of guessing.
+3. Allowed V1 provider IDs are a closed allowlist: `youtube_music`, `apple_music`, `spotify`.
+4. Siri/Shortcut obtains the user's choice and sends it back.
+5. Domain validation maps the provider ID to a trusted internal provider definition.
+6. The service resolves only trusted Catalog/system mappings for that provider and performs playback best-effort.
+
+This is **not** a general-purpose app selector. Provider text from the remote client must never become an executable path, command, argument, or arbitrary URL. Unknown provider values are rejected.
+
+If the initial command already includes a known provider, the clarification round trip may be skipped.
+
+README must still explain that media transport ultimately depends on Windows/media-app behavior and may not be able to guarantee a specific active session in every case.
 
 ## Directory Structure (v2)
 
@@ -188,6 +203,6 @@ windows-siri-agent/
 7. **Catalog 使用穩定 `app_id`**：Matcher 找到程式後，後續流程（`/apps/search` 回傳、`/action` 執行）盡量透過 `app_id` 傳遞，避免重複用 display name 比對造成同名程式、大小寫、fuzzy match 不一致的問題。
 8. **Windows 內建工具走 `system_apps` mapping**：Task Manager、Settings、Calculator 等視為 Trusted Launch Source 的固定入口，不依賴一般 Discovery，也不算「把所有應用程式寫死」。
 9. **測試分兩類**：`tests/unit/`（mock 化，可在任何環境含本容器完整執行）與 `tests/integration_windows/`（只能在真實 Windows 執行，且明確禁止 shutdown / lock / force kill 等破壞性操作，只做唯讀或安全的探測）。
-10. **Media control 維持 best-effort 標記**：沿用 v1 設計，README 明確說明系統層 media control 作用於目前 active media session，無法保證只控制單一 app；第一版不做特定 app 選擇邏輯。
+10. **Media control 維持 best-effort，但裸 `play` 需做受限 provider 釐清**：pause/next/previous 仍作用於目前 active media session；當 play 未指定來源時，以 `youtube_music` / `apple_music` / `spotify` 封閉白名單要求使用者選擇。這不是任意 app selector，遠端字串不可形成 executable path、command、argument 或 arbitrary URL。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).
