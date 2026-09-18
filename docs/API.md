@@ -124,3 +124,11 @@ See [Security](SECURITY.md#shutdown-two-step-confirmation) for token security re
 - Simple per-IP per-minute limit
 - Don't block normal Siri usage
 - Applied at infrastructure/middleware layer
+
+## Spotify Authorization and Status
+
+- `GET /spotify/status` — requires authentication; returns only local authorization status, scope, and expiry metadata.
+- `GET /spotify/auth/start` — requires authentication; returns a Spotify PKCE authorization URL.
+- `GET /spotify/callback` — loopback-only OAuth callback; it never returns or logs tokens.
+
+Spotify access and refresh tokens remain in the Windows `runtime` directory. iPhone/Siri only sends natural-language text to `/command` and never receives a token.

@@ -1,0 +1,144 @@
+"""Small, fixed-endpoint Spotify Web API adapter.
+
+This module deliberately exposes named operations instead of a generic HTTP
+proxy.  Remote command text never reaches this adapter as a URL or endpoint.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+import httpx
+
+
+class SpotifyApiError(RuntimeError):
+    """An expected Spotify API or network failure without response secrets."""
+
+    def __init__(self, status_code: int | None, message: str, *, retry_after_seconds: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.retry_after_seconds = retry_after_seconds
+
+
+class SpotifyApiClient:
+    """Adapter for the allowlisted Spotify Accounts and Web API operations."""
+
+    def __init__(
+        self,
+        *,
+        http_client: httpx.Client | None = None,
+        api_base_url: str = "https://api.spotify.com/v1",
+        accounts_base_url: str = "https://accounts.spotify.com",
+    ) -> None:
+        self.http_client = http_client or httpx.Client(timeout=15.0, follow_redirects=True)
+        self.api_base_url = api_base_url.rstrip("/")
+        self.accounts_base_url = accounts_base_url.rstrip("/")
+
+    def close(self) -> None:
+        self.http_client.close()
+
+    def search_tracks(self, access_token: str, query: str, *, limit: int = 10) -> list[dict[str, Any]]:
+        payload = self._api_json(
+            "GET",
+            "/search",
+            access_token=access_token,
+            params={"q": query, "type": "track", "limit": str(max(1, min(limit, 50)))},
+        )
+        tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
+        items = tracks.get("items", []) if isinstance(tracks, dict) else []
+        return [item for item in items if isinstance(item, dict)]
+
+    def get_devices(self, access_token: str) -> list[dict[str, Any]]:
+        payload = self._api_json("GET", "/me/player/devices", access_token=access_token)
+        devices = payload.get("devices", []) if isinstance(payload, dict) else []
+        return [device for device in devices if isinstance(device, dict)]
+
+    def transfer_playback(self, access_token: str, device_id: str, *, play: bool = False) -> None:
+        self._api_json(
+            "PUT",
+            "/me/player",
+            access_token=access_token,
+            json={"device_ids": [device_id], "play": play},
+        )
+
+    def start_resume(self, access_token: str, *, device_id: str | None = None, track_uri: str | None = None) -> None:
+        params = {"device_id": device_id} if device_id else None
+        body = {"uris": [track_uri]} if track_uri else None
+        self._api_json("PUT", "/me/player/play", access_token=access_token, params=params, json=body)
+
+    def pause(self, access_token: str, *, device_id: str | None = None) -> None:
+        self._api_json("PUT", "/me/player/pause", access_token=access_token, params=self._device_params(device_id))
+
+    def next(self, access_token: str, *, device_id: str | None = None) -> None:
+        self._api_json("POST", "/me/player/next", access_token=access_token, params=self._device_params(device_id))
+
+    def previous(self, access_token: str, *, device_id: str | None = None) -> None:
+        self._api_json("POST", "/me/player/previous", access_token=access_token, params=self._device_params(device_id))
+
+    def exchange_code(self, client_id: str, code: str, redirect_uri: str, code_verifier: str) -> dict[str, Any]:
+        return self._accounts_json(
+            "POST",
+            "/api/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "client_id": client_id,
+                "code_verifier": code_verifier,
+            },
+        )
+
+    def refresh_token(self, client_id: str, refresh_token: str) -> dict[str, Any]:
+        return self._accounts_json(
+            "POST",
+            "/api/token",
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": client_id},
+        )
+
+    @staticmethod
+    def _device_params(device_id: str | None) -> Mapping[str, str] | None:
+        return {"device_id": device_id} if device_id else None
+
+    def _api_json(self, method: str, path: str, *, access_token: str, **kwargs) -> dict[str, Any]:
+        headers = dict(kwargs.pop("headers", {}) or {})
+        headers["Authorization"] = f"Bearer {access_token}"
+        headers.setdefault("Accept", "application/json")
+        return self._request_json(method, f"{self.api_base_url}{path}", headers=headers, **kwargs)
+
+    def _accounts_json(self, method: str, path: str, *, data: Mapping[str, str]) -> dict[str, Any]:
+        return self._request_json(
+            method,
+            f"{self.accounts_base_url}{path}",
+            headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"},
+            data=data,
+        )
+
+    def _request_json(self, method: str, url: str, *, headers: Mapping[str, str] | None = None, **kwargs) -> dict[str, Any]:
+        try:
+            response = self.http_client.request(method, url, headers=headers, **kwargs)
+        except httpx.HTTPError as exc:
+            raise SpotifyApiError(None, "Spotify 網路連線失敗。") from exc
+
+        if response.status_code >= 400:
+            retry_after = self._retry_after(response)
+            messages = {
+                401: "Spotify 授權已失效。",
+                403: "Spotify 拒絕這項播放操作，請確認 Premium 與帳戶狀態。",
+                429: "Spotify 目前請求過多，請稍後再試。",
+            }
+            raise SpotifyApiError(response.status_code, messages.get(response.status_code, "Spotify API 請求失敗。"), retry_after_seconds=retry_after)
+        if response.status_code == 204 or not response.content:
+            return {}
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise SpotifyApiError(response.status_code, "Spotify 回應格式無效。") from exc
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
+    def _retry_after(response: httpx.Response) -> int | None:
+        value = response.headers.get("Retry-After")
+        try:
+            return max(0, min(int(value), 3600)) if value is not None else None
+        except (TypeError, ValueError):
+            return None

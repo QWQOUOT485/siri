@@ -1,0 +1,29 @@
+websites:
+  - id: youtube
+    display_name: YouTube
+    aliases: [youtube, youtube video]
+    url: https://www.youtube.com/
+  - id: youtube_music
+    display_name: YouTube Music
+    aliases: [youtube music, yt music, 音樂]
+    url: https://music.youtube.com/
+  - id: spotify_web
+    display_name: Spotify Web
+    aliases: [spotify web, spotify 網頁版]
+    url: https://open.spotify.com/
+  - id: netflix
+    display_name: Netflix
+    aliases: [netflix]
+    url: https://www.netflix.com/
+  - id: google
+    display_name: Google
+    aliases: [google, 谷歌]
+    url: https://www.google.com/
+  - id: chatgpt
+    display_name: ChatGPT
+    aliases: [chatgpt, chat gpt]
+    url: https://chatgpt.com/
+  - id: github
+    display_name: GitHub
+    aliases: [github, git hub]
+    url: https://github.com/
