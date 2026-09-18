@@ -14,6 +14,28 @@ Behavior rules for coding agents working on this project.
 9. If modifying Spotify/music playback → read docs/SPOTIFY.md + docs/SECURITY.md
 10. After completing work → run relevant tests per docs/TESTING.md
 
+## Project Status Handoff
+
+`PROJECT_STATUS.md` is the mandatory project-state handoff for future chats and coding agents.
+
+Before finishing any task that changes the real project state, the agent MUST update `PROJECT_STATUS.md`.
+
+Update it when any of the following changes:
+- a milestone is completed
+- a real-world acceptance test passes or fails
+- implementation status materially changes
+- a blocker is discovered, changed, or resolved
+- the current phase changes
+- the next required action changes
+
+Rules:
+- Do NOT mark a feature complete merely because code, documentation, or mocked tests exist.
+- Record real Windows / Spotify / Siri validation separately from code/spec/mock-test completion.
+- If a real-world test was not run, explicitly keep it under Not Yet Proven or equivalent status.
+- Keep the file concise and current; remove or replace stale next-step information when superseded.
+- Never write secrets, API keys, OAuth tokens, passwords, or private credentials into `PROJECT_STATUS.md`.
+- A task that does not change project state (for example, explanation-only work) does not require a status-file edit.
+
 ## Document Priority
 ```
 SECURITY.md
