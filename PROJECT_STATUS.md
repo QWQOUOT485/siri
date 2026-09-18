@@ -47,6 +47,18 @@
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
 - `暫停`、`暫停音樂`、`pause music` 與簡體 `暂停音乐` 都收斂到封閉的 `spotify_pause` action；不回退到通用系統媒體控制。
 
+## Local AI Phase 0.5 Preparation (2026-09-18)
+
+- 使用者已在 LM Studio 下載三個 planned benchmark candidates：
+  - Qwen3 0.6B
+  - Qwen2.5 1.5B Instruct
+  - Qwen3 4B
+- 以上模型目前只確認「已下載」，**尚未完成 benchmark、尚未選定 production model**。
+- Phase 0.5 實測 runbook 已建立：`docs/LOCAL_AI_MODEL_POC_RUNBOOK.md`。
+- Runbook 要求三個模型使用同一份固定測資，分別測 prompt-only JSON 與 structured-output（若支援），並量測 intent/semantic accuracy、hallucination、post-grounding false accept、false execution、clarification accuracy、P50/P95 latency 與資源使用。
+- 實測預計由 Codex 在真實 Windows + LM Studio 環境依 runbook 執行；尚未執行前，不得把任何模型標成通過。
+- 目前 LM Studio 開發 endpoint 由使用者回報為 `http://192.168.0.199:1234`；production same-host target 仍為 loopback `127.0.0.1:1234`。
+
 ## Local AI Product Decision (2026-09-18)
 
 - 舊規則「V1 不得加入 LLM integration」已取消。
@@ -149,7 +161,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 
 - Local AI 已接入正式 Agent 或已通過模型可行性驗收。
 - LM Studio 已完成 production loopback-only 安全配置。
-- Phase 0.5 的 0.5–0.8B / 1–1.5B / ~3B baseline 模型比較已完成。
+- Phase 0.5 的 Qwen3 0.6B / Qwen2.5 1.5B Instruct / Qwen3 4B 模型比較已完成。
 - Siri Shortcut 已能朗讀候選、反問使用者並完成第二輪 clarification。
 - Siri Shortcut 已完成包含歌曲消歧、候選反問與第二輪選擇的完整端到端播放驗收。
 
