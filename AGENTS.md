@@ -56,7 +56,7 @@ TASKS cannot override security or product specifications.
 - NEVER delete security tests to make CI pass
 - NEVER commit secrets (.env, API keys)
 - NEVER add public network access
-- NEVER add LLM integration (v1)
+- Local LLM integration is allowed in V1 only under the approved safety architecture: rule-first/fallback-only, closed schema, deterministic grounding, no direct execution, and no AI handling of shutdown/force-close/firewall/system-administration actions.
 - NEVER add Remote Shell
 - Windows native API preferred over third-party packages
 - Evaluate OSS before use: maintenance status, security, license
