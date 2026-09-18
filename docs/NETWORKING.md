@@ -9,6 +9,10 @@ Answers: Why can iPhone connect from different floors?
 - Architecture: iPhone → Siri → Apple Shortcuts → Home LAN/Wi-Fi → Windows Agent → Windows System Operations
 
 ### No Public Network Solutions (#2)
+The Windows Agent remains LAN-only and must never accept public Internet control.
+
+Spotify integration is one narrow exception for **outbound HTTPS only**: the Windows PC may initiate connections to Spotify Accounts / Spotify Web API for OAuth, catalog search, device discovery, and playback control. This does not expose the Agent port to the Internet.
+
 Do NOT use:
 - Tailscale / Tailscale Funnel
 - Cloudflare Tunnel
