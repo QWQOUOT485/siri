@@ -181,7 +181,10 @@ spotify_device_name = 使用者 Windows 上 Spotify 顯示的裝置名稱
 
 若指定的 Windows Connect 裝置目前不是 active，Next／Previous 轉移播放權時使用
 `play=true`；若目前已暫停，切歌後再以固定的 Start/Resume 操作恢復播放。Pause
-不會走這個恢復流程。
+不會走這個恢復流程。Next 會在 skip 前後讀取目前曲目 identity；只有確認曲目真的改變
+後才會 Resume。若目前是沒有播放佇列的單曲、Spotify 沒有可用下一首，會回傳
+`SPOTIFY_NO_NEXT_TRACK` 並保留目前歌曲，不會用 Resume 把它從頭重播。Previous 保留
+Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語義。
 
 如果 Spotify 回傳 401：嘗試 refresh token；若仍失敗，要求重新授權。
 

@@ -53,6 +53,11 @@ class SpotifyApiClient:
         devices = payload.get("devices", []) if isinstance(payload, dict) else []
         return [device for device in devices if isinstance(device, dict)]
 
+    def get_current_playback(self, access_token: str) -> dict[str, Any]:
+        """Read the current playback state from the fixed Spotify endpoint."""
+
+        return self._api_json("GET", "/me/player", access_token=access_token)
+
     def transfer_playback(self, access_token: str, device_id: str, *, play: bool = False) -> None:
         self._api_json(
             "PUT",

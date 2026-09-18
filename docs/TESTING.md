@@ -42,6 +42,8 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs
 - Pause / next / previous map to Spotify playback actions
 - Next / previous resume the selected track after skipping, including when the configured device was inactive or paused
+- Next with no Spotify next item returns `SPOTIFY_NO_NEXT_TRACK` and does not restart the current track
+- Next only resumes after the playback track identity changes; an already-playing new track is not restarted
 - Lock parsing
 - Malicious command rejection
 - Arbitrary executable path rejection

@@ -67,3 +67,15 @@ def test_playback_controls_accept_successful_non_json_responses():
 
     client.pause("access-token")
     client.next("access-token")
+
+
+def test_current_playback_uses_the_fixed_player_state_endpoint():
+    def handler(request: httpx.Request):
+        assert request.method == "GET"
+        assert request.url.path == "/v1/me/player"
+        assert request.headers["Authorization"] == "Bearer access-token"
+        return httpx.Response(200, json={"item": {"id": "track-1"}, "is_playing": True})
+
+    client = client_for(handler)
+
+    assert client.get_current_playback("access-token") == {"item": {"id": "track-1"}, "is_playing": True}

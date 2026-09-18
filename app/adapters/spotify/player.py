@@ -23,6 +23,8 @@ class SpotifyPlayer:
         sleep: Callable[[float], None] = time.sleep,
         device_retries: int = 3,
         device_wait_seconds: float = 1.0,
+        skip_retries: int = 3,
+        skip_wait_seconds: float = 0.15,
     ) -> None:
         self.client = client
         self.device_name = device_name.strip()
@@ -30,6 +32,8 @@ class SpotifyPlayer:
         self.sleep = sleep
         self.device_retries = max(0, min(device_retries, 5))
         self.device_wait_seconds = max(0.0, min(device_wait_seconds, 10.0))
+        self.skip_retries = max(1, min(skip_retries, 5))
+        self.skip_wait_seconds = max(0.0, min(skip_wait_seconds, 2.0))
 
     def resume(self, access_token: str, track: SpotifyTrackRef | None = None) -> OperationResult:
         device = self._resolve_device(access_token)
@@ -47,10 +51,23 @@ class SpotifyPlayer:
         return self._control(access_token, "pause", "已暫停 Spotify。", transfer_play=False, resume_after=False)
 
     def next(self, access_token: str) -> OperationResult:
-        return self._control(access_token, "next", "已切換到 Spotify 下一首。", transfer_play=True, resume_after=True)
+        return self._control(
+            access_token,
+            "next",
+            "已切換到 Spotify 下一首。",
+            transfer_play=True,
+            resume_after=True,
+            require_track_change=True,
+        )
 
     def previous(self, access_token: str) -> OperationResult:
-        return self._control(access_token, "previous", "已切換到 Spotify 上一首。", transfer_play=True, resume_after=True)
+        return self._control(
+            access_token,
+            "previous",
+            "已切換到 Spotify 上一首。",
+            transfer_play=True,
+            resume_after=True,
+        )
 
     def _control(
         self,
@@ -60,16 +77,61 @@ class SpotifyPlayer:
         *,
         transfer_play: bool,
         resume_after: bool,
+        require_track_change: bool = False,
     ) -> OperationResult:
         device = self._resolve_device(access_token)
         if device is None:
             return self._missing_device()
+        before = self.client.get_current_playback(access_token) if require_track_change else {}
+        before_track_id = self._track_id(before)
+        if require_track_change and not self._has_context(before):
+            return OperationResult(
+                False,
+                "目前 Spotify 曲目沒有可切換的播放佇列，已保留目前歌曲。",
+                "SPOTIFY_NO_NEXT_TRACK",
+                data={"device_name": device.name},
+            )
         if not device.is_active:
             self.client.transfer_playback(access_token, device.device_id, play=transfer_play)
         getattr(self.client, action)(access_token, device_id=device.device_id)
+
+        after = {}
+        if require_track_change:
+            after = self._playback_after_skip(access_token, before_track_id)
+            after_track_id = self._track_id(after)
+            if not after_track_id or (before_track_id and after_track_id == before_track_id):
+                return OperationResult(
+                    False,
+                    "Spotify 沒有可切換的下一首，已保留目前歌曲。",
+                    "SPOTIFY_NO_NEXT_TRACK",
+                    data={"device_name": device.name},
+                )
         if resume_after:
-            self.client.start_resume(access_token, device_id=device.device_id)
+            if not require_track_change or not bool(after.get("is_playing")):
+                self.client.start_resume(access_token, device_id=device.device_id)
         return OperationResult(True, message, data={"device_name": device.name})
+
+    def _playback_after_skip(self, access_token: str, before_track_id: str | None) -> dict:
+        state: dict = {}
+        for attempt in range(self.skip_retries):
+            if attempt:
+                self.sleep(self.skip_wait_seconds)
+            state = self.client.get_current_playback(access_token) or {}
+            after_track_id = self._track_id(state)
+            if after_track_id and (before_track_id is None or after_track_id != before_track_id):
+                return state
+        return state
+
+    @staticmethod
+    def _track_id(state: dict | None) -> str | None:
+        item = state.get("item") if isinstance(state, dict) else None
+        track_id = item.get("id") if isinstance(item, dict) else None
+        return str(track_id).strip() if track_id else None
+
+    @staticmethod
+    def _has_context(state: dict | None) -> bool:
+        context = state.get("context") if isinstance(state, dict) else None
+        return isinstance(context, dict) and bool(str(context.get("uri") or "").strip())
 
     def _resolve_device(self, access_token: str) -> SpotifyDevice | None:
         for attempt in range(self.device_retries + 1):

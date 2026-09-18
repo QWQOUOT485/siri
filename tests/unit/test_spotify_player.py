@@ -5,8 +5,9 @@ from app.adapters.windows.base import OperationResult
 
 
 class FakeSpotifyPlayerClient:
-    def __init__(self, devices):
+    def __init__(self, devices, playback_states=None):
         self.devices = list(devices)
+        self.playback_states = list(playback_states or [])
         self.calls = []
 
     def get_devices(self, access_token):
@@ -27,6 +28,10 @@ class FakeSpotifyPlayerClient:
 
     def previous(self, access_token, *, device_id=None):
         self.calls.append(("previous", access_token, device_id))
+
+    def get_current_playback(self, access_token):
+        self.calls.append(("playback", access_token))
+        return self.playback_states.pop(0) if self.playback_states else {}
 
 
 def test_player_selects_configured_device_transfers_it_then_plays_trusted_track():
@@ -78,7 +83,11 @@ def test_player_next_keeps_playback_running_when_configured_device_is_inactive()
         [
             SpotifyDevice(device_id="phone", name="Phone", is_active=True),
             SpotifyDevice(device_id="pc", name="My Windows", is_active=False),
-        ]
+        ],
+        playback_states=[
+            {"item": {"id": "old-track"}, "is_playing": False, "context": {"uri": "spotify:playlist:playlist-1"}},
+            {"item": {"id": "new-track"}, "is_playing": False, "context": {"uri": "spotify:playlist:playlist-1"}},
+        ],
     )
     player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
 
@@ -87,15 +96,21 @@ def test_player_next_keeps_playback_running_when_configured_device_is_inactive()
     assert result.success is True
     assert client.calls == [
         ("devices", "access-token"),
+        ("playback", "access-token"),
         ("transfer", "access-token", "pc", True),
         ("next", "access-token", "pc"),
+        ("playback", "access-token"),
         ("resume", "access-token", "pc", None),
     ]
 
 
 def test_player_next_resumes_the_new_track_after_skipping():
     client = FakeSpotifyPlayerClient(
-        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)]
+        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)],
+        playback_states=[
+            {"item": {"id": "old-track"}, "is_playing": False, "context": {"uri": "spotify:playlist:playlist-1"}},
+            {"item": {"id": "new-track"}, "is_playing": False, "context": {"uri": "spotify:playlist:playlist-1"}},
+        ],
     )
     player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
 
@@ -104,9 +119,61 @@ def test_player_next_resumes_the_new_track_after_skipping():
     assert result.success is True
     assert client.calls == [
         ("devices", "access-token"),
+        ("playback", "access-token"),
         ("next", "access-token", "pc"),
+        ("playback", "access-token"),
         ("resume", "access-token", "pc", None),
     ]
+
+
+def test_player_next_does_not_resume_when_new_track_is_already_playing():
+    client = FakeSpotifyPlayerClient(
+        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)],
+        playback_states=[
+            {"item": {"id": "old-track"}, "is_playing": True, "context": {"uri": "spotify:playlist:playlist-1"}},
+            {"item": {"id": "new-track"}, "is_playing": True, "context": {"uri": "spotify:playlist:playlist-1"}},
+        ],
+    )
+    player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
+
+    result = player.next("access-token")
+
+    assert result.success is True
+    assert ("resume", "access-token", "pc", None) not in client.calls
+
+
+def test_player_next_does_not_restart_current_track_when_spotify_has_no_next_item():
+    client = FakeSpotifyPlayerClient(
+        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)],
+        playback_states=[
+            {"item": {"id": "same-track"}, "is_playing": False, "context": {"uri": "spotify:album:album-1"}},
+            {"item": {"id": "same-track"}, "is_playing": False, "context": {"uri": "spotify:album:album-1"}},
+        ],
+    )
+    player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
+
+    result = player.next("access-token")
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_NO_NEXT_TRACK"
+    assert ("resume", "access-token", "pc", None) not in client.calls
+
+
+def test_player_next_does_not_send_skip_for_a_standalone_track_without_context():
+    client = FakeSpotifyPlayerClient(
+        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)],
+        playback_states=[
+            {"item": {"id": "same-track"}, "is_playing": True, "progress_ms": 1040, "context": None},
+        ],
+    )
+    player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
+
+    result = player.next("access-token")
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_NO_NEXT_TRACK"
+    assert ("next", "access-token", "pc") not in client.calls
+    assert ("resume", "access-token", "pc", None) not in client.calls
 
 
 def test_player_reports_missing_device_without_shell_fallback():
