@@ -176,8 +176,12 @@ spotify_device_name = 使用者 Windows 上 Spotify 顯示的裝置名稱
 基本控制：
 - Resume: Start/Resume Playback
 - Pause: Pause Playback
-- Next: Skip To Next
-- Previous: Skip To Previous
+- Next: Skip To Next，完成切換後保持／恢復播放
+- Previous: Skip To Previous，完成切換後保持／恢復播放
+
+若指定的 Windows Connect 裝置目前不是 active，Next／Previous 轉移播放權時使用
+`play=true`；若目前已暫停，切歌後再以固定的 Start/Resume 操作恢復播放。Pause
+不會走這個恢復流程。
 
 如果 Spotify 回傳 401：嘗試 refresh token；若仍失敗，要求重新授權。
 

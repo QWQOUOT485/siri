@@ -41,6 +41,7 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Spotify access/refresh tokens are never returned or logged
 - User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs
 - Pause / next / previous map to Spotify playback actions
+- Next / previous resume the selected track after skipping, including when the configured device was inactive or paused
 - Lock parsing
 - Malicious command rejection
 - Arbitrary executable path rejection

@@ -73,6 +73,42 @@ def test_player_opens_spotify_through_injected_trusted_callback_when_no_device_e
     assert client.calls[-1] == ("pause", "access-token", "pc")
 
 
+def test_player_next_keeps_playback_running_when_configured_device_is_inactive():
+    client = FakeSpotifyPlayerClient(
+        [
+            SpotifyDevice(device_id="phone", name="Phone", is_active=True),
+            SpotifyDevice(device_id="pc", name="My Windows", is_active=False),
+        ]
+    )
+    player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
+
+    result = player.next("access-token")
+
+    assert result.success is True
+    assert client.calls == [
+        ("devices", "access-token"),
+        ("transfer", "access-token", "pc", True),
+        ("next", "access-token", "pc"),
+        ("resume", "access-token", "pc", None),
+    ]
+
+
+def test_player_next_resumes_the_new_track_after_skipping():
+    client = FakeSpotifyPlayerClient(
+        [SpotifyDevice(device_id="pc", name="My Windows", is_active=True)]
+    )
+    player = SpotifyPlayer(client, device_name="My Windows", sleep=lambda _seconds: None)
+
+    result = player.next("access-token")
+
+    assert result.success is True
+    assert client.calls == [
+        ("devices", "access-token"),
+        ("next", "access-token", "pc"),
+        ("resume", "access-token", "pc", None),
+    ]
+
+
 def test_player_reports_missing_device_without_shell_fallback():
     client = FakeSpotifyPlayerClient([])
     player = SpotifyPlayer(client, open_spotify=lambda: OperationResult(False, "not found", "UNKNOWN_APP"), sleep=lambda _seconds: None, device_retries=1)

@@ -44,21 +44,31 @@ class SpotifyPlayer:
         return OperationResult(True, message, data={"device_name": device.name, "track_name": track.track_name if track else None})
 
     def pause(self, access_token: str) -> OperationResult:
-        return self._control(access_token, "pause", "已暫停 Spotify。")
+        return self._control(access_token, "pause", "已暫停 Spotify。", transfer_play=False, resume_after=False)
 
     def next(self, access_token: str) -> OperationResult:
-        return self._control(access_token, "next", "已切換到 Spotify 下一首。")
+        return self._control(access_token, "next", "已切換到 Spotify 下一首。", transfer_play=True, resume_after=True)
 
     def previous(self, access_token: str) -> OperationResult:
-        return self._control(access_token, "previous", "已切換到 Spotify 上一首。")
+        return self._control(access_token, "previous", "已切換到 Spotify 上一首。", transfer_play=True, resume_after=True)
 
-    def _control(self, access_token: str, action: str, message: str) -> OperationResult:
+    def _control(
+        self,
+        access_token: str,
+        action: str,
+        message: str,
+        *,
+        transfer_play: bool,
+        resume_after: bool,
+    ) -> OperationResult:
         device = self._resolve_device(access_token)
         if device is None:
             return self._missing_device()
         if not device.is_active:
-            self.client.transfer_playback(access_token, device.device_id, play=False)
+            self.client.transfer_playback(access_token, device.device_id, play=transfer_play)
         getattr(self.client, action)(access_token, device_id=device.device_id)
+        if resume_after:
+            self.client.start_resume(access_token, device_id=device.device_id)
         return OperationResult(True, message, data={"device_name": device.name})
 
     def _resolve_device(self, access_token: str) -> SpotifyDevice | None:
