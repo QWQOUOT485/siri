@@ -29,8 +29,15 @@
 工作管理員 (Task Manager)、檔案總管 (File Explorer)、設定 (Settings)、控制台 (Control Panel)、計算機 (Calculator)、記事本 (Notepad)、Windows Terminal、命令提示字元 (Command Prompt)、PowerShell、剪取工具 (Snipping Tool)、小畫家 (Paint)、裝置管理員 (Device Manager)、服務 (Services)、事件檢視器 (Event Viewer)、磁碟管理 (Disk Management)。
 
 ### 2.3 媒體與音量控制 (Media & Volume)
-- **媒體控制**：支援 `play_pause`, `play`, `pause`, `next_track`, `previous_track`。適用於 Spotify, YouTube Music, Chrome, Edge, VLC 等支援 Windows 媒體鍵的程式。
+- **媒體控制**：支援 `play_pause`, `play`, `pause`, `next_track`, `previous_track`。適用於 Spotify, YouTube Music, Apple Music, Chrome, Edge, VLC 等支援 Windows 媒體鍵的程式。
   - 常用語句：播放音樂、繼續播放、播放、暫停、播放暫停、下一首、下一曲、上一首、上一曲 / play, pause, next track, previous track。
+- **播放來源釐清 (Media Provider Clarification)**：
+  - 當使用者只說「播放」/「播放音樂」/「Play」，且沒有指定播放器時，Agent **不得自行猜測播放器**，應回傳需要釐清的結果，讓 Siri/捷徑詢問：「要使用 YouTube Music、Apple Music，還是 Spotify？」
+  - 第一版允許的 provider 白名單為：`youtube_music`, `apple_music`, `spotify`。顯示名稱分別為 YouTube Music、Apple Music、Spotify。
+  - 如果使用者直接說「播放 Spotify」、「用 Apple Music 播放」、「YouTube Music 播放」等包含明確 provider 的語句，Agent 可直接解析，不需要再次詢問。
+  - 使用者選擇 provider 後，捷徑把選擇結果送回 Agent；Agent 只能把它映射到上述白名單，不得把任意字串當成應用程式、命令、路徑或 URL 執行。
+  - `pause`、`next_track`、`previous_track` 預設仍作用於 Windows 目前 active media session，不強制詢問 provider。
+  - provider-specific 播放屬於「受限的選擇流程」，不是任意 app target。若 provider 無法安全啟動或沒有可用 media session，回傳可朗讀的錯誤，不得退化成任意 shell/URL 操作。
 - **音量控制**：控制 Windows 主音量，單次調整限制步數 (steps 1-10)。支援 `volume_up`, `volume_down`, `mute`, `unmute`, `toggle_mute`。
   - 常用語句：音量大一點、音量增加、聲音大一點、調大音量、音量小一點、音量降低、聲音小一點、調小音量、靜音、取消靜音、解除靜音 / volume up, volume down, mute, unmute。
 
