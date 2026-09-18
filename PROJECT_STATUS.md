@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Spotify 真實播放驗收（Windows Agent 控制已通過，token refresh 與 Shortcut 待驗收）**
+目前階段：**Spotify 真實播放驗收（Windows Agent 控制與 token refresh 已通過，Shortcut 待驗收）**
 
-規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放與基本播放控制驗收。下一個關卡是驗證 token refresh 與 Siri Shortcut 端到端流程。
+規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制與 token refresh 驗收。下一個關卡是 Siri Shortcut 端到端流程。
 
 ## Completed / Decided
 
@@ -39,6 +39,7 @@
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
+- 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 
 ## Real-World Acceptance (2026-09-18)
 
@@ -49,6 +50,7 @@
 - `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
 - `暫停` 與 `下一首` 實際回傳成功。
 - 未指定專輯的 `播放晴天` 實際回傳成功並選到 `晴天` / `葉惠美`；測試最後再次暫停。
+- 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - 測試完成後 Agent 已停止，8000 port 已釋放。
 - API key 未出現在測試 log 中。
 
@@ -78,15 +80,13 @@ D:\ai\windows-siri-agent\scripts\start.bat
 4. 若尚未授權，呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
 5. 驗證 `/spotify/status`。
 6. 尚待真實測試：
-   - token refresh
    - iPhone Siri Shortcut 端到端播放
-7. 以上成功後，才算完成 V1 的完整播放驗收。
+7. Siri Shortcut 成功後，才算完成 V1 的完整播放驗收。
 
 ## Important: What Is NOT Yet Proven
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
-- Spotify token refresh 已在真實帳號驗證。
 - Siri Shortcut 已完成端到端播放驗收。
 
 目前這些是「下一階段驗收項目」，不是既成事實。
