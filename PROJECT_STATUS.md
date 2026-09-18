@@ -112,6 +112,7 @@
 - `下一首`、`下一曲`、`上一首` 與 `上一曲` 已從 closed alias 移除並由 regression test 拒絕；英文 `next track` / `previous track` 等既有英文閉集合保留。
 - README、SPEC、Spotify、Siri Shortcut 與本地 AI 測試文件已同步改用完整中文口令；原始唯讀 `docs/SOURCE_SPEC.md` 未修改。
 - source parser tests 已通過；部署後 runtime parser 直接驗證 `下一首歌` / `上一首歌` 可解析，四個舊中文短口令均回傳 `INVALID_COMMAND`。新的 Siri 端到端口令尚未重新驗證，完成前不把新口令標成 Siri acceptance。
+- 最新一次 iPhone 嘗試沒有在 Agent log 產生 `spotify_previous`；手機端出現 `parse_command` 的 `INVALID_COMMAND`，其他相鄰請求仍是 `spotify_next`。因此「上一首歌」的 Siri → Shortcut 交接仍未通過，不能把 Siri 的「設在什麼時候」誤判成 Spotify 播放錯誤。
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
