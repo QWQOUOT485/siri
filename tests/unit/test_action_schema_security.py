@@ -31,3 +31,24 @@ def test_spotify_album_hint_stays_search_data():
     ).to_validated()
 
     assert action.album == "葉惠美"
+
+
+def test_spotify_version_hint_is_closed_search_data_only():
+    action = ActionRequest(
+        action=ActionName.SPOTIFY_PLAY_TRACK,
+        track="晴天",
+        artist="周杰倫",
+        version_hint="live",
+    ).to_validated()
+
+    assert action.version_hint.value == "live"
+
+    with pytest.raises(ValidationError):
+        ActionRequest(
+            action=ActionName.SPOTIFY_PLAY_TRACK,
+            track="晴天",
+            version_hint="live; shutdown /s",
+        )
+
+    with pytest.raises(ValidationError):
+        ActionRequest(action=ActionName.SPOTIFY_PAUSE, version_hint="live")

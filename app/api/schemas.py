@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.domain.actions import ActionName, ValidatedAction
+from app.domain.actions import ActionName, SpotifyVersionHint, ValidatedAction
 
 
 _UNSAFE_TARGET = re.compile(r"(?:[A-Za-z]:[\\/]|\\\\|/|\.exe\b|\.bat\b|\.cmd\b|https?://|[;&|`$<>]|\x00)", re.IGNORECASE)
@@ -24,6 +24,7 @@ class ActionRequest(BaseModel):
     track: str | None = Field(default=None, min_length=1, max_length=200)
     artist: str | None = Field(default=None, min_length=1, max_length=200)
     album: str | None = Field(default=None, min_length=1, max_length=200)
+    version_hint: SpotifyVersionHint | None = None
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -43,8 +44,8 @@ class ActionRequest(BaseModel):
                 raise ValueError("track, artist, and album must not contain control characters")
         if self.action is ActionName.SPOTIFY_PLAY_TRACK and not self.track:
             raise ValueError("track is required for Spotify named-track playback")
-        if self.action is not ActionName.SPOTIFY_PLAY_TRACK and (self.track or self.artist or self.album):
-            raise ValueError("track, artist, and album are only supported by Spotify named-track playback")
+        if self.action is not ActionName.SPOTIFY_PLAY_TRACK and (self.track or self.artist or self.album or self.version_hint):
+            raise ValueError("track, artist, album, and version_hint are only supported by Spotify named-track playback")
         if self.action not in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE} and self.steps != 1:
             raise ValueError("steps is only supported by volume actions")
         return self
@@ -59,6 +60,7 @@ class ActionRequest(BaseModel):
             track=self.track,
             artist=self.artist,
             album=self.album,
+            version_hint=self.version_hint,
             steps=self.steps,
             confirmation_token=self.confirmation_token,
         )

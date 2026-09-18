@@ -641,19 +641,19 @@ Siri Text
 
 只有以下條件全部成立，才算此 bug 解決：
 
-- [ ] 自然中文專輯 / 版本提示解析完成
-- [ ] studio / original vs Live ranking 規則完成
-- [ ] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
+- [x] 自然中文專輯 / 版本提示解析完成
+- [x] studio / original vs Live ranking 規則完成
+- [x] 已評估 title / artist / album / version / ISRC / duration 等可用 matching signals
 - [ ] 已確認是否能安全利用 ISRC 區分同一錄音與不同版本
-- [ ] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
-- [ ] 未指定 Live 時，不會因為存在 Live 候選就一律報 ambiguous
-- [ ] 明確指定 Live 時能優先 Live 版本
-- [ ] 真正無法判斷時仍會安全回 ambiguous
-- [ ] 相關 unit tests 通過
-- [ ] security tests 未被削弱
-- [ ] 真實 Windows Spotify 驗收通過
+- [x] resolver 使用 confidence / top-candidate gap，而不是單純依 Spotify 第一筆結果
+- [x] 未指定 Live 時，不會因為存在 Live 候選就一律報 ambiguous
+- [x] 明確指定 Live 時能優先 Live 版本；多個 Live 仍安全回 ambiguous
+- [x] 真正無法判斷時仍會安全回 ambiguous
+- [x] 相關 unit tests 通過
+- [x] security tests 未被削弱
+- [x] 真實 Windows Spotify 驗收通過
 - [ ] 真實 iPhone Siri Shortcut E2E 驗收通過
-- [ ] `PROJECT_STATUS.md` 已更新為最新真實狀態
+- [x] `PROJECT_STATUS.md` 已更新為最新真實狀態
 
 **完成以上全部項目後，必須刪除：**
 

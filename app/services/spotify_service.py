@@ -56,13 +56,25 @@ class SpotifyService:
         if command.action is ActionName.SPOTIFY_PREVIOUS:
             return self.player.previous(access_token)
 
-        resolution = self.catalog.find_track(command.track or "", command.artist, command.album, access_token=access_token)
+        resolution = self.catalog.find_track(
+            command.track or "",
+            command.artist,
+            command.album,
+            version_hint=command.version_hint,
+            access_token=access_token,
+        )
         if resolution.track is None:
             if resolution.ambiguous:
                 candidates = [self._public_track(candidate) for candidate in resolution.candidates]
+                details = []
+                if command.album:
+                    details.append(f"專輯：{command.album}")
+                if command.version_hint:
+                    details.append(f"版本：{command.version_hint.value}")
+                detail_suffix = f"（{'／'.join(details)}）" if details else ""
                 return OperationResult(
                     False,
-                    f"找到多個可能的 {command.track}{f'（專輯/版本：{command.album}）' if command.album else ''}，請補充歌手或專輯。",
+                    f"找到多個可能的 {command.track}{detail_suffix}，請補充歌手、專輯或版本。",
                     "SPOTIFY_AMBIGUOUS_TRACK",
                     {"candidates": candidates},
                 )

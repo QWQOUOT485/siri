@@ -49,6 +49,43 @@ def test_named_track_command_captures_a_parenthesized_album_hint():
     assert parsed.action.album == "葉惠美"
 
 
+def test_natural_chinese_album_phrases_are_search_hints_not_track_text():
+    trailing_album = CommandParser().parse("播放周杰倫的晴天，專輯葉惠美")
+    assert trailing_album.accepted is True
+    assert trailing_album.action is not None
+    assert trailing_album.action.track == "晴天"
+    assert trailing_album.action.artist == "周杰倫"
+    assert trailing_album.action.album == "葉惠美"
+
+    leading_album = CommandParser().parse("播放葉惠美專輯的晴天")
+    assert leading_album.accepted is True
+    assert leading_album.action is not None
+    assert leading_album.action.track == "晴天"
+    assert leading_album.action.artist is None
+    assert leading_album.action.album == "葉惠美"
+
+
+def test_natural_version_phrases_capture_closed_version_intent():
+    live = CommandParser().parse("播放周杰倫的晴天現場版")
+    assert live.accepted is True
+    assert live.action is not None
+    assert live.action.track == "晴天"
+    assert live.action.artist == "周杰倫"
+    assert live.action.version_hint == "live"
+
+    original = CommandParser().parse("播放晴天原版")
+    assert original.accepted is True
+    assert original.action is not None
+    assert original.action.track == "晴天"
+    assert original.action.version_hint == "original"
+
+    english_live = CommandParser().parse("Play Blinding Lights live")
+    assert english_live.accepted is True
+    assert english_live.action is not None
+    assert english_live.action.track == "Blinding Lights"
+    assert english_live.action.version_hint == "live"
+
+
 def test_spotify_prefix_is_still_a_closed_spotify_command():
     parsed = CommandParser().parse("Spotify 播放周杰倫的晴天")
 

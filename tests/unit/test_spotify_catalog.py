@@ -57,6 +57,68 @@ def test_catalog_refuses_to_choose_between_close_candidates():
     assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
 
 
+def test_catalog_prefers_canonical_studio_over_live_for_same_artist():
+    client = FakeSpotifySearchClient(
+        [
+            track("live", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
+            track("studio", "晴天", ["周杰倫"], album="葉惠美"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "studio"
+    assert result.ambiguous is False
+
+
+def test_catalog_prefers_live_when_user_explicitly_requests_live():
+    client = FakeSpotifySearchClient(
+        [
+            track("studio", "晴天", ["周杰倫"], album="葉惠美"),
+            track("live", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", version_hint="live", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "live"
+    assert client.queries == [("test-token", "track:晴天 artist:周杰倫 live", 10)]
+
+
+def test_catalog_keeps_multiple_live_versions_ambiguous():
+    client = FakeSpotifySearchClient(
+        [
+            track("liveone", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"),
+            track("livetwo", "晴天", ["周杰倫"], album="地表最強世界巡迴演唱會"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", version_hint="live", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+
+
+def test_catalog_does_not_choose_between_different_artists_for_bare_title():
+    client = FakeSpotifySearchClient(
+        [
+            track("one", "Stay", ["Artist One"], album="Studio"),
+            track("two", "Stay", ["Artist Two"], album="Studio"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", None, access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+
+
 def test_catalog_uses_album_hint_to_select_the_requested_release():
     client = FakeSpotifySearchClient(
         [

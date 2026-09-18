@@ -25,7 +25,14 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - `播放晴天` parses a track title
 - `播放周杰倫的晴天` parses track + artist
 - `播放周杰倫的晴天 (葉惠美)` parses track + artist + album/version hint
+- `播放周杰倫的晴天，專輯葉惠美` parses a natural album hint
+- `播放葉惠美專輯的晴天` parses a leading album hint
+- `播放晴天現場版` / `播放晴天原版` parses a closed version hint
 - Spotify search ranking prefers exact title + artist matches
+- Studio/original wins against Live when no version was requested
+- Explicit Live intent wins against studio/original
+- Multiple Live versions remain ambiguous
+- Bare same-title tracks by different artists remain ambiguous
 - Ambiguous Spotify search results do not auto-play an arbitrary track
 - Spotify API calls are mocked in unit tests
 - Spotify access/refresh tokens are never returned or logged

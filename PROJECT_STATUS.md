@@ -6,9 +6,9 @@
 
 ## Current Phase
 
-目前階段：**Spotify 真實播放驗收（Windows Agent 控制與 token refresh 已通過，Shortcut 因歌名歧義待修正後驗收）**
+目前階段：**Spotify 真實播放驗收（歌曲消歧實作與 Windows + Spotify 驗收已完成，Shortcut E2E 待進行）**
 
-規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制與 token refresh 驗收。Siri Shortcut 實機流程已發現語音內容不足以消除同名現場版本歧義，需先修正語音輸入／選曲策略，再完成端到端驗收。
+規格層與 Spotify-only 實作已完成；目前安裝在 Windows 的 Agent 已完成 OAuth 狀態、Connect 裝置、指定歌曲播放、基本播放控制、token refresh 與本次歌曲消歧驗收。Siri Shortcut 實機端到端流程仍待重新驗證。
 
 ## Completed / Decided
 
@@ -38,6 +38,9 @@
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
+- 已支援自然語音可使用的 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；版本意圖使用封閉的 `live`／`studio`／`original` 值，只進 Spotify 搜尋與排序。
+- `SpotifyCatalog` 已對所有歌曲使用通用版本分類與安全排序：未指定 Live 時優先 studio/original，明確 Live 時優先 Live；不同歌手的裸歌名仍維持 ambiguous，不以搜尋第一筆代替意圖。
+- 消歧修正的 unit tests 已通過（68 passed，2 個既有 dependency deprecation warnings）；這不等同於 Windows 或 Siri 實機驗收。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
@@ -50,9 +53,11 @@
 - Spotify Connect 裝置已被 Agent 找到。
 - `播放周杰倫的晴天 (葉惠美)` 實際回傳成功，播放曲目為 `晴天`，專輯為 `葉惠美`。
 - `暫停` 與 `下一首` 實際回傳成功。
-- 直接對 Windows Agent 測試未指定專輯的 `播放晴天` 曾實際回傳成功並選到 `晴天` / `葉惠美`；測試最後再次暫停。這不是 Siri Shortcut 端到端結果。
+- 部署消歧修正後，直接對 Windows Agent 的自然語句 `播放周杰倫的晴天，專輯葉惠美` 實際播放 `晴天` / `葉惠美`。
+- 部署消歧修正後，直接對 Windows Agent 的裸歌名 `播放周杰倫的晴天` 實際播放 `晴天` / `葉惠美`，證明同歌手 studio 優先規則生效；這不是 Siri Shortcut 端到端結果。
+- `播放晴天現場版` 實際回傳 `SPOTIFY_AMBIGUOUS_TRACK`，候選是多個 Live 發行；Agent 沒有選第一筆或誤播 studio，符合安全規則。
+- 本次實機測試最後再次 `暫停` 成功；修正後 Agent 目前仍在 `D:\ai\windows-siri-agent` 運行，供下一步 Shortcut 測試。
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
-- 測試完成後 Agent 已停止，8000 port 已釋放。
 - API key 未出現在測試 log 中。
 
 ## Known Blocker: Siri Shortcut 歌名／現場版本歧義 (2026-09-18)
@@ -61,7 +66,7 @@
 - Spotify 搜尋回報 `SPOTIFY_AMBIGUOUS_TRACK`，候選包含原版 `晴天`／`葉惠美`、`2004無與倫比演唱會` 及其他 `Live` 版本；Agent 正確拒絕隨機播放。因此目前不是 OAuth、Connect 裝置或 Spotify 播放控制失敗，而是 Shortcut 語音輸入與選曲消歧尚未完成。
 - 現有 `播放周杰倫的晴天 (葉惠美)` 可作為文字測試提示，但括號形式不是可靠的語音介面；Siri 可能把括號內容念成普通詞語或改變順序。
 - 期望的語音形式包括 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`；若使用者沒有說明 Live，產品也需要明確決定是否優先選原版／正式專輯，只有明確說「現場版」時才選 Live。若仍有多個合理候選，應繼續要求補充，不得隨機播放。
-- 下一步：新增並測試自然中文的歌手／歌名／專輯或版本解析，定義「未指定 Live 時」的安全排序規則，再重新跑實際 Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
+- 實作、unit tests 與 Windows + Spotify 實機驗證已完成；下一步是用自然語音重新跑 iPhone Siri Shortcut E2E。完成前不得把 Shortcut 驗收標成成功。
 
 ## Current Local Acceptance Gate
 
@@ -89,14 +94,14 @@ D:\ai\windows-siri-agent\scripts\start.bat
 4. 若尚未授權，呼叫本機 Spotify OAuth start endpoint，完成瀏覽器授權。
 5. 驗證 `/spotify/status`。
 6. 尚待真實測試：
-   - 修正歌手／歌名／專輯或版本提示後，重新驗證 iPhone Siri Shortcut 端到端播放
+   - 修正後重新驗證 iPhone Siri Shortcut 端到端播放
 7. Siri Shortcut 成功後，才算完成 V1 的完整播放驗收。
 
 ## Important: What Is NOT Yet Proven
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
-- Siri Shortcut 已完成端到端播放驗收；目前已知裸歌名 `播放晴天` 可能因原版／現場版候選歧義而被安全拒絕。
+- Siri Shortcut 已完成端到端播放驗收；目前尚未重新驗證修正後的裸歌名流程。
 - Siri 以自然語音表達專輯／版本提示時，Parser 能穩定抽取並完成選曲。
 
 目前這些是「下一階段驗收項目」，不是既成事實。

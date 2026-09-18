@@ -69,6 +69,47 @@ def test_named_track_service_searches_then_plays_the_server_selected_track(tmp_p
     assert len(calls) == 3
 
 
+def test_named_track_service_passes_live_intent_to_catalog_and_playback(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            assert request.url.params["q"] == "track:晴天 artist:周杰倫 live"
+            return httpx.Response(
+                200,
+                json={
+                    "tracks": {
+                        "items": [
+                            spotify_track("studio", "晴天", "周杰倫"),
+                            {**spotify_track("live", "晴天", "周杰倫"), "album": {"name": "2004 Live"}},
+                        ]
+                    }
+                },
+            )
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/play":
+            assert json.loads(request.content) == {"uris": ["spotify:track:live"]}
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+
+    result = spotify.execute(
+        ValidatedAction(
+            action=ActionName.SPOTIFY_PLAY_TRACK,
+            track="晴天",
+            artist="周杰倫",
+            version_hint="live",
+        )
+    )
+
+    assert result.success is True
+    assert result.data["track_name"] == "晴天"
+    assert result.data["album_name"] == "2004 Live"
+
+
 def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
     calls = []
 

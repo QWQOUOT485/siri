@@ -8,6 +8,14 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class SpotifyVersionHint(str, Enum):
+    """Closed version intent understood by the Spotify catalog ranker."""
+
+    LIVE = "live"
+    STUDIO = "studio"
+    ORIGINAL = "original"
+
+
 class ActionName(str, Enum):
     OPEN_APP = "open_app"
     CLOSE_APP = "close_app"
@@ -62,6 +70,7 @@ class ValidatedAction(BaseModel):
     track: str | None = Field(default=None, min_length=1, max_length=200)
     artist: str | None = Field(default=None, min_length=1, max_length=200)
     album: str | None = Field(default=None, min_length=1, max_length=200)
+    version_hint: SpotifyVersionHint | None = None
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -75,8 +84,8 @@ class ValidatedAction(BaseModel):
             raise ValueError("confirmation_token is required")
         if self.action in SPOTIFY_TRACK_ACTIONS and not self.track:
             raise ValueError("track is required for Spotify named-track playback")
-        if self.action not in SPOTIFY_TRACK_ACTIONS and (self.track or self.artist or self.album):
-            raise ValueError("track, artist, and album are only supported by Spotify named-track playback")
+        if self.action not in SPOTIFY_TRACK_ACTIONS and (self.track or self.artist or self.album or self.version_hint):
+            raise ValueError("track, artist, album, and version_hint are only supported by Spotify named-track playback")
         for value in (self.track, self.artist, self.album):
             if value and any(ord(char) < 32 or ord(char) == 127 for char in value):
                 raise ValueError("track, artist, and album must not contain control characters")

@@ -9,6 +9,9 @@
 - 「播放晴天」→ 搜尋並播放歌曲
 - 「播放周杰倫的晴天」→ 用歌曲名 + 歌手搜尋並播放
 - 「播放周杰倫的晴天 (葉惠美)」→ 以專輯/版本提示縮小同名歌曲結果
+- 「播放周杰倫的晴天，專輯葉惠美」→ 以自然語音提供專輯提示
+- 「播放葉惠美專輯的晴天」→ 以專輯前置語法提供專輯提示
+- 「播放晴天現場版」/「播放晴天原版」→ 提供 Live／原版版本意圖
 - 「暫停」→ 暫停 Spotify
 - 「下一首」→ Spotify 下一首
 - 「上一首」→ Spotify 上一首
@@ -77,6 +80,7 @@ ValidatedAction(
   track = 晴天,
   artist = 周杰倫,
   album = 葉惠美  # optional album/version hint
+  version_hint = null  # live / studio / original, optional closed hint
 )
 ↓
 SpotifyService
@@ -99,9 +103,13 @@ Start/Resume Playback
 排序原則：
 1. 歌名完全匹配 + 歌手完全匹配。
 2. 歌名完全匹配 + 歌手完全匹配 + 專輯完全匹配（若提供專輯提示）。
-3. 歌名完全匹配 + 歌手高度匹配。
-4. 正規化後的強匹配。
-5. 其他候選。
+3. 使用者明確的 `live`／`studio`／`original` 版本意圖。
+4. 未指定版本時，正式 studio/original 候選優先，Live／演唱會／次要發行候選降權。
+5. 歌名完全匹配 + 歌手高度匹配。
+6. 正規化後的強匹配。
+7. 其他候選。
+
+未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手；同一歌手的 studio／Live 候選則依版本規則排序。若最高候選與第二名仍無足夠安全分差，不得播放。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
 
@@ -209,8 +217,13 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - `播放晴天` → `spotify_play_track(track=晴天)`
 - `播放周杰倫的晴天` → track + artist
 - `播放周杰倫的晴天 (葉惠美)` → track + artist + album/version hint
+- `播放周杰倫的晴天，專輯葉惠美` → natural album hint
+- `播放葉惠美專輯的晴天` → leading album hint
+- `播放晴天現場版` / `播放晴天原版` → closed version intent
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
+- studio/original vs Live ranking, including explicit Live intent
+- bare same-title tracks by different artists remain ambiguous
 - ambiguous results 不自動播放
 - no results
 - token refresh

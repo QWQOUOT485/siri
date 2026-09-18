@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from app.domain.actions import ActionName, ParsedCommand, ValidatedAction
+from app.domain.actions import ActionName, ParsedCommand, SpotifyVersionHint, ValidatedAction
 from app.domain.matching import normalize_name
 
 
@@ -71,8 +71,14 @@ class CommandParser:
 
         spotify_track = self._spotify_track(raw.rstrip("。！？!?"))
         if spotify_track is not None:
-            track, artist, album = spotify_track
-            return self._accepted(ActionName.SPOTIFY_PLAY_TRACK, track=track, artist=artist, album=album)
+            track, artist, album, version_hint = spotify_track
+            return self._accepted(
+                ActionName.SPOTIFY_PLAY_TRACK,
+                track=track,
+                artist=artist,
+                album=album,
+                version_hint=version_hint,
+            )
 
         if self._unsafe(raw, normalized):
             return ParsedCommand(accepted=False, error_code="UNSUPPORTED_COMMAND", message="這個指令包含不支援或不安全的操作。")
@@ -116,29 +122,32 @@ class CommandParser:
         return ParsedCommand(accepted=True, action=ValidatedAction(action=action, **kwargs), message="已解析指令。")
 
     @staticmethod
-    def _spotify_track(raw: str) -> tuple[str, str | None, str | None] | None:
+    def _spotify_track(raw: str) -> tuple[str, str | None, str | None, SpotifyVersionHint | None] | None:
+        raw, version_hint = CommandParser._split_version_hint(raw)
         raw, album = CommandParser._split_album_hint(raw)
+        raw, natural_album = CommandParser._split_natural_album_hint(raw)
+        album = album or natural_album
         chinese = re.match(r"^(?:spotify\s*)?播放\s*(?P<artist>.+?)的(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if chinese:
             artist = chinese.group("artist").strip()
             track = chinese.group("track").strip()
-            return (track, artist, album) if track and artist else None
+            return (track, artist, album, version_hint) if track and artist else None
 
         english = re.match(r"^(?:spotify\s+)?play\s+(?P<track>.+?)\s+by\s+(?P<artist>.+)$", raw, flags=re.IGNORECASE)
         if english:
             track = english.group("track").strip()
             artist = english.group("artist").strip()
-            return (track, artist, album) if track and artist else None
+            return (track, artist, album, version_hint) if track and artist else None
 
         chinese_track = re.match(r"^(?:spotify\s*)?播放\s*(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if chinese_track:
             track = chinese_track.group("track").strip()
-            return (track, None, album) if track else None
+            return (track, None, album, version_hint) if track else None
 
         english_track = re.match(r"^(?:spotify\s+)?play\s+(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if english_track:
             track = english_track.group("track").strip()
-            return (track, None, album) if track else None
+            return (track, None, album, version_hint) if track else None
         return None
 
     @staticmethod
@@ -151,6 +160,63 @@ class CommandParser:
         album = match.group("album").strip()
         base = raw[: match.start()].rstrip()
         return (base, album) if base and album else (raw, None)
+
+    @staticmethod
+    def _split_natural_album_hint(raw: str) -> tuple[str, str | None]:
+        """Extract album wording that Siri can naturally dictate."""
+
+        leading = re.match(
+            r"^(?P<prefix>(?:spotify\s*)?播放\s*)(?P<album>.+?)(?:專輯|专辑)\s*的\s*(?P<track>.+)$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if leading:
+            album = leading.group("album").strip()
+            base = f"{leading.group('prefix')}{leading.group('track').strip()}"
+            return (base, album) if base and album else (raw, None)
+
+        english = re.search(r"\s+from\s+(?:the\s+)?album\s+(?P<album>.+?)\s*$", raw, flags=re.IGNORECASE)
+        if english:
+            album = english.group("album").strip()
+            base = raw[: english.start()].rstrip()
+            return (base, album) if base and album else (raw, None)
+
+        trailing = re.search(
+            r"(?:[，,、]\s*|\s+)(?:專輯|专辑|album)\s*(?:是|為|为|[:：])?\s*(?P<album>.+?)\s*$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if not trailing:
+            return raw, None
+        album = trailing.group("album").strip()
+        base = raw[: trailing.start()].rstrip(" ，,、")
+        return (base, album) if base and album else (raw, None)
+
+    @staticmethod
+    def _split_version_hint(raw: str) -> tuple[str, SpotifyVersionHint | None]:
+        """Extract only closed, safe version words from the end of a track phrase."""
+
+        patterns = (
+            (
+                r"(?:現場版|现场版|演唱會版|演唱会版|演唱會|演唱会|live(?:\s+version)?|concert(?:\s+version)?)",
+                SpotifyVersionHint.LIVE,
+            ),
+            (
+                r"(?:錄音室版|录音室版|錄音室|录音室|studio(?:\s+version)?)",
+                SpotifyVersionHint.STUDIO,
+            ),
+            (
+                r"(?:原版|原始版|正式版|original(?:\s+version)?)",
+                SpotifyVersionHint.ORIGINAL,
+            ),
+        )
+        for suffix, hint in patterns:
+            match = re.search(rf"\s*{suffix}\s*$", raw, flags=re.IGNORECASE)
+            if not match:
+                continue
+            base = raw[: match.start()].rstrip(" ，,、")
+            return (base, hint) if base else (raw, None)
+        return raw, None
 
     @staticmethod
     def _unsafe_target(target: str) -> bool:
