@@ -40,7 +40,7 @@
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
-- 消歧修正的完整 unit/security tests 已通過（82 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
+- 消歧修正的完整 unit/security tests 已通過（84 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
 - Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
@@ -81,7 +81,7 @@
 ## Resolved Bug: `暫停音樂` parser alias (2026-09-18)
 
 - 使用者實機回報 iPhone Shortcut 的「暫停音樂」沒有作用；原 parser 只有 exact alias `暫停`，因此請求未進入 Spotify pause service。
-- 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；目前完整 unit tests 為 82 passed，保留既有 2 個 dependency deprecation warnings。
+- 先加入回歸測試確認原行為失敗，再加入繁體、簡體與英文 `pause music` 的封閉 alias；目前完整 unit tests 為 84 passed，保留既有 2 個 dependency deprecation warnings。
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
