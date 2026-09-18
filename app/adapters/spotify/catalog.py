@@ -36,19 +36,29 @@ class SpotifyCatalog:
     def __init__(self, client) -> None:
         self.client = client
 
-    def find_track(self, track: str, artist: str | None, *, access_token: str) -> TrackResolution:
+    def find_track(self, track: str, artist: str | None, album: str | None = None, *, access_token: str) -> TrackResolution:
         query = f"track:{track}"
         if artist:
             query += f" artist:{artist}"
+        if album:
+            query += f" album:{album}"
         payloads = self.client.search_tracks(access_token, query, limit=10)
         refs = tuple(ref for item in payloads if (ref := self._to_ref(item)) is not None)
         if not refs:
             return TrackResolution(track=None, ambiguous=False)
 
-        ranked = sorted(refs, key=lambda ref: self._score(ref, track, artist), reverse=True)
-        best_score = self._score(ranked[0], track, artist)
-        second_score = self._score(ranked[1], track, artist) if len(ranked) > 1 else None
+        ranked = sorted(refs, key=lambda ref: self._score(ref, track, artist, album), reverse=True)
+        best_score = self._score(ranked[0], track, artist, album)
+        second_score = self._score(ranked[1], track, artist, album) if len(ranked) > 1 else None
         exact_track_matches = [ref for ref in ranked if self._normalize(ref.track_name) == self._normalize(track)]
+        if album:
+            exact_album_matches = [
+                ref for ref in exact_track_matches if self._normalize(ref.album_name) == self._normalize(album)
+            ]
+            if len(exact_album_matches) == 1:
+                return TrackResolution(track=exact_album_matches[0], ambiguous=False, candidates=tuple(ranked[:5]))
+            if len(exact_album_matches) > 1:
+                return TrackResolution(track=None, ambiguous=True, candidates=tuple(exact_album_matches[:5]))
         if artist is None and len(exact_track_matches) > 1:
             return TrackResolution(track=None, ambiguous=True, candidates=tuple(exact_track_matches[:5]))
         if best_score < 0.70 or (second_score is not None and best_score - second_score < 0.08):
@@ -80,12 +90,17 @@ class SpotifyCatalog:
             return None
 
     @classmethod
-    def _score(cls, ref: SpotifyTrackRef, track: str, artist: str | None) -> float:
+    def _score(cls, ref: SpotifyTrackRef, track: str, artist: str | None, album: str | None = None) -> float:
         track_score = cls._similarity(ref.track_name, track)
-        if not artist:
+        if not artist and not album:
             return track_score
-        artist_score = max((cls._similarity(name, artist) for name in ref.artist_names), default=0.0)
-        return track_score * 0.75 + artist_score * 0.25
+        artist_score = max((cls._similarity(name, artist) for name in ref.artist_names), default=0.0) if artist else None
+        album_score = cls._similarity(ref.album_name, album) if album else None
+        if artist and album:
+            return track_score * 0.60 + (artist_score or 0.0) * 0.20 + (album_score or 0.0) * 0.20
+        if artist:
+            return track_score * 0.75 + (artist_score or 0.0) * 0.25
+        return track_score * 0.75 + (album_score or 0.0) * 0.25
 
     @classmethod
     def _similarity(cls, left: str, right: str) -> float:

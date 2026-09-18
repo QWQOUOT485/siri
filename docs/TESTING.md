@@ -24,11 +24,12 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Bare `play` / 「播放」 maps to `spotify_resume`
 - `播放晴天` parses a track title
 - `播放周杰倫的晴天` parses track + artist
+- `播放周杰倫的晴天 (葉惠美)` parses track + artist + album/version hint
 - Spotify search ranking prefers exact title + artist matches
 - Ambiguous Spotify search results do not auto-play an arbitrary track
 - Spotify API calls are mocked in unit tests
 - Spotify access/refresh tokens are never returned or logged
-- User song/artist strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs
+- User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs
 - Pause / next / previous map to Spotify playback actions
 - Lock parsing
 - Malicious command rejection

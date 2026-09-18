@@ -36,6 +36,7 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
         or parsed.action.website_id
         or parsed.action.track
         or parsed.action.artist
+        or parsed.action.album
     )
     audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action=result.action, target=target, success=result.success, duration_ms=(time.perf_counter() - started) * 1000, error_code=result.error_code)
     return response_payload(result)

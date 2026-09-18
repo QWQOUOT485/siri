@@ -57,6 +57,22 @@ def test_catalog_refuses_to_choose_between_close_candidates():
     assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
 
 
+def test_catalog_uses_album_hint_to_select_the_requested_release():
+    client = FakeSpotifySearchClient(
+        [
+            track("live", "晴天", ["周杰倫"], album="2004 Live"),
+            track("studio", "晴天", ["周杰倫"], album="葉惠美"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("晴天", "周杰倫", "葉惠美", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "studio"
+    assert client.queries == [("test-token", "track:晴天 artist:周杰倫 album:葉惠美", 10)]
+
+
 def test_catalog_reports_no_results_without_creating_a_playable_reference():
     catalog = SpotifyCatalog(FakeSpotifySearchClient([]))
 

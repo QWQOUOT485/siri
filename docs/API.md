@@ -86,8 +86,9 @@ For requests such as `播放周杰倫的晴天`, the parser produces a validated
 - `action = spotify_play_track`
 - `track` = user-provided song title
 - `artist` = optional user-provided artist name
+- `album` = optional parenthesized album/version hint, for example `葉惠美`
 
-The service uses `track` / `artist` only as Spotify Catalog search input. The client never sends a Spotify URI, executable path, command, process ID, or arbitrary URL.
+The service uses `track` / `artist` / `album` only as Spotify Catalog search input. The client never sends a Spotify URI, executable path, command, process ID, or arbitrary URL.
 
 Server flow:
 1. Validate the closed action.

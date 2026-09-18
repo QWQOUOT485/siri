@@ -257,13 +257,14 @@ Invoke-RestMethod http://127.0.0.1:8000/spotify/status -Headers @{ 'X-API-Key' =
 播放
 播放晴天
 播放周杰倫的晴天
+播放周杰倫的晴天 (葉惠美)
 Play Blinding Lights by The Weeknd
 暫停
 下一首
 上一首
 ```
 
-歌曲名稱與歌手只會作為 Spotify Search API 的查詢文字；只有經 Spotify 回應驗證過的曲目才會進入播放。搜尋結果不明確時 Agent 會要求補充歌手，不會隨機播放，也不接受客戶端直接傳入 Spotify URI。
+歌曲名稱、歌手與括號中的專輯/版本提示只會作為 Spotify Search API 的查詢文字；只有經 Spotify 回應驗證過的曲目才會進入播放。搜尋結果不明確時 Agent 會要求補充歌手或專輯，不會隨機播放，也不接受客戶端直接傳入 Spotify URI。
 
 ## 8. Application Catalog
 

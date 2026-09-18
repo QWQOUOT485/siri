@@ -17,4 +17,17 @@ def test_action_schema_has_no_shell_or_path_escape_hatches():
     with pytest.raises(ValidationError):
         ActionRequest(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay", track_uri="spotify:track:client_supplied")
     with pytest.raises(ValidationError):
+        ActionRequest(action=ActionName.SPOTIFY_PAUSE, album="Album must not be accepted here")
+    with pytest.raises(ValidationError):
         ActionRequest(action="media_play", app_name="ignored")
+
+
+def test_spotify_album_hint_stays_search_data():
+    action = ActionRequest(
+        action=ActionName.SPOTIFY_PLAY_TRACK,
+        track="晴天",
+        artist="周杰倫",
+        album="葉惠美",
+    ).to_validated()
+
+    assert action.album == "葉惠美"

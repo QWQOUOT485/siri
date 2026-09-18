@@ -38,6 +38,17 @@ def test_english_named_track_command_uses_spotify_action():
     assert parsed.action.artist == "The Weeknd"
 
 
+def test_named_track_command_captures_a_parenthesized_album_hint():
+    parsed = CommandParser().parse("播放周杰倫的晴天 (葉惠美)")
+
+    assert parsed.accepted is True
+    assert parsed.action is not None
+    assert parsed.action.action is ActionName.SPOTIFY_PLAY_TRACK
+    assert parsed.action.track == "晴天"
+    assert parsed.action.artist == "周杰倫"
+    assert parsed.action.album == "葉惠美"
+
+
 def test_spotify_prefix_is_still_a_closed_spotify_command():
     parsed = CommandParser().parse("Spotify 播放周杰倫的晴天")
 

@@ -23,6 +23,7 @@ class ActionRequest(BaseModel):
     website_name: str | None = Field(default=None, min_length=1, max_length=200)
     track: str | None = Field(default=None, min_length=1, max_length=200)
     artist: str | None = Field(default=None, min_length=1, max_length=200)
+    album: str | None = Field(default=None, min_length=1, max_length=200)
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -37,13 +38,13 @@ class ActionRequest(BaseModel):
             raise ValueError("website_id or website_name is required")
         if self.action is ActionName.CONFIRM_SHUTDOWN and not self.confirmation_token:
             raise ValueError("confirmation_token is required")
-        for value in (self.track, self.artist):
+        for value in (self.track, self.artist, self.album):
             if value and any(ord(char) < 32 or ord(char) == 127 for char in value):
-                raise ValueError("track and artist must not contain control characters")
+                raise ValueError("track, artist, and album must not contain control characters")
         if self.action is ActionName.SPOTIFY_PLAY_TRACK and not self.track:
             raise ValueError("track is required for Spotify named-track playback")
-        if self.action is not ActionName.SPOTIFY_PLAY_TRACK and (self.track or self.artist):
-            raise ValueError("track and artist are only supported by Spotify named-track playback")
+        if self.action is not ActionName.SPOTIFY_PLAY_TRACK and (self.track or self.artist or self.album):
+            raise ValueError("track, artist, and album are only supported by Spotify named-track playback")
         if self.action not in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE} and self.steps != 1:
             raise ValueError("steps is only supported by volume actions")
         return self
@@ -57,6 +58,7 @@ class ActionRequest(BaseModel):
             website_query=self.website_name,
             track=self.track,
             artist=self.artist,
+            album=self.album,
             steps=self.steps,
             confirmation_token=self.confirmation_token,
         )

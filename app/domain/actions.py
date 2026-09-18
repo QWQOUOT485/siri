@@ -61,6 +61,7 @@ class ValidatedAction(BaseModel):
     website_query: str | None = Field(default=None, min_length=1, max_length=200)
     track: str | None = Field(default=None, min_length=1, max_length=200)
     artist: str | None = Field(default=None, min_length=1, max_length=200)
+    album: str | None = Field(default=None, min_length=1, max_length=200)
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -74,11 +75,11 @@ class ValidatedAction(BaseModel):
             raise ValueError("confirmation_token is required")
         if self.action in SPOTIFY_TRACK_ACTIONS and not self.track:
             raise ValueError("track is required for Spotify named-track playback")
-        if self.action not in SPOTIFY_TRACK_ACTIONS and (self.track or self.artist):
-            raise ValueError("track and artist are only supported by Spotify named-track playback")
-        for value in (self.track, self.artist):
+        if self.action not in SPOTIFY_TRACK_ACTIONS and (self.track or self.artist or self.album):
+            raise ValueError("track, artist, and album are only supported by Spotify named-track playback")
+        for value in (self.track, self.artist, self.album):
             if value and any(ord(char) < 32 or ord(char) == 127 for char in value):
-                raise ValueError("track and artist must not contain control characters")
+                raise ValueError("track, artist, and album must not contain control characters")
         if self.action not in VOLUME_ACTIONS and self.steps != 1:
             raise ValueError("steps is only supported by volume actions")
         return self

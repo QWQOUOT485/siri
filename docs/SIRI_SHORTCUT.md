@@ -56,6 +56,7 @@ Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息
 - 「播放音樂」
 - 「播放晴天」
 - 「播放周杰倫的晴天」
+- 「播放周杰倫的晴天 (葉惠美)」
 - 「Spotify 播放周杰倫的晴天」
 - 「暫停」
 - 「下一首」
@@ -68,6 +69,7 @@ Windows Agent 會自行解析：
 ↓
 track = 晴天
 artist = 周杰倫
+album = optional album/version hint
 ↓
 Spotify 搜尋
 ↓
@@ -130,7 +132,7 @@ Spotify 搜尋
 - 「開啟 Discord」 / 「打開 YouTube Music」
 - 「關閉 Chrome」
 - 「播放」 / 「播放音樂」→ Spotify 恢復播放
-- 「播放晴天」 / 「播放周杰倫的晴天」→ Spotify 搜尋並播放指定歌曲
+- 「播放晴天」 / 「播放周杰倫的晴天」 / 「播放周杰倫的晴天 (葉惠美)」→ Spotify 搜尋並播放指定歌曲
 - 「暫停」 / 「下一首」 / 「上一首」→ 控制 Spotify
 - 「音量大一點」 / 「靜音」
 - 「鎖定電腦」

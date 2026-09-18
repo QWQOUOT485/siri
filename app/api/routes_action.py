@@ -15,6 +15,6 @@ router = APIRouter()
 async def action(request: Request, body: ActionRequest, _=Depends(require_api_key)):
     started = time.perf_counter()
     result = request.app.state.runtime.command_service.execute(body.to_validated())
-    target = body.app_name or body.app_id or body.website_name or body.website_id or body.track or body.artist
+    target = body.app_name or body.app_id or body.website_name or body.website_id or body.track or body.artist or body.album
     audit_event(request.app.state.runtime.logger, client_ip=request.client.host if request.client else None, action=result.action, target=target, success=result.success, duration_ms=(time.perf_counter() - started) * 1000, error_code=result.error_code)
     return response_payload(result)

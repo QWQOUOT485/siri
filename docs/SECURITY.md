@@ -73,7 +73,7 @@ No arbitrary URLs can be provided from remote. Use a website catalog. The config
 
 Spotify is the only V1 music provider.
 
-Song title and artist supplied by Siri are **search data only**. They may be sent as query parameters to the Spotify Web API, but MUST NOT become:
+Song title, artist, and optional album/version hints supplied by Siri are **search data only**. They may be sent as query parameters to the Spotify Web API, but MUST NOT become:
 - executable paths
 - shell/CMD/PowerShell commands
 - process IDs

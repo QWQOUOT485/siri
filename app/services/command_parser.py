@@ -71,8 +71,8 @@ class CommandParser:
 
         spotify_track = self._spotify_track(raw.rstrip("。！？!?"))
         if spotify_track is not None:
-            track, artist = spotify_track
-            return self._accepted(ActionName.SPOTIFY_PLAY_TRACK, track=track, artist=artist)
+            track, artist, album = spotify_track
+            return self._accepted(ActionName.SPOTIFY_PLAY_TRACK, track=track, artist=artist, album=album)
 
         if self._unsafe(raw, normalized):
             return ParsedCommand(accepted=False, error_code="UNSUPPORTED_COMMAND", message="這個指令包含不支援或不安全的操作。")
@@ -116,29 +116,41 @@ class CommandParser:
         return ParsedCommand(accepted=True, action=ValidatedAction(action=action, **kwargs), message="已解析指令。")
 
     @staticmethod
-    def _spotify_track(raw: str) -> tuple[str, str | None] | None:
+    def _spotify_track(raw: str) -> tuple[str, str | None, str | None] | None:
+        raw, album = CommandParser._split_album_hint(raw)
         chinese = re.match(r"^(?:spotify\s*)?播放\s*(?P<artist>.+?)的(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if chinese:
             artist = chinese.group("artist").strip()
             track = chinese.group("track").strip()
-            return (track, artist) if track and artist else None
+            return (track, artist, album) if track and artist else None
 
         english = re.match(r"^(?:spotify\s+)?play\s+(?P<track>.+?)\s+by\s+(?P<artist>.+)$", raw, flags=re.IGNORECASE)
         if english:
             track = english.group("track").strip()
             artist = english.group("artist").strip()
-            return (track, artist) if track and artist else None
+            return (track, artist, album) if track and artist else None
 
         chinese_track = re.match(r"^(?:spotify\s*)?播放\s*(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if chinese_track:
             track = chinese_track.group("track").strip()
-            return (track, None) if track else None
+            return (track, None, album) if track else None
 
         english_track = re.match(r"^(?:spotify\s+)?play\s+(?P<track>.+)$", raw, flags=re.IGNORECASE)
         if english_track:
             track = english_track.group("track").strip()
-            return (track, None) if track else None
+            return (track, None, album) if track else None
         return None
+
+    @staticmethod
+    def _split_album_hint(raw: str) -> tuple[str, str | None]:
+        """Treat one trailing parenthesized value as Spotify search metadata."""
+
+        match = re.search(r"\s*[（(]\s*(?P<album>[^()（）]+?)\s*[）)]\s*$", raw)
+        if not match:
+            return raw, None
+        album = match.group("album").strip()
+        base = raw[: match.start()].rstrip()
+        return (base, album) if base and album else (raw, None)
 
     @staticmethod
     def _unsafe_target(target: str) -> bool:

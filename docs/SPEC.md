@@ -40,11 +40,12 @@
 - **指定歌曲播放 (`spotify_play_track`)**：
   - 「播放晴天」
   - 「播放周杰倫的晴天」
+  - 「播放周杰倫的晴天 (葉惠美)」：可用專輯/版本提示消除同名歌曲歧義
   - 「Spotify 播放周杰倫的晴天」
   - `Play Blinding Lights by The Weeknd`
-- Parser 將自然語言收斂成結構化資料，例如：`action = spotify_play_track`、`track = 晴天`、`artist = 周杰倫`（artist 可選）。
+- Parser 將自然語言收斂成結構化資料，例如：`action = spotify_play_track`、`track = 晴天`、`artist = 周杰倫`、`album = 葉惠美`（artist/album 可選）。
 - Agent 使用 Spotify Web API 搜尋 Catalog，取得可信的 Spotify track URI/ID 後再要求 Spotify 播放。
-- 使用者輸入的歌名/歌手只可作為 Spotify 搜尋文字，不可變成 shell、CMD、PowerShell、exe path、command-line arguments 或 arbitrary URL。
+- 使用者輸入的歌名/歌手/專輯提示只可作為 Spotify 搜尋文字，不可變成 shell、CMD、PowerShell、exe path、command-line arguments 或 arbitrary URL。
 - 如果搜尋結果明顯歧義或信心不足，不得隨機播放；回傳可朗讀訊息，要求使用者補充歌手或更完整歌名。
 - Spotify 播放目標優先使用本機設定的 Windows Spotify Connect 裝置；若目前沒有可用裝置，回傳清楚錯誤，或安全地透過 Trusted AppEntry 開啟 Spotify Desktop 後再重試。
 - Spotify OAuth / token / scopes / device selection 詳見 [Spotify Integration](SPOTIFY.md)。

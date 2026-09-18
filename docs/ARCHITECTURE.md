@@ -111,7 +111,7 @@ Siri text
   ↓
 Rule-based Parser
   ↓
-ValidatedAction(spotify_play_track, track, optional artist)
+ValidatedAction(spotify_play_track, track, optional artist/album hint)
   ↓
 SpotifyService
   ├─ SpotifyAuth / token refresh
@@ -124,7 +124,7 @@ Spotify Web API
 Spotify Connect device on Windows
 ```
 
-The Spotify integration is separate from the generic Windows launcher. Song title and artist are untrusted search text and may only enter the Spotify search request. They must never be used as an executable path, shell command, command-line argument, process ID, or arbitrary URL.
+The Spotify integration is separate from the generic Windows launcher. Song title, artist, and the optional album/version hint are untrusted search text and may only enter the Spotify search request. They must never be used as an executable path, shell command, command-line argument, process ID, or arbitrary URL.
 
 The service converts Spotify API results into trusted internal objects (for example `SpotifyTrackRef` containing Spotify track ID/URI and display metadata). Only those trusted objects may reach the playback method.
 

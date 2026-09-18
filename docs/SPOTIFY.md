@@ -8,6 +8,7 @@
 - 「播放」/「播放音樂」→ 恢復 Spotify
 - 「播放晴天」→ 搜尋並播放歌曲
 - 「播放周杰倫的晴天」→ 用歌曲名 + 歌手搜尋並播放
+- 「播放周杰倫的晴天 (葉惠美)」→ 以專輯/版本提示縮小同名歌曲結果
 - 「暫停」→ 暫停 Spotify
 - 「下一首」→ Spotify 下一首
 - 「上一首」→ Spotify 上一首
@@ -74,7 +75,8 @@ Parser
 ValidatedAction(
   action = spotify_play_track,
   track = 晴天,
-  artist = 周杰倫
+  artist = 周杰倫,
+  album = 葉惠美  # optional album/version hint
 )
 ↓
 SpotifyService
@@ -92,13 +94,14 @@ Start/Resume Playback
 
 使用 Spotify `GET /search` 搜尋 track。
 
-搜尋 query 可以由歌名與歌手組成，但只能作為 Spotify 搜尋資料。
+搜尋 query 可以由歌名、歌手與可選的專輯/版本提示組成，但只能作為 Spotify 搜尋資料。
 
 排序原則：
 1. 歌名完全匹配 + 歌手完全匹配。
-2. 歌名完全匹配 + 歌手高度匹配。
-3. 正規化後的強匹配。
-4. 其他候選。
+2. 歌名完全匹配 + 歌手完全匹配 + 專輯完全匹配（若提供專輯提示）。
+3. 歌名完全匹配 + 歌手高度匹配。
+4. 正規化後的強匹配。
+5. 其他候選。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
 
@@ -165,7 +168,7 @@ spotify_device_name = 使用者 Windows 上 Spotify 顯示的裝置名稱
 
 ## 安全邊界
 
-使用者的 `track` / `artist` 是不可信輸入，但允許送進 Spotify Search API。
+使用者的 `track` / `artist` / `album` 是不可信輸入，但允許送進 Spotify Search API。
 
 它們永遠不能進入：
 - shell
@@ -205,6 +208,7 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - `播放` → `spotify_resume`
 - `播放晴天` → `spotify_play_track(track=晴天)`
 - `播放周杰倫的晴天` → track + artist
+- `播放周杰倫的晴天 (葉惠美)` → track + artist + album/version hint
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
 - ambiguous results 不自動播放
@@ -213,7 +217,7 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - 401 / 403 / 429 handling
 - device not found
 - transfer playback mocked flow
-- track/artist injection strings 只能當搜尋文字
+- track/artist/album injection strings 只能當搜尋文字
 - client-provided Spotify URI 被拒絕
 - tokens 不出現在 logs/API responses
 
