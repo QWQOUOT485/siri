@@ -23,18 +23,21 @@ Complete Windows Siri Agent v1.
 8. Matcher (normalize, alias, fuzzy, confidence, ambiguous handling)
 9. Windows adapters (launcher, process, media, volume, system, firewall)
 10. Command parser (Chinese + English, rule-based, no LLM)
-11. API routes (/health, /info, /apps, /action, /command)
-12. Setup scripts (setup.ps1, start.bat, Task Scheduler, firewall)
-13. Siri integration documentation
-14. Unit tests (all mocked)
-15. Windows integration tests (real Windows only, no destructive ops)
-16. Final verification
+11. Spotify integration (PKCE auth, token refresh, catalog search, device selection, named-track playback)
+12. API routes (/health, /info, /apps, /action, /command)
+13. Setup scripts (setup.ps1, start.bat, Task Scheduler, firewall, Spotify OAuth setup)
+14. Siri integration documentation
+15. Unit tests (all mocked, including Spotify API)
+16. Windows integration tests (real Windows only, no destructive ops)
+17. Final verification
 
 ## Definition of Done
 - All security invariants from docs/SECURITY.md are implemented
 - All API endpoints functional per docs/API.md
 - Application discovery finds common Windows programs
 - Chinese and English commands work
+- Spotify named-track playback works with track + optional artist input
+- Spotify OAuth tokens remain local and are never exposed to Siri/iPhone
 - Shutdown requires two-step confirmation
 - No user input reaches shell/subprocess
 - Unit tests pass

@@ -69,20 +69,34 @@ The Remote API cannot add executable paths. The `manual_apps` configuration is l
 ## Website Security
 No arbitrary URLs can be provided from remote. Use a website catalog. The config file allows local additions. Remote commands cannot add malicious URLs. The first version does not allow remote arbitrary URLs.
 
-## Media Provider Security
-Playback provider clarification uses a closed allowlist only. V1 provider IDs are `youtube_music`, `apple_music`, and `spotify`.
+## Spotify Integration Security
 
-A provider selected by Siri/Shortcut is data, not executable input. It must be validated against the allowlist and mapped to a trusted internal Catalog/system definition before any Windows action occurs.
+Spotify is the only V1 music provider.
 
-Remote provider input MUST NOT become:
-- an executable path
-- a shell/CMD/PowerShell command
-- process ID
+Song title and artist supplied by Siri are **search data only**. They may be sent as query parameters to the Spotify Web API, but MUST NOT become:
+- executable paths
+- shell/CMD/PowerShell commands
+- process IDs
 - command-line arguments
-- script path
-- arbitrary URL
+- script paths
+- local filesystem paths
+- arbitrary URLs
 
-Unknown provider values must be rejected. A bare `play` request must ask for clarification rather than guessing or falling back to arbitrary execution.
+The remote API must not accept raw Spotify access tokens, refresh tokens, arbitrary Spotify API URLs, or caller-provided track URIs as execution targets. Track IDs/URIs used for playback must come from trusted Spotify API search results or server-side cached trusted references.
+
+Spotify OAuth credentials/tokens are local secrets:
+- never return them to iPhone
+- never place them in Siri Shortcut
+- never commit them to Git
+- never log access/refresh tokens
+- store them only in protected local configuration/token storage
+- refresh access tokens locally as required
+
+Use Authorization Code with PKCE for user authorization. Use an explicit loopback callback such as `http://127.0.0.1:<port>/callback`; do not use `localhost`.
+
+Request only the Spotify scopes required for playback/device control: `user-modify-playback-state` and `user-read-playback-state`.
+
+Outbound HTTPS calls from Windows to Spotify Accounts/Web API are permitted solely for Spotify integration. This does **not** permit exposing the Windows Agent to the public Internet or accepting remote control from outside the LAN.
 
 ## LAN Security
 - LAN only, absolutely no Internet exposure.

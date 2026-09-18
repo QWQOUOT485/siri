@@ -43,7 +43,7 @@ See [Security](SECURITY.md#api-response-security)
 
 - Requires authentication
 - Accepts structured safe operations:
-  `open_app`, `close_app`, `force_close_app`, `open_website`, `media_play_pause`, `media_next`, `media_previous`, `volume_up`, `volume_down`, `mute`, `unmute`, `toggle_mute`, `lock`, `request_shutdown`, `confirm_shutdown`, `refresh_apps`
+  `open_app`, `close_app`, `force_close_app`, `open_website`, `spotify_resume`, `spotify_play_track`, `spotify_pause`, `spotify_next`, `spotify_previous`, `volume_up`, `volume_down`, `mute`, `unmute`, `toggle_mute`, `lock`, `request_shutdown`, `confirm_shutdown`, `refresh_apps`
 
 ## POST /command
 
@@ -68,41 +68,39 @@ Unified response:
 - `confirmation_token` (for shutdown flow)
 - `error_code`
 
-## Media Provider Clarification Flow
+## Spotify Playback Flow
 
-When `POST /command` receives a bare playback request such as `播放`, `播放音樂`, or `Play` without a provider:
+Spotify is the only V1 music provider. The API does not accept a provider selector.
 
-1. Agent does not guess a provider and does not immediately dispatch an unrestricted launch.
-2. Return `clarification_required=true`, `clarification_type="media_provider"`, a Siri-friendly `message`, and allowlisted `options`.
-3. V1 provider allowlist: `youtube_music`, `apple_music`, `spotify`.
-4. The Shortcut asks the user to choose/say one of those providers.
-5. The follow-up request sends only the selected provider identifier or equivalent natural-language phrase back to the Agent.
-6. Agent validates the provider against the closed allowlist, resolves it through trusted internal mappings/catalog entries, then performs playback best-effort.
-7. Arbitrary provider strings, executable paths, command arguments, or URLs are rejected.
+### Resume / Pause / Next / Previous
 
-Example clarification response:
+Natural-language commands map to the closed Spotify actions:
+- `spotify_resume`
+- `spotify_pause`
+- `spotify_next`
+- `spotify_previous`
 
-```json
-{
-  "success": false,
-  "status": "clarification_required",
-  "action": "play",
-  "message": "要使用 YouTube Music、Apple Music，還是 Spotify？",
-  "clarification_required": true,
-  "clarification_type": "media_provider",
-  "options": [
-    {"id": "youtube_music", "label": "YouTube Music"},
-    {"id": "apple_music", "label": "Apple Music"},
-    {"id": "spotify", "label": "Spotify"}
-  ],
-  "confirmation_required": false,
-  "error_code": null
-}
-```
+### Play a specific track
 
-If the original command already names an allowlisted provider (for example `播放 Spotify`), the clarification step is skipped.
+For requests such as `播放周杰倫的晴天`, the parser produces a validated action with:
+- `action = spotify_play_track`
+- `track` = user-provided song title
+- `artist` = optional user-provided artist name
 
-`pause`, `media_next`, and `media_previous` continue to target the current active media session by default.
+The service uses `track` / `artist` only as Spotify Catalog search input. The client never sends a Spotify URI, executable path, command, process ID, or arbitrary URL.
+
+Server flow:
+1. Validate the closed action.
+2. Search Spotify for a track.
+3. Rank exact title + artist matches above weaker matches.
+4. If confidence is insufficient or several plausible tracks remain, return a clarification/error message instead of guessing.
+5. Resolve a trusted Spotify track URI/ID from the Spotify response.
+6. Resolve the configured/active Spotify Connect device.
+7. Start playback using the trusted Spotify URI.
+
+A successful response may include safe display metadata such as track title and artist, but must not expose OAuth tokens or internal secrets.
+
+Spotify authorization and device behavior are specified in [SPOTIFY.md](SPOTIFY.md).
 
 Don't make iPhone parse many different formats.
 
