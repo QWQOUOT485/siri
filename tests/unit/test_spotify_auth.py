@@ -51,7 +51,24 @@ def test_pkce_authorization_contains_state_and_challenge_but_not_verifier(tmp_pa
     assert query["state"] == [state]
     assert query["code_challenge_method"] == ["S256"]
     assert len(query["code_challenge"][0]) >= 40
-    assert query["scope"] == ["user-modify-playback-state user-read-playback-state user-library-read"]
+    assert query["scope"] == [
+        "user-modify-playback-state user-read-playback-state user-library-read user-top-read"
+    ]
+
+
+def test_pkce_authorization_requests_top_read_only_for_personalization(tmp_path):
+    auth, _, _ = manager(tmp_path)
+
+    authorization_url, _ = auth.begin_authorization()
+
+    scopes = set(parse_qs(urlparse(authorization_url).query)["scope"][0].split())
+
+    assert scopes == {
+        "user-modify-playback-state",
+        "user-read-playback-state",
+        "user-library-read",
+        "user-top-read",
+    }
 
 
 def test_callback_requires_the_original_state_and_stores_tokens_locally(tmp_path):

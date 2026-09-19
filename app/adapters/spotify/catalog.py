@@ -199,7 +199,7 @@ class SpotifyCatalog:
         version_hint: str | None,
         access_token: str,
     ) -> tuple[SpotifyTrackRef, ...]:
-        """Order the existing top-three ambiguity set with read-only saved status."""
+        """Order the existing top-three ambiguity set with read-only user signals."""
 
         candidates = tuple(refs[:3])
         checker = getattr(self.client, "check_saved_tracks", None)
@@ -209,19 +209,66 @@ class SpotifyCatalog:
             statuses = checker(access_token, tuple(ref.track_uri for ref in candidates))
         except Exception:
             return candidates
-        if len(statuses) != len(candidates) or any(not isinstance(status, bool) for status in statuses):
+        if len(statuses) != len(candidates) or not all(isinstance(status, bool) for status in statuses):
             return candidates
         saved_by_uri = dict(zip((ref.track_uri for ref in candidates), statuses))
+        top_track_ids = self._top_track_ids(access_token)
+        top_artist_names = self._top_artist_names(access_token)
+
+        def ranking_key(ref: SpotifyTrackRef) -> tuple[float | int, ...]:
+            relevance_score = self._score(ref, track, artist, album, version_hint)
+            saved_score = 1 if saved_by_uri.get(ref.track_uri, False) else 0
+            top_track_score = 1 if ref.track_id in top_track_ids else 0
+            top_artist_score = int(
+                any(self._normalize(name) in top_artist_names for name in ref.artist_names)
+            )
+            popularity = ref.popularity if ref.popularity is not None else -1
+            if artist or album or version_hint:
+                # Explicit metadata is a stronger authority than personalization.
+                return relevance_score, saved_score, top_track_score, top_artist_score, popularity
+            return saved_score, top_track_score, top_artist_score, relevance_score, popularity
+
         return tuple(
             sorted(
                 candidates,
-                key=lambda ref: (
-                    1 if saved_by_uri.get(ref.track_uri, False) else 0,
-                    *self._ranking_key(ref, track, artist, album, version_hint),
-                ),
+                key=ranking_key,
                 reverse=True,
             )
         )
+
+    def _top_track_ids(self, access_token: str) -> set[str]:
+        getter = getattr(self.client, "get_top_tracks", None)
+        if not callable(getter):
+            return set()
+        try:
+            items = getter(access_token)
+            if not isinstance(items, list):
+                return set()
+            track_ids: set[str] = set()
+            for item in items:
+                if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
+                    return set()
+                track_ids.add(item["id"].strip())
+            return track_ids
+        except Exception:
+            return set()
+
+    def _top_artist_names(self, access_token: str) -> set[str]:
+        getter = getattr(self.client, "get_top_artists", None)
+        if not callable(getter):
+            return set()
+        try:
+            items = getter(access_token)
+            if not isinstance(items, list):
+                return set()
+            artist_names: set[str] = set()
+            for item in items:
+                if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"].strip():
+                    return set()
+                artist_names.add(self._normalize(item["name"]))
+            return artist_names
+        except Exception:
+            return set()
 
     @classmethod
     def _has_explicit_chinese_artist_track_shape(

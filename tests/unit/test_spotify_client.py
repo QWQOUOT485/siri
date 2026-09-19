@@ -46,6 +46,31 @@ def test_saved_track_lookup_rejects_arbitrary_uris_and_unbounded_batches():
         client.check_saved_tracks("access-token", tuple(f"spotify:track:{index}" for index in range(4)))
 
 
+def test_top_track_and_artist_lookups_use_fixed_endpoints_and_bounded_limit():
+    def handler(request: httpx.Request):
+        assert request.method == "GET"
+        assert request.url.params["limit"] == "50"
+        if request.url.path == "/v1/me/top/tracks":
+            return httpx.Response(200, json={"items": [{"id": "top-track"}]})
+        if request.url.path == "/v1/me/top/artists":
+            return httpx.Response(200, json={"items": [{"name": "Top Artist"}]})
+        raise AssertionError(request.url)
+
+    client = client_for(handler)
+
+    assert client.get_top_tracks("access-token", limit=999) == [{"id": "top-track"}]
+    assert client.get_top_artists("access-token", limit=999) == [{"name": "Top Artist"}]
+
+
+def test_top_lookup_rejects_malformed_items_without_exposing_generic_http():
+    client = client_for(lambda _request: httpx.Response(200, json={"items": "not-a-list"}))
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_top_tracks("access-token")
+
+    assert error.value.status_code == 200
+
+
 def test_pkce_code_exchange_uses_form_data_and_does_not_use_a_client_secret():
     def handler(request: httpx.Request):
         assert request.method == "POST"
