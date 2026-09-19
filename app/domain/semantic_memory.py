@@ -122,4 +122,3 @@ class RecoveryCandidateEvidence(_MemoryModel):
     candidates: tuple[AliasCandidate, ...] = Field(default_factory=tuple, max_length=3)
     conflict: bool = False
     automatic_canonicalization_allowed: bool = False
-
