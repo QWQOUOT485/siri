@@ -201,21 +201,28 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 修訂後 benchmark 已完成：fixture 共 109 cases；與 production eligibility 對齊後，沒有明確歌名的 unresolved-reference / hallucination cases 在送模型前標為 deterministic-only，仍保留在 corpus 量測 safe-unknown，不把它們混入 supported AI accuracy。
 - `qwen2.5-coder-1.5b-instruct` 的 prompt/schema 兩種模式結果一致：supported semantic `95.24%`（63 cases）、intent `100%`、semantic-retry `100%`、deterministic-only safe-unknown `100%`、safety-only safe-unknown `100%`、false execution `0%`、post-grounding false accept `0%`、P95 `203.8/212.4 ms`。剩餘 3 個 supported failure 都是 `X 專輯的 Y` 的 album/artist role 誤判；一次額外 role-prompt A/B 未帶來穩定淨改善，未寫入 production prompt。
 - Review 後補強：hostile `safety_only` case 不再呼叫模型；`一下` 不再可被 grounding 成歌名，但複合口令 `播放一下晴天` 仍保留正常 track boundary。
-- 規格 blocker：`docs/SOURCE_SPEC.md` §94 仍明確禁止 V1 Local LLM，§95 只允許未來擴充；較新的 `docs/SPEC.md` 與 `docs/SECURITY.md` 已寫入 gated Local AI。依 `AGENTS.md` 的 Source of Truth 規則，這個衝突在明確修訂權威規格前，不得宣稱 AI 已獲 V1 production authorization；目前 GitHub 上傳僅供 review，不代表最終整合或 promotion。
+- 規格權威衝突已於 2026-09-19 由使用者明確決定「一切照新」後解除：`docs/SOURCE_SPEC.md` 保留為唯讀歷史規格，不再覆蓋目前維護中的 `SECURITY.md` / `SPEC.md` / `ARCHITECTURE.md`。原 §94/§95 的 V1 no-AI 限制視為已被後續 guarded Local AI 產品決策 supersede。這只解除文件 blocker，不等同 fallback promotion。
 - 這是 loopback shadow / offline corpus evidence，不是 fallback promotion：AI 仍預設 `off`，尚未完成 Windows/Spotify/Siri acceptance、independent review 或任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
+
+## Local AI Spec Authority Decision (2026-09-19)
+
+- 使用者明確決定：**一切照新**。目前維護中的 `SECURITY.md`、`SPEC.md`、`ARCHITECTURE.md` 與其已接受的後續產品決策為有效規格；`docs/SOURCE_SPEC.md` 僅保留歷史來源，不再作為衝突時的 final arbiter。
+- `AGENTS.md` 已同步改為上述 active-spec priority；`docs/MIGRATION_CHECKLIST.md` 已把 SOURCE_SPEC #94「V1 不使用 AI/LLM」標記為被 2026-09-18 guarded Local AI 產品決策 supersede。
+- 此決定解除的是**文件／治理 blocker**。它沒有自動批准 production fallback，也沒有改變目前 installed runtime 的 shadow-only / `fallback_approved=false` 狀態。
+- 下一個 AI gate 是獨立 promotion review：只有在明確核准後，才可把 AI semantic result 接到可執行的 Spotify fallback path。
 
 ## Local AI Shadow Remediation / Auditable Evidence (2026-09-19)
 
 - `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` 已新增 historical-scope / supersession record；早期 `select_candidate`、clarification AI、播放控制等廣泛概念不得再被當成第一整合 scope。
 - 已新增 `docs/LOCAL_AI_BENCHMARK_2026-09-19.md`，固定 source commit、fixture hash、prompt/schema hash、LM Studio/model/config 與 sanitized metrics；不提交 raw prompts、model output、tokens 或 credentials。
-- GitHub PR #5 的 independent gate review 判定 production fallback **NO-GO**、shadow-only remediation **GO**。目前仍須先解除 SOURCE_SPEC authority conflict、完成 production-aligned Windows/Spotify/Siri shadow acceptance，才可另開 promotion review。
+- GitHub PR #5 的 independent gate review 原判定 production fallback **NO-GO**、shadow-only remediation **GO**。其中 SOURCE_SPEC authority conflict 已於 2026-09-19 依使用者「一切照新」決定解除；production-aligned shadow acceptance 亦已完成。正式 fallback 仍需獨立 promotion review，不能因文件 blocker 解除就自動開啟。
 
 ## Local AI Production-Aligned Shadow Acceptance Check (2026-09-19)
 
 - 以 source `893b115` 在隔離 `127.0.0.1:8001` runtime 做 guarded shadow check：`/health` 回傳 200；authenticated `/info` 回報 `mode=shadow`、adapter 已設定、`fallback_approved=false`；parser-miss 的 `幫我放晴天` 只產生 bounded `local_ai status=shadow_accepted`，沒有 executable action、Spotify playback 或 fallback；unsupported-domain 輸入被 eligibility gate 拒絕。
 - 部署前的 readback 確認 `D:\ai\windows-siri-agent` 是 pre-AI；完成 loopback gate 後，已先備份 `runtime.py`、`config.py`、`routes_command.py` 到 `D:\ai\windows-siri-agent\work\local-ai-shadow-backup-20260919-203734`，再以可還原方式同步六個 Local AI modules、runtime/config/route wiring，並加入 `LOCAL_AI_MODE=shadow`、`LOCAL_AI_FALLBACK_APPROVED=false`。
 - 已在實際 port 8000 installed runtime 完成 shadow-only acceptance：`/health` 回傳 200；authenticated `/info` 回報 `mode=shadow`、adapter 已設定、`fallback_approved=false`；parser-miss 的 `幫我放晴天` log 為 `shadow_accepted`，unsupported-domain 的 `幫我播放一首歌曲` log 為 `ineligible`，兩者都沒有 executable action 或 Spotify playback。
-- LM Studio listener 已重新讀回為 `127.0.0.1:1234`，不再是 `0.0.0.0`。這只完成 installed shadow acceptance，不是 fallback promotion；port 8000 目前仍是 shadow、fallback 關閉，後續仍受 SOURCE_SPEC authority conflict 與獨立 promotion review gate 約束。
+- LM Studio listener 已重新讀回為 `127.0.0.1:1234`，不再是 `0.0.0.0`。這只完成 installed shadow acceptance，不是 fallback promotion；port 8000 目前仍是 shadow、fallback 關閉，後續仍需獨立 promotion review 才能考慮 executable fallback。
 
 ## Local AI Product Decision (2026-09-18)
 
