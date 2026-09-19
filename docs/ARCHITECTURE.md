@@ -302,7 +302,7 @@ The accepted clarification flow is:
 
 Remove obsolete test-only actions, duplicate dictionary extraction, and duplicate Speak actions when maintaining the Shortcut. Do not move `Dismiss Siri and Continue` back to the start of the Shortcut; it belongs after candidate speech and immediately before the second dictation.
 
-### Priority 4 — Rotate the exposed API key
+### Priority 4 — Rotate the exposed API key (completed 2026-09-19)
 
 A previous troubleshooting screenshot exposed part of the API key. Rotate it before treating the current setup as cleaned up:
 
@@ -312,7 +312,10 @@ A previous troubleshooting screenshot exposed part of the API key. Rotate it bef
 - invalidate/remove the old key
 - never commit or log either key
 
-This is operational hygiene; it does not require an architecture change.
+This rotation was completed for the installed Agent: the local key was
+replaced, the iPhone Shortcut header was updated, the `.env` ACL was
+restricted, and a fresh authenticated `/info` check passed after restarting
+port 8000. Future rotations should repeat the same coordinated procedure.
 
 ### Priority 5 — Local AI stays gated
 

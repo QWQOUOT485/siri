@@ -155,6 +155,14 @@
 - 部署到 `D:\ai\windows-siri-agent` 後，直接送出完整文字 `暫停音樂` 的真實 HTTP 回應為 `success=true`、`action=spotify_pause`，並成功找到 Windows Spotify 裝置。
 - 直接 Agent 驗收後，使用者重新測試 iPhone Siri Shortcut，確認「暫停音樂」已能成功暫停 Spotify；這個基本控制路徑已通過，但不等同於新的歌曲消歧／三選一 clarification E2E。
 
+## API Key Rotation / Environment State (2026-09-19)
+
+- `D:\ai\windows-siri-agent\.env` 的 `SIRI_AGENT_API_KEY` 已換成新的高熵 key；Spotify Client ID、Redirect URI、Token path 與其他 runtime 設定未改動。
+- `.env` 仍被 Git 忽略；ACL 已收斂為 SYSTEM、Administrators 與目前登入使用者，沒有保留一般 Authenticated Users 的讀寫權限。
+- 以隔離的 `127.0.0.1:8001` runtime 讀取新 `.env` 後，authenticated `/info` 回傳 HTTP 200；沒有輸出或寫入 key。
+- 使用者已更新 iPhone Shortcut 的 `X-API-Key`；之後以 `scripts/start.bat` 重啟 port 8000，`/health` 回傳 200，使用新 key 的 authenticated `/info` 回傳 200，Spotify 授權與既有 playback scopes 仍在。API key rotation 的 Windows/env 切換已完成；換 key 後的 iPhone 實機播放／暫停回歸仍待使用者測試。
+- 使用者隨後確認換 key 後的 iPhone Siri Shortcut 已正常；重啟後 log 收到 iPhone 的指定歌曲、clarification 與成功播放請求。API Key rotation 後的 iPhone → Agent → Spotify 播放回歸已通過。
+
 ## Siri Shortcut Stable Dictation Flow Documentation (2026-09-19)
 
 - `docs/SIRI_SHORTCUT.md` 已更新為目前實機通過流程：一般指令維持 Siri 語音；只有 clarification 分支在候選朗讀後執行「關閉 Siri 並繼續」→ 第二次 Dictate Text → POST token。
