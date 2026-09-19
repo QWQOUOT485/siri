@@ -101,10 +101,10 @@ class SemanticMemoryDatabase:
     def _migrate(self, connection: sqlite3.Connection, version: int) -> None:
         if version >= SCHEMA_VERSION:
             return
-        connection.execute("BEGIN")
         try:
             connection.executescript(
                 """
+                BEGIN;
                 CREATE TABLE IF NOT EXISTS entities (
                     entity_pk INTEGER PRIMARY KEY,
                     entity_type TEXT NOT NULL,
@@ -162,7 +162,7 @@ class SemanticMemoryDatabase:
                 """
             )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-            connection.commit()
+            connection.execute("COMMIT")
         except Exception:
             connection.rollback()
             raise
