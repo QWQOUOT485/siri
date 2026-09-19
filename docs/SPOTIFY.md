@@ -41,6 +41,9 @@
 遵循 least privilege，只要求目前功能需要的 scopes：
 - `user-modify-playback-state`：播放、暫停、下一首歌、上一首歌、Transfer Playback。
 - `user-read-playback-state`：讀取目前播放狀態與 Spotify Connect 裝置。
+- `user-library-read`：讀取使用者 Spotify Library membership，僅用來判斷搜尋候選是否已被使用者保存／按讚，作為個人化排序訊號。
+
+加入 `user-library-read` 後，既有 Spotify 授權需要重新走一次 OAuth consent，讓新 scope 寫入 token。此 scope 只讀，不允許 Agent 修改使用者的 Library。
 
 若未來新增功能需要更多 scopes，必須先更新本規格與 SECURITY.md，不可預先要求不必要權限。
 
@@ -114,6 +117,28 @@ Start/Resume Playback
 若使用者明確要求 Live／現場版，服務會在搜尋前拒絕播放。未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手。若最高候選與第二名仍無足夠安全分差，不得播放。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
+
+### Saved / Liked Track Preference
+
+在完成基本 title / artist / album / version / Live filtering 後，Agent 可對仍然有效的 trusted Spotify candidates 查詢目前使用者的 Library membership。
+
+使用 Spotify read-only Library endpoint：
+
+```text
+GET /me/library/contains?uris=spotify:track:...
+```
+
+規則：
+
+- 只檢查由 Spotify Search 建立的 server-owned candidate URI；client 不得提供 URI。
+- 已保存／按讚的 track 可作為強個人化 ranking signal，優先排到 clarification 候選前面。
+- saved status 不得覆蓋使用者明確指定的 artist / album / version。
+- saved status 不得把真正不同歌手的合理同名歌曲直接自動消歧；仍應走 clarification，除非既有 deterministic resolver 本來就有足夠安全優勢。
+- Library lookup timeout / 401 / 403 / 429 / unavailable 時，搜尋流程必須退回既有 deterministic ranking，不得讓播放功能整體失效。
+- 此訊號只用於排序，不進 AI prompt，不進 Shortcut，不寫入一般 API response。
+- 不使用 Library write scope，也不自動幫使用者按讚或取消按讚。
+
+目前這是 planned optimization，尚未視為已實作或實機驗收。
 
 真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 
@@ -248,6 +273,8 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - `播放晴天現場版` / `播放晴天原版` → closed version intent
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
+- saved/liked candidate 可被提升排序，但不能覆蓋 explicit artist/album/version 或 genuine ambiguity
+- Library lookup 失敗時必須安全 fallback 到既有 ranking
 - Live 候選直接排除；明確 Live intent 不搜尋、不播放
 - Traditional/Simplified identity normalization
 - bare same-title tracks by different artists remain ambiguous
