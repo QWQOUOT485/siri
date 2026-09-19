@@ -197,20 +197,24 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-最近記錄的完整 source test run為 **160 passed**，另有 2 個既有 dependency deprecation warnings；compileall、pip check、git diff check 也有通過紀錄。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **228 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
-2026-09-20 的 loopback shadow benchmark 已開始但依使用者要求暫停；部分結果與未完成邊界記錄在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式維持 95.24% supported semantic accuracy；`qwen3-4b` 僅完成 prompt mode，schema mode 尚未完成。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+2026-09-20 的 loopback benchmark 三個模型、兩種模式的固定 corpus rows 已完成；完整 sanitized evidence 位於 `docs/LOCAL_AI_BENCHMARK_2026-09-20.md`，中斷過程仍保留在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 已完成但為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 Windows/Spotify/Siri acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+
+2026-09-20 real Windows Agent 已完成 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；結果與 evidence boundary 記錄在 `docs/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probe 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前以 source/unit evidence 為主，仍不是完整 promotion acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+
+新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
 ### Promotion gate
 
 production fallback 仍是 **NO-GO**，直到完成：
 
-1. current exact commit / model / config 的 production-loopback shadow acceptance
+1. 完整 current exact commit / model / config 的 production-loopback shadow acceptance（目前 real Agent safe/hostile probes 已部分完成）
 2. durable sanitized benchmark evidence summary（含 commit、fixture、model、LM Studio、prompt/schema/config 與 aggregate metrics）
 3. 完整 source/security regression
-4. real Windows Agent + Spotify safe cases / fail-closed cases
-5. deterministic commands 與 clarification regression
-6. separate independent promotion review
+4. real Windows Agent + Spotify safe cases / fail-closed cases（目前 live safe/hostile/clarification 部分完成；transport fault matrix 仍以 unit evidence 為主）
+5. deterministic commands 與 clarification regression（source suite 已通過；Siri voice acceptance仍另計）
+6. separate independent promotion review（2026-09-20 review 已完成但結論為 NO-GO，需先清除列出的 blockers）
 
 不得因 benchmark 變好而直接設定 `LOCAL_AI_FALLBACK_APPROVED=true`。
 
@@ -232,8 +236,8 @@ Phase 1 原則：
 - DB corruption/unavailability 必須退回既有 deterministic behavior。
 - 已建立 bounded domain models、schema-versioned SQLite persistence、RAM exact index、candidate-only RapidFuzz evidence、MemoryLearner、EntityRecoveryService、optional runtime config 與 aggregate-only metrics。
 - `Sad overlxrd` 首次 trusted clarification + successful mocked playback 會建立 alias；第二次相同 artist text 走 exact RAM canonicalization；mocked playback failure 不會學習。
-- source/security/concurrency regression 已加入本次 source slice；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 保持 false。
-- 尚未在 installed Windows Agent、真實 Spotify 帳號或 iPhone Siri Shortcut 上做 Semantic Recovery acceptance；因此不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
+- source/security/concurrency regression 已納入完整 pytest suite；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 以 code-level false gate fail closed。
+- 本次沒有在 installed Windows Agent、真實 Spotify 帳號或 iPhone Siri Shortcut 上做 Semantic Recovery acceptance；因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
 
 規格位於 `docs/semantic_recovery/`。
 
@@ -260,13 +264,13 @@ Phase 1 原則：
    - 都不得擴張 Local AI allowlist。
 
 4. **Local Semantic Recovery Phase 1 runtime acceptance**
-   - source implementation 與 poisoning/conflict tests 已完成為可 review slice。
-   - 仍需 Windows SQLite create/migration、restart persistence、RAM rebuild、真實 `Sad overlxrd` clarification/playback/second exact-hit、latency 與既有 Siri/Spotify regression。
+   - source implementation與poisoning/conflict tests已完成。
+   - 仍需 Windows SQLite create/migration、restart persistence、RAM rebuild、真實 `Sad overlxrd` clarification/playback/second exact-hit、latency與既有 Siri/Spotify regression。
 
 5. **Local AI promotion evidence**
    - 保持 off/shadow。
-   - 2026-09-20 partial three-model benchmark 已記錄，但 `qwen3-4b` schema mode 尚未完成；不得據此選定模型或啟用 fallback。
-   - 完成剩餘單一 benchmark mode 後，再做 production-aligned loopback acceptance 與 separate promotion review。
+   - 2026-09-20 three-model/two-mode benchmark 與 sanitized combined evidence 已完成；`qwen3-4b` 未達初始品質門檻，且不得據此自動選定模型或啟用 fallback。
+   - 下一步是 current exact commit/configuration 的 production-aligned loopback shadow acceptance，再做 deterministic regressions 與 separate promotion review。
 
 ### Smaller validation gaps
 
