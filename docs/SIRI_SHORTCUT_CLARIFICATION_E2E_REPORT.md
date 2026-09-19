@@ -125,11 +125,25 @@ Shortcut 本身從「捷徑」App 手動執行正常，但從：
 
 此時 Windows Agent 沒有取得預期的第二輪輸入，問題位於 Siri → Shortcut 的互動交接，而不是 Spotify clarification service。
 
-### 已驗證 workaround
+### 已驗證修正
 
-在 Shortcut 前段使用「關閉 Siri 並繼續（Dismiss Siri and Continue）」後，可避免 Siri 繼續攔截後續輸入。
+最終實機驗證發現，「關閉 Siri 並繼續（Dismiss Siri and Continue）」不應放在 Shortcut 最前段，而應只放在 clarification 分支內：
 
-代價：後續「要求輸入」實測會落到文字輸入，因此目前穩定可用版本不是完整 hands-free voice clarification。
+```text
+朗讀候選
+→ 關閉 Siri 並繼續
+→ 第二次聽寫文字
+→ POST②
+```
+
+這樣可同時達成：
+
+- 一般指令維持 Siri 語音操作。
+- 需要選歌時，先讓 Siri 朗讀候選。
+- 候選朗讀完成後退出 Siri session，避免 Siri 把「第一首」攔截成自己的排程／提醒語意。
+- 關閉 Siri 後立即由 Shortcut 的第二次聽寫接手，因此第二輪仍可使用語音，不需要打字。
+
+使用者已完成實機測試並確認此順序可成功選歌與播放。
 
 ## 目前驗收結論
 
@@ -142,14 +156,20 @@ Shortcut 本身從「捷徑」App 手動執行正常，但從：
 - Agent server-side candidate selection。
 - 真實 Spotify 播放。
 
-### 尚未通過
+### 通過的完整語音路徑
 
-- 從「嘿 Siri」啟動到第二輪候選選擇，全程 hands-free 語音且不被 Siri 原生功能攔截。
-- 「關閉 Siri 並繼續」workaround 下仍維持第二輪純語音輸入。
+- 從「嘿 Siri」啟動 Shortcut。
+- 第一輪語音指令送到 Windows Agent。
+- Agent 回傳候選與 token。
+- Siri 朗讀候選。
+- clarification 分支內執行「關閉 Siri 並繼續」。
+- Shortcut 第二次聽寫接住「第一首／第二首／第三首」。
+- 第二次 POST 帶回 selection + token。
+- Agent 在 trusted candidate set 中完成選擇並真實播放 Spotify。
 
 因此本次應記錄為：
 
-> **Spotify clarification iPhone E2E 已成功，但目前穩定 workaround 的第二輪需要文字輸入；完整 hands-free Siri clarification 仍未驗收。**
+> **Spotify clarification iPhone E2E 已完成全語音實機驗收；關鍵修正是把「關閉 Siri 並繼續」移到候選朗讀之後、第二次聽寫之前。**
 
 ## 額外觀察：Spotify 候選品質
 
@@ -173,8 +193,8 @@ Shortcut 本身從「捷徑」App 手動執行正常，但從：
 
 ## 建議後續
 
-1. 保留目前可穩定運作的 clarification flow。
-2. 若要追求完全 hands-free，再獨立研究 Siri / Shortcuts 第二輪語音輸入限制，不應因此放寬 Agent parser 或安全邊界。
+1. 保留目前已驗證的 hands-free clarification flow，特別是「朗讀候選 → 關閉 Siri 並繼續 → 第二次聽寫」的順序。
+2. 不要把「關閉 Siri 並繼續」移回 Shortcut 最前面，否則可能退回文字輸入。
 3. 另開 Spotify search quality 工作：
    - 評估 `market=TW`
    - 評估 popularity 只作 tie-breaker
