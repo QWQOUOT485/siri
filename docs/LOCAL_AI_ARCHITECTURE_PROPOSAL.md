@@ -2070,9 +2070,11 @@ document; it is not proof that Local AI has been implemented or accepted.
 The architecture is acceptable as a **gated, future design** after the above
 decisions. It is not approved for production Local AI execution today. The
 clarification bounded-attempt source/unit gate is complete. The next
-implementation order is: improve Spotify candidate quality, then define the
-minimal trust-state models and eligibility gate, implement adapter transport
-only, add `off`/`shadow` modes, and then run a new measured PoC.
+implementation order is: improve Spotify candidate quality, define the
+semantic-retry eligibility signals (including parser-success/resolver-failure
+cases), then define the minimal trust-state models and policy gate, implement
+adapter transport only, add `off`/`shadow` modes, and then run a new measured
+PoC.
 
 ## 39. Semantic retry after a syntactically valid but semantically wrong parse
 
