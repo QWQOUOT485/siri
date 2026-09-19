@@ -219,6 +219,7 @@ class SpotifyCatalog:
         saved_by_uri = dict(zip((ref.track_uri for ref in candidates), statuses))
         top_track_ids = self._top_track_ids(access_token)
         top_artist_names = self._top_artist_names(access_token)
+        recent_track_ids, recent_artist_names = self._recent_signals(access_token)
 
         def ranking_key(ref: SpotifyTrackRef) -> tuple[float | int, ...]:
             relevance_score = self._score(ref, track, artist, album, version_hint)
@@ -227,11 +228,31 @@ class SpotifyCatalog:
             top_artist_score = int(
                 any(self._normalize(name) in top_artist_names for name in ref.artist_names)
             )
+            recent_track_score = 1 if ref.track_id in recent_track_ids else 0
+            recent_artist_score = int(
+                any(self._normalize(name) in recent_artist_names for name in ref.artist_names)
+            )
             popularity = ref.popularity if ref.popularity is not None else -1
             if artist or album or version_hint:
                 # Explicit metadata is a stronger authority than personalization.
-                return relevance_score, saved_score, top_track_score, top_artist_score, popularity
-            return saved_score, top_track_score, top_artist_score, relevance_score, popularity
+                return (
+                    relevance_score,
+                    saved_score,
+                    top_track_score,
+                    top_artist_score,
+                    recent_track_score,
+                    recent_artist_score,
+                    popularity,
+                )
+            return (
+                saved_score,
+                top_track_score,
+                top_artist_score,
+                recent_track_score,
+                recent_artist_score,
+                relevance_score,
+                popularity,
+            )
 
         return tuple(
             sorted(
@@ -274,6 +295,48 @@ class SpotifyCatalog:
             return artist_names
         except Exception:
             return set()
+
+    def _recent_signals(self, access_token: str) -> tuple[set[str], set[str]]:
+        """Return only bounded identity evidence from the fixed recent-items read."""
+
+        getter = getattr(self.client, "get_recently_played", None)
+        if not callable(getter):
+            return set(), set()
+        try:
+            items = getter(access_token)
+            if not isinstance(items, list):
+                return set(), set()
+            track_ids: set[str] = set()
+            artist_names: set[str] = set()
+            for item in items:
+                if not isinstance(item, dict):
+                    return set(), set()
+                # The concrete adapter returns Spotify recently-played wrappers;
+                # accepting a track-shaped item as well keeps this optional seam
+                # compatible with small test/double adapters without widening it.
+                track = item.get("track") if "track" in item else item
+                if not isinstance(track, dict):
+                    return set(), set()
+                track_id = track.get("id")
+                artists = track.get("artists")
+                if (
+                    not isinstance(track_id, str)
+                    or not 1 <= len(track_id.strip()) <= 100
+                    or not isinstance(artists, list)
+                    or not artists
+                ):
+                    return set(), set()
+                track_ids.add(track_id.strip())
+                for artist in artists:
+                    if not isinstance(artist, dict) or not isinstance(artist.get("name"), str):
+                        return set(), set()
+                    normalized = self._normalize(artist["name"])
+                    if not normalized:
+                        return set(), set()
+                    artist_names.add(normalized)
+            return track_ids, artist_names
+        except Exception:
+            return set(), set()
 
     @classmethod
     def _has_explicit_chinese_artist_track_shape(

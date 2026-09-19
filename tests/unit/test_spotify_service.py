@@ -162,6 +162,8 @@ def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
             return httpx.Response(200, json=[False, False])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
             return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
         assert request.url.path == "/v1/search"
         return httpx.Response(
             200,
@@ -181,6 +183,7 @@ def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
         "/v1/me/library/contains",
         "/v1/me/top/tracks",
         "/v1/me/top/artists",
+        "/v1/me/player/recently-played",
     ]
 
 
@@ -192,6 +195,8 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
         if request.url.path == "/v1/me/library/contains":
             return httpx.Response(200, json=[False, False, False])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
             return httpx.Response(200, json={"items": []})
         assert request.url.path == "/v1/search"
         return httpx.Response(
@@ -221,6 +226,7 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
         "/v1/me/library/contains",
         "/v1/me/top/tracks",
         "/v1/me/top/artists",
+        "/v1/me/player/recently-played",
     ]
 
 
@@ -246,6 +252,8 @@ def test_ambiguous_search_uses_saved_status_to_order_options_without_auto_playin
             return httpx.Response(200, json=[False, True])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
             return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
         raise AssertionError(request.url)
 
     spotify, _ = service(tmp_path, handler)
@@ -260,6 +268,7 @@ def test_ambiguous_search_uses_saved_status_to_order_options_without_auto_playin
         "/v1/me/library/contains",
         "/v1/me/top/tracks",
         "/v1/me/top/artists",
+        "/v1/me/player/recently-played",
     ]
 
 
@@ -284,6 +293,8 @@ def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path
             return httpx.Response(200, json=[False, False])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
             return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
         if request.url.path == "/v1/me/player/devices":
             return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
         if request.url.path == "/v1/me/player/play":
@@ -304,6 +315,7 @@ def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path
         "/v1/me/library/contains",
         "/v1/me/top/tracks",
         "/v1/me/top/artists",
+        "/v1/me/player/recently-played",
         "/v1/me/player/devices",
         "/v1/me/player/play",
     ]
@@ -330,6 +342,8 @@ def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
             return httpx.Response(200, json=[False, False])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
             return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
         raise AssertionError(request.url)
 
     spotify, _ = service(tmp_path, handler)
@@ -347,6 +361,7 @@ def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
         "/v1/me/library/contains",
         "/v1/me/top/tracks",
         "/v1/me/top/artists",
+        "/v1/me/player/recently-played",
     ]
 
 

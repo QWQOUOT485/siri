@@ -22,6 +22,7 @@ DEFAULT_SPOTIFY_SCOPES = (
     "user-read-playback-state",
     "user-library-read",
     "user-top-read",
+    "user-read-recently-played",
 )
 
 
