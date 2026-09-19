@@ -276,7 +276,14 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 將既有 resolver safe threshold 明確記錄為 `0.70`；單一候選低於 threshold 才是 `SPOTIFY_LOW_CONFIDENCE_TRACK`，多候選 ambiguity 仍 deterministic clarification。
 - `/command` 現在只沿著 AI semantic-retry seam 傳遞原始 utterance；新增真實 `SpotifyCatalog → SpotifyService → /command` shadow test、approved-test-only fallback 後再次 deterministic resolve test，以及 ambiguity 不進 AI test。這不是 Spotify 搜尋／播放／個人化功能擴充。
 - 完整 pytest `160 passed`、2 個既有 dependency deprecation warnings；compileall、pip check、git diff check 通過。這些仍是 source/unit evidence，不是 installed Windows/Spotify/Siri acceptance。
-- 本輪仍只改 source integration seam 與 AI safety documentation；installed Agent 未重新部署，`LOCAL_AI_FALLBACK_APPROVED=false` 與 production fallback **NO-GO** 保持不變。
+- 本輪仍只改 source integration seam 與 AI safety documentation；後續只做可還原 installed shadow sync，`LOCAL_AI_FALLBACK_APPROVED=false` 與 production fallback **NO-GO** 保持不變。
+
+## Local AI Resolver Seam Installed Shadow Regression (2026-09-19)
+
+- 以可還原 backup `D:\ai\windows-siri-agent\work\local-ai-resolver-shadow-backup-20260919-221500` 保存 installed 原始的四個 AI integration seam 檔案，再同步 source `78fed3c` 的 `catalog.py`、`spotify_service.py`、`command_service.py`、`routes_command.py`；四個 source/deployed SHA-256 readback 一致。
+- Installed compileall 與 config readback 通過；重啟後 port 8000 `/health` 正常，authenticated `/info` 回報 `mode=shadow`、`adapter_configured=true`、`fallback_approved=false`；LM Studio listener 維持 `127.0.0.1:1234`。
+- 安全 parser-miss 的 installed log 產生 `local_ai status=shadow_accepted`，沒有 executable action；unresolved-reference 輸入由 `unresolved_reference` gate 拒絕。這是 installed shadow evidence，不是 installed resolver-signal、Spotify playback、Siri 或 fallback acceptance。
+- Installed `.env` 未開啟 fallback；下一步仍是保留 shadow/off，除非使用者另行要求獨立 production promotion decision。
 
 ## Local AI Product Decision (2026-09-18)
 
