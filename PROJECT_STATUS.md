@@ -37,8 +37,8 @@
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
-- Spotify candidate quality 下一階段新增個人化排序：對 server-owned 搜尋候選以 read-only Spotify Library membership 判斷是否為使用者已保存／按讚歌曲，作為強 ranking signal；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。
-- 此功能需要新增 OAuth scope `user-library-read`，實作後既有帳號需重新授權一次；目前尚未實作、尚未重新授權、尚未實機驗收。
+- Spotify candidate quality 下一階段新增個人化排序：對 server-owned 搜尋候選以 read-only Spotify Library membership 判斷是否為使用者已保存／按讚歌曲，作為最強個人化 ranking signal；再加入 Top Tracks / Top Artists、Recently Played、Spotify Search relevance，最後才考慮 popularity-like tie-breaker；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。
+- 個人化與 Library 功能需要新增 OAuth scopes `user-library-read`、`user-library-modify`、`user-top-read`、`user-read-recently-played`；實作後既有帳號需重新授權一次；目前尚未實作、尚未重新授權、尚未實機驗收。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
@@ -48,6 +48,8 @@
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
 - `暫停`、`暫停音樂`、`pause music` 與簡體 `暂停音乐` 都收斂到封閉的 `spotify_pause` action；不回退到通用系統媒體控制。
+- Spotify extended controls 已加入下一階段 scope：shuffle on/off、repeat off/track/context、seek、Spotify device volume，以及「喜歡這首／取消喜歡這首」Library write。這些全部維持 deterministic closed actions，不交給 Local AI。
+- 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
 ## Local AI Phase 0.5 Preparation (2026-09-18)
 
@@ -230,7 +232,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 6. source 與 Windows Agent 已完成新的消歧規則：Live 排除、繁簡 normalization、最多 3 個 trusted candidates、短效 token。
 7. 已跑 unit/security tests 並部署 Windows Agent；clarification token 流程已接到 iPhone Shortcut。
 8. iPhone Siri Shortcut 端到端播放與三選一反問流程已完成全語音實機驗收。
-9. 後續 Spotify 工作重點轉為模糊歌名候選品質改善：評估 `market=TW`、保存原始 relevance、加入使用者已按讚／Library membership 排序訊號，再視 API 可用資料評估 popularity tie-breaker；不得因此降低 ambiguity safety。
+9. 後續 Spotify 工作重點：先做候選個人化排序（saved/liked → top tracks/artists → recently played → search relevance → final tie-breaker），再加入 shuffle/repeat/seek/Spotify volume/like/unlike current track；同時評估 `market=TW` 的 availability 行為，不把它誤當熱門度排序；不得降低 ambiguity safety。
 
 ## Important: What Is NOT Yet Proven
 
