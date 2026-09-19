@@ -235,7 +235,7 @@ GET /me/library/contains?uris=spotify:track:...
 
 saved/liked 的第一個 deterministic source slice 已完成：Agent 只在既有 ambiguity 的最多三個 server-owned candidates 內查詢 membership，並只重排候選，不會改變自動播放或 ambiguity safety。Library lookup 失敗、缺少 scope 或回應格式異常時會退回原本 deterministic ranking。既有 token 需要重新授權取得 `user-library-read`；2026-09-20 bounded read-only acceptance probe 使用固定 20 個 bare-title 加上最多 50 個記憶體內 Recently Played title seed，取得 1 個 saved-only reorder case（原始 position 1 → final position 0），ambiguity 保留且沒有 playback/Library write。Recently Played seed 只擴大搜尋語料，saved probe ranking client 只暴露 Search 與 Library membership；精確結果見 [`SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
 
-Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/top/tracks` 與 `GET /me/top/artists`，並只對既有 server-owned ambiguity candidates 排序。Top signal 不會覆蓋 explicit artist / album / version、不會消除 ambiguity，也不會進入 AI、Shortcut 或一般 API response。top lookup malformed / timeout / 401 / 403 / 429 時會忽略該 signal；若 Library lookup 本身失敗，仍回到原 deterministic order。2026-09-20 current-source real-account probe 已取得 1 個 Top Track reorder partial acceptance，但尚未取得 Top-Artist-only reorder；精確結果見 [`SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。可用 `scripts/spotify_top_ranking_acceptance.py --from-top-tracks` 重跑 Top probe；它只讀取且不播放、不修改 Library。`scripts/spotify_saved_ranking_acceptance.py` 仍可單獨重跑 saved slice。
+Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/top/tracks` 與 `GET /me/top/artists`，並只對既有 server-owned ambiguity candidates 排序。Top signal 不會覆蓋 explicit artist / album / version、不會消除 ambiguity，也不會進入 AI、Shortcut 或一般 API response。top lookup malformed / timeout / 401 / 403 / 429 時會忽略該 signal；若 Library lookup 本身失敗，仍回到原 deterministic order。2026-09-20 current-source real-account probe 已取得 1 個 Top Track reorder partial acceptance，但尚未取得 Top-Artist-only reorder；後續 bounded Top-Artist-only probe 遭遇 Spotify Development Mode `429 QUOTA_EXCEEDED`（`Retry-After: 3600`），所以目前仍是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。精確結果見 [`SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。可用 `scripts/spotify_top_ranking_acceptance.py --from-top-tracks` 或 `--from-top-artists --top-artist-only` 重跑 Top probe；後者只應在 quota window 清除後執行，且只讀取、不播放、不修改 Library。`scripts/spotify_saved_ranking_acceptance.py` 仍可單獨重跑 saved slice。
 
 Recently Played 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/player/recently-played`，將 server 回傳的 track ID / artist name 作為既有 ambiguity candidates 內的次級排序 evidence，順序位於 Top Tracks / Top Artists 之後、Search relevance 之前。它不建立新候選、不消除 genuine ambiguity、不覆蓋 explicit metadata，也不進 AI、Shortcut 或一般 API response。空歷史、malformed item、timeout、401、403、429、缺少 optional method 或其他 lookup failure 都會忽略該訊號並維持既有 deterministic ranking。此 slice 需要 `user-read-recently-played`；token 已於 2026-09-20 重新授權取得，但 real-account acceptance 尚未單獨執行。
 
@@ -323,7 +323,7 @@ Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語
 
 如果 Spotify 回傳 403：回傳權限 / Premium / account 狀態相關的友善錯誤，不繞過 Spotify 限制。
 
-如果 Spotify 回傳 429：遵循 `Retry-After`，不可 busy-loop 重試。
+如果 Spotify 回傳 429：遵循 `Retry-After`，不可 busy-loop 重試。Acceptance probe 最多只做一次不超過 30 秒的 bounded retry；`QUOTA_EXCEEDED` 或較長的 `Retry-After` 直接記錄為 blocked，等待 provider quota window 清除。
 
 ## Extended Playback Controls
 

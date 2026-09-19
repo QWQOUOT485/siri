@@ -112,7 +112,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Top track / artist 只在既有最多三個 trusted genuine-ambiguity candidates 內作排序 evidence。
 - saved → top track → top artist → deterministic relevance → popularity 的順序只影響 candidate ordering；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - malformed 或失敗的 top lookup 只忽略該訊號；Library lookup 失敗時整體回到原 deterministic order。
-- source/unit regression 已完成。2026-09-20 token 已重新授權並包含 `user-top-read`、`user-read-recently-played` 與 `user-library-read`；current-source read-only probe 使用固定 20 個 bare-title 加上 bounded in-memory 的 50 個 Top Track title seed，得到 34 個 genuine ambiguity、34 個可比對 raw candidate set、0 個 API/library error，並觀察到 1 個 `top_track` candidate 從原始位置 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Top Artist data 在 19 個 candidates 命中，但本次沒有獨立的 Top-Artist-only reorder，因此目前是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。詳細結果見 [`docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。
+- source/unit regression 已完成。2026-09-20 token 已重新授權並包含 `user-top-read`、`user-read-recently-played` 與 `user-library-read`；current-source read-only probe 使用固定 20 個 bare-title 加上 bounded in-memory 的 50 個 Top Track title seed，得到 34 個 genuine ambiguity、34 個可比對 raw candidate set、0 個 API/library error，並觀察到 1 個 `top_track` candidate 從原始位置 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Top Artist data 在 19 個 candidates 命中，但本次沒有獨立的 Top-Artist-only reorder，因此目前是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。後續 bounded Top-Artist-only probe 遭遇 Spotify Development Mode `429 QUOTA_EXCEEDED`，`Retry-After=3600` 秒；probe 沒有重試或 busy-loop，quota 清除前不再重跑。詳細結果見 [`docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Recently Played source slice
 
@@ -258,6 +258,7 @@ Phase 1 原則：
 1. **Spotify Top-Artist-only genuine-ambiguity acceptance**
    - Top Track 已有 1 個 real-account partial acceptance；如要完成 combined Top Tracks / Top Artists gate，需補一個沒有 Top Track / saved / recent 強訊號、由 Top Artist 單獨提升的 case。
    - 驗證 Top Artist 只改善候選順序、不覆蓋 explicit metadata、不消除 genuine ambiguity、不自動播放。
+   - 目前被 Spotify Development Mode quota 阻塞：最近一次 bounded probe 收到 `429 QUOTA_EXCEEDED`、`Retry-After=3600`；最小下一步是 quota window 清除後只跑一次 bounded read-only probe。
 
 2. **Spotify personalization real acceptance and next signal**
    - Top Track 的 genuine-ambiguity ordering 已取得 1 個 real-account partial acceptance；仍需決定是否補一個 Top-Artist-only reorder 以完成 combined Top Tracks / Top Artists gate。
@@ -295,7 +296,7 @@ Phase 1 原則：
 ## Current Recommended Order
 
 ```text
-1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
+1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate; after quota clears)
 2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
 3. deterministic Spotify playback-state controls
 4. Local Semantic Recovery Phase 1 runtime acceptance

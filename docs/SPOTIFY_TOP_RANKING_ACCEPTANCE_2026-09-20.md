@@ -4,10 +4,14 @@ Date: 2026-09-20
 
 Decision: **PARTIAL ACCEPTANCE** — Top Track reordering is accepted for this
 real-account probe; a standalone Top Artist reordering case is not yet proven.
+The follow-up Top-Artist-only probe is currently blocked by the provider's
+Development Mode quota, not accepted as a pass.
 
 ## Scope and method
 
-- Source revision: `74304144d51ed174a3619a32e76e07a04d8e87e0`.
+- Initial Top Track evidence source revision:
+  `74304144d51ed174a3619a32e76e07a04d8e87e0`.
+- The follow-up probe implementation is based on merged revision `9d92374`.
 - The token was reauthorized through the current source flow and included
   `user-top-read`, `user-read-recently-played`, and `user-library-read`.
 - The probe used the fixed 20 bare-title queries plus a bounded in-memory
@@ -48,6 +52,35 @@ sets, but this run did not produce a Top-Artist-only reorder that could be
 attributed separately from the Top Track signal. Therefore this is not a
 standalone acceptance claim for the Top Artist signal.
 
+## Top-Artist-only follow-up
+
+The follow-up probe added a bounded, read-only Top Artist corpus path. It can
+use at most 50 Top Artists and at most 50 in-memory seed titles, and its
+`--top-artist-only` mode accepts a case only when the final first candidate is
+newly promoted by Top Artist with no saved, Top Track, or Recently Played signal.
+No seed title or account name is written to the repository or report.
+
+A diagnostic partial run found 8 Top-Artist-only opportunities, but all 8 had
+the Top Artist candidate already first in the raw Search order, so there were
+0 Top-Artist-only reorders. That run also encountered 25 Search HTTP 429
+responses and therefore is not acceptance evidence.
+
+A smaller bounded rerun was stopped at corpus seeding by Spotify:
+
+| Measure | Result |
+| --- | ---: |
+| Status | blocked |
+| Blocked operation | Top Artist seed lookup |
+| HTTP status | 429 |
+| Provider reason | `QUOTA_EXCEEDED` |
+| `Retry-After` | 3600 seconds |
+| Probe retry used | false |
+| Rate-limit exhausted | true |
+
+The probe records only the bounded status, provider reason, and retry delay.
+It does not retry a `QUOTA_EXCEEDED` response or busy-loop; no further Spotify
+calls were made after this blocker appeared.
+
 ## Safety and decision
 
 The real case preserved genuine ambiguity and did not execute playback. The
@@ -61,8 +94,9 @@ Keep the Top Tracks / Top Artists slice in **partial acceptance** status:
 - Automatic playback, client-provided ranking authority, and Library writes:
   not enabled by this evidence.
 
-The smallest next evidence-producing action is a bounded real-account query
-that yields a Top-Artist-only reorder, or an explicit product decision to
-accept the combined Top signal based on the Top Track case and proceed to the
+The current smallest next evidence-producing action is one bounded,
+read-only Top-Artist-only query after the provider quota window clears. Until
+then, keep this slice in partial acceptance and do not claim standalone Top
+Artist acceptance. An explicit product decision could instead accept the
+combined Top signal based on the existing Top Track case and proceed to the
 Recently Played gate.
-

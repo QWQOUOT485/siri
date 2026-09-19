@@ -124,7 +124,11 @@ def test_pkce_code_exchange_uses_form_data_and_does_not_use_a_client_secret():
 
 def test_rate_limit_error_preserves_retry_after_without_leaking_the_access_token():
     def handler(_request: httpx.Request):
-        return httpx.Response(429, headers={"Retry-After": "7"}, json={"error": "rate limited"})
+        return httpx.Response(
+            429,
+            headers={"Retry-After": "7"},
+            json={"error": {"status": 429, "message": "Too many requests", "reason": "QUOTA_EXCEEDED"}},
+        )
 
     client = client_for(handler)
 
@@ -133,6 +137,7 @@ def test_rate_limit_error_preserves_retry_after_without_leaking_the_access_token
 
     assert error.value.status_code == 429
     assert error.value.retry_after_seconds == 7
+    assert error.value.reason == "QUOTA_EXCEEDED"
     assert "super-secret-access-token" not in str(error.value)
 
 

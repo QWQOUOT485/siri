@@ -47,6 +47,11 @@ DEFAULT_TITLES = (
     "Shape of You",
 )
 
+MAX_TOP_ARTIST_SEEDS = 50
+MAX_TOP_ARTIST_TITLES = 50
+TOP_ARTIST_TRACKS_PER_SEED = 1
+MAX_PROBE_RETRY_WAIT_SECONDS = 30
+
 
 class ReadOnlyRecordingClient:
     """Expose and cache only the bounded read operations used by the slice."""
@@ -63,16 +68,68 @@ class ReadOnlyRecordingClient:
         self.top_track_error: SpotifyApiError | None = None
         self.top_artist_error: SpotifyApiError | None = None
         self.recent_error: SpotifyApiError | None = None
+        self.rate_limit_errors = 0
+        self.rate_limit_reasons: set[str] = set()
+        self.last_retry_after_seconds: int | None = None
+        self.rate_limit_retry_used = False
+        self.rate_limit_exhausted = False
+
+    def _record_rate_limit(self, error: SpotifyApiError) -> None:
+        self.rate_limit_errors += 1
+        if error.reason is not None:
+            self.rate_limit_reasons.add(error.reason)
+        self.last_retry_after_seconds = error.retry_after_seconds
+
+    def rate_limit_summary(self) -> dict:
+        summary = {
+            "rate_limit_errors": self.rate_limit_errors,
+            "rate_limit_retry_used": self.rate_limit_retry_used,
+            "rate_limit_exhausted": self.rate_limit_exhausted,
+            "rate_limit_reasons": sorted(self.rate_limit_reasons),
+        }
+        if self.last_retry_after_seconds is not None:
+            summary["last_retry_after_seconds"] = self.last_retry_after_seconds
+        return summary
+
+    def _call(self, operation):
+        try:
+            return operation()
+        except SpotifyApiError as exc:
+            if exc.status_code != 429:
+                raise
+            self._record_rate_limit(exc)
+            if (
+                self.rate_limit_retry_used
+                or exc.reason == "QUOTA_EXCEEDED"
+                or exc.retry_after_seconds is None
+                or exc.retry_after_seconds > MAX_PROBE_RETRY_WAIT_SECONDS
+            ):
+                self.rate_limit_exhausted = True
+                raise
+            self.rate_limit_retry_used = True
+            time.sleep(exc.retry_after_seconds)
+            try:
+                return operation()
+            except SpotifyApiError as retry_exc:
+                if retry_exc.status_code == 429:
+                    self._record_rate_limit(retry_exc)
+                    self.rate_limit_exhausted = True
+                raise
+
+    def search_seed_tracks(self, access_token: str, query: str, *, limit: int = 10) -> list[dict]:
+        """Search only for corpus seeding without mixing it into acceptance evidence."""
+
+        return self._call(lambda: self.client.search_tracks(access_token, query, limit=limit))
 
     def search_tracks(self, access_token: str, query: str, *, limit: int = 10) -> list[dict]:
-        payload = self.client.search_tracks(access_token, query, limit=limit)
+        payload = self._call(lambda: self.client.search_tracks(access_token, query, limit=limit))
         self.searches.append(payload)
         return payload
 
     def check_saved_tracks(self, access_token: str, track_uris: tuple[str, ...]) -> list[bool]:
         self.saved_batches.append(tuple(track_uris))
         try:
-            statuses = self.client.check_saved_tracks(access_token, track_uris)
+            statuses = self._call(lambda: self.client.check_saved_tracks(access_token, track_uris))
         except SpotifyApiError:
             self.saved_errors += 1
             raise
@@ -84,7 +141,7 @@ class ReadOnlyRecordingClient:
             raise self.top_track_error
         if self.top_track_items is None:
             try:
-                self.top_track_items = self.client.get_top_tracks(access_token, limit=limit)
+                self.top_track_items = self._call(lambda: self.client.get_top_tracks(access_token, limit=limit))
             except SpotifyApiError as exc:
                 self.top_track_error = exc
                 raise
@@ -95,7 +152,7 @@ class ReadOnlyRecordingClient:
             raise self.top_artist_error
         if self.top_artist_items is None:
             try:
-                self.top_artist_items = self.client.get_top_artists(access_token, limit=limit)
+                self.top_artist_items = self._call(lambda: self.client.get_top_artists(access_token, limit=limit))
             except SpotifyApiError as exc:
                 self.top_artist_error = exc
                 raise
@@ -106,7 +163,7 @@ class ReadOnlyRecordingClient:
             raise self.recent_error
         if self.recent_items is None:
             try:
-                self.recent_items = self.client.get_recently_played(access_token, limit=limit)
+                self.recent_items = self._call(lambda: self.client.get_recently_played(access_token, limit=limit))
             except SpotifyApiError as exc:
                 self.recent_error = exc
                 raise
@@ -117,7 +174,16 @@ def _emit(payload: dict) -> None:
     print(json.dumps(payload, ensure_ascii=True, separators=(",", ":")))
 
 
-def _titles_from_args() -> tuple[tuple[str, ...], bool]:
+def _spotify_error_details(error: SpotifyApiError) -> dict:
+    details = {"status_code": error.status_code}
+    if error.retry_after_seconds is not None:
+        details["retry_after_seconds"] = error.retry_after_seconds
+    if error.reason is not None:
+        details["spotify_reason"] = error.reason
+    return details
+
+
+def _titles_from_args() -> tuple[tuple[str, ...], bool, bool, bool, int]:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--title",
@@ -130,6 +196,22 @@ def _titles_from_args() -> tuple[tuple[str, ...], bool]:
         action="store_true",
         help="Add a bounded, in-memory sample of the account's Top Track titles to the probe.",
     )
+    parser.add_argument(
+        "--from-top-artists",
+        action="store_true",
+        help="Add a bounded, in-memory sample of titles found from the account's Top Artists to the probe.",
+    )
+    parser.add_argument(
+        "--top-artist-only",
+        action="store_true",
+        help="Accept only a reorder caused by Top Artist, with no saved, Top Track, or Recently Played signal.",
+    )
+    parser.add_argument(
+        "--top-artist-seed-limit",
+        type=int,
+        default=MAX_TOP_ARTIST_SEEDS,
+        help=f"Bound the number of Top Artists used for corpus seeding (1-{MAX_TOP_ARTIST_SEEDS}).",
+    )
     args = parser.parse_args()
     titles = tuple(args.titles or DEFAULT_TITLES)
     if not titles:
@@ -139,7 +221,53 @@ def _titles_from_args() -> tuple[tuple[str, ...], bool]:
             parser.error("each title must contain 1 to 100 characters")
         if any(ord(char) < 32 or ord(char) == 127 for char in title):
             parser.error("titles must not contain control characters")
-    return titles, args.from_top_tracks
+    if args.top_artist_only and not args.from_top_artists:
+        parser.error("--top-artist-only requires --from-top-artists")
+    if not 1 <= args.top_artist_seed_limit <= MAX_TOP_ARTIST_SEEDS:
+        parser.error(f"--top-artist-seed-limit must be between 1 and {MAX_TOP_ARTIST_SEEDS}")
+    return titles, args.from_top_tracks, args.from_top_artists, args.top_artist_only, args.top_artist_seed_limit
+
+
+def _safe_text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not 0 < len(value) <= 100 or any(ord(char) < 32 or ord(char) == 127 for char in value):
+        return None
+    return value
+
+
+def _top_artist_seed_titles(
+    client: ReadOnlyRecordingClient,
+    access_token: str,
+    items: list[dict],
+    *,
+    artist_limit: int,
+) -> tuple[str, ...]:
+    """Build a bounded, in-memory bare-title corpus from Top Artist search results."""
+
+    artist_names = tuple(
+        dict.fromkeys(
+            name
+            for item in items[:artist_limit]
+            if isinstance(item, dict)
+            and (name := _safe_text(item.get("name"))) is not None
+        )
+    )
+    titles: list[str] = []
+    for artist_name in artist_names:
+        payload = client.search_seed_tracks(
+            access_token,
+            f"artist:{artist_name}",
+            limit=TOP_ARTIST_TRACKS_PER_SEED,
+        )
+        for item in payload:
+            title = _safe_text(item.get("name")) if isinstance(item, dict) else None
+            if title is not None:
+                titles.append(title)
+            if len(dict.fromkeys(titles)) >= MAX_TOP_ARTIST_TITLES:
+                return tuple(dict.fromkeys(titles))[:MAX_TOP_ARTIST_TITLES]
+    return tuple(dict.fromkeys(titles))[:MAX_TOP_ARTIST_TITLES]
 
 
 def _raw_refs_for_candidates(
@@ -203,7 +331,7 @@ def _recent_signals(catalog: SpotifyCatalog, items: list[dict] | None) -> tuple[
 
 
 def main() -> int:
-    titles, from_top_tracks = _titles_from_args()
+    titles, from_top_tracks, from_top_artists, top_artist_only, top_artist_seed_limit = _titles_from_args()
     config = load_config()
     token = SpotifyTokenStore(config.spotify_token_file).load()
     if token is None:
@@ -221,12 +349,15 @@ def main() -> int:
     transport = SpotifyApiClient()
     client = ReadOnlyRecordingClient(transport)
     seeded_top_title_count = 0
+    seeded_top_artist_title_count = 0
+    top_track_items: list[dict] | None = None
+    top_artist_items: list[dict] | None = None
     if from_top_tracks:
         try:
-            top_items = transport.get_top_tracks(token.access_token, limit=50)
+            top_items = client.get_top_tracks(token.access_token, limit=50)
         except SpotifyApiError as exc:
             transport.close()
-            _emit({"status": "blocked", "reason": "top_tracks_lookup_failed", "status_code": exc.status_code})
+            _emit({"status": "blocked", "reason": "top_tracks_lookup_failed", **_spotify_error_details(exc), **client.rate_limit_summary()})
             return 2
         top_titles = tuple(
             item["name"].strip()
@@ -238,9 +369,27 @@ def main() -> int:
         )
         titles = tuple(dict.fromkeys((*titles, *top_titles)))
         seeded_top_title_count = len(top_titles)
+        top_track_items = top_items
+    if from_top_artists:
+        try:
+            top_artist_items = client.get_top_artists(token.access_token, limit=50)
+            top_artist_titles = _top_artist_seed_titles(
+                client,
+                token.access_token,
+                top_artist_items,
+                artist_limit=top_artist_seed_limit,
+            )
+        except SpotifyApiError as exc:
+            transport.close()
+            _emit({"status": "blocked", "reason": "top_artist_seed_lookup_failed", **_spotify_error_details(exc), **client.rate_limit_summary()})
+            return 2
+        titles = tuple(dict.fromkeys((*titles, *top_artist_titles)))
+        seeded_top_artist_title_count = len(top_artist_titles)
     catalog = SpotifyCatalog(client)
-    if from_top_tracks:
-        client.top_track_items = top_items
+    if top_track_items is not None:
+        client.top_track_items = top_track_items
+    if top_artist_items is not None:
+        client.top_artist_items = top_artist_items
     ambiguous_cases = 0
     raw_candidate_sets = 0
     saved_memberships = 0
@@ -249,6 +398,11 @@ def main() -> int:
     recent_matches = 0
     api_errors = 0
     accepted_cases: list[dict] = []
+    top_artist_signal_cases = 0
+    top_artist_only_opportunities = 0
+    top_artist_only_reorders = 0
+    top_artist_raw_first_matches = 0
+    top_artist_final_first_matches = 0
 
     try:
         for title in titles:
@@ -258,8 +412,15 @@ def main() -> int:
                 result = catalog.find_track(title, None, access_token=token.access_token)
             except SpotifyApiError as exc:
                 api_errors += 1
-                _emit({"status": "search_error", "status_code": exc.status_code})
+                if exc.status_code == 429:
+                    _emit({"status": "blocked", "reason": "spotify_rate_limited", **_spotify_error_details(exc), **client.rate_limit_summary()})
+                    return 2
+                _emit({"status": "search_error", **_spotify_error_details(exc)})
                 continue
+
+            if client.rate_limit_exhausted:
+                _emit({"status": "blocked", "reason": "spotify_rate_limited", **client.rate_limit_summary()})
+                return 2
 
             if not result.ambiguous or result.track is not None:
                 continue
@@ -316,26 +477,49 @@ def main() -> int:
 
             raw_first = raw_candidates[0]
             final_first = candidates[0]
+            final_top_track = top_track_match(final_first)
+            final_top_artist = top_artist_match(final_first)
+            raw_top_track = top_track_match(raw_first)
+            raw_top_artist = top_artist_match(raw_first)
+            has_saved_signal = any(saved_by_uri.get(candidate.track_uri, False) for candidate in candidates)
+            has_recent_signal = any(recent_match(candidate) for candidate in candidates)
+            has_top_track_signal = any(top_track_match(candidate) for candidate in candidates)
+            has_top_artist_signal = any(top_artist_match(candidate) for candidate in candidates)
+            if has_top_artist_signal:
+                top_artist_signal_cases += 1
+            if has_top_artist_signal and not has_saved_signal and not has_recent_signal and not has_top_track_signal:
+                top_artist_only_opportunities += 1
+                if raw_top_artist:
+                    top_artist_raw_first_matches += 1
+                if final_top_artist:
+                    top_artist_final_first_matches += 1
+                if final_top_artist and not raw_top_artist:
+                    top_artist_only_reorders += 1
             if final_first.track_uri == raw_first.track_uri or final_first.track_uri not in raw_positions:
                 continue
             if any(saved_by_uri.get(candidate.track_uri, False) for candidate in candidates):
                 continue
             if any(recent_match(candidate) for candidate in candidates):
                 continue
-            final_top_track = top_track_match(final_first)
-            final_top_artist = top_artist_match(final_first)
-            raw_top_track = top_track_match(raw_first)
-            raw_top_artist = top_artist_match(raw_first)
-            if (final_top_track or final_top_artist) and not (raw_top_track or raw_top_artist):
-                accepted_cases.append(
-                    {
-                        "case_number": len(accepted_cases) + 1,
-                        "signal": "top_track" if final_top_track else "top_artist",
-                        "original_position": raw_positions[final_first.track_uri],
-                        "final_position": 0,
-                        "ambiguity_preserved": True,
-                    }
-                )
+            if top_artist_only and has_top_track_signal:
+                continue
+            if top_artist_only:
+                if not final_top_artist or raw_top_artist or final_top_track or raw_top_track:
+                    continue
+                signal = "top_artist"
+            else:
+                if not (final_top_track or final_top_artist) or (raw_top_track or raw_top_artist):
+                    continue
+                signal = "top_track" if final_top_track else "top_artist"
+            accepted_cases.append(
+                {
+                    "case_number": len(accepted_cases) + 1,
+                    "signal": signal,
+                    "original_position": raw_positions[final_first.track_uri],
+                    "final_position": 0,
+                    "ambiguity_preserved": True,
+                }
+            )
     finally:
         transport.close()
 
@@ -348,18 +532,42 @@ def main() -> int:
         "recent_matches": recent_matches,
         "api_errors": api_errors,
         "library_errors": client.saved_errors,
+        "top_track_errors": int(client.top_track_error is not None),
+        "top_artist_errors": int(client.top_artist_error is not None),
+        "recent_errors": int(client.recent_error is not None),
+        **client.rate_limit_summary(),
+        "top_artist_signal_cases": top_artist_signal_cases,
+        "top_artist_only_opportunities": top_artist_only_opportunities,
+        "top_artist_only_reorders": top_artist_only_reorders,
+        "top_artist_raw_first_matches": top_artist_raw_first_matches,
+        "top_artist_final_first_matches": top_artist_final_first_matches,
         "writes_performed": False,
         "playback_performed": False,
         "seeded_top_title_count": seeded_top_title_count,
+        "seeded_top_artist_title_count": seeded_top_artist_title_count,
+        "top_artist_only": top_artist_only,
     }
-    if accepted_cases:
+    lookup_error_keys = (
+        "api_errors",
+        "library_errors",
+        "top_track_errors",
+        "top_artist_errors",
+        "recent_errors",
+        "rate_limit_errors",
+    )
+    if accepted_cases and not any(common[key] > 0 for key in lookup_error_keys):
         _emit({"status": "accepted", "cases": accepted_cases, **common})
         return 0
 
+    reason = (
+        "lookup_errors_prevented_signal_isolation"
+        if any(common[key] > 0 for key in lookup_error_keys)
+        else "no_top_candidate_reordered_from_original_search_order_without_stronger_signal"
+    )
     _emit(
         {
             "status": "blocked",
-            "reason": "no_top_candidate_reordered_from_original_search_order_without_stronger_signal",
+            "reason": reason,
             **common,
         }
     )

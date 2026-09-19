@@ -19,10 +19,18 @@ _TRACK_URI = re.compile(r"^spotify:track:[A-Za-z0-9]+$")
 class SpotifyApiError(RuntimeError):
     """An expected Spotify API or network failure without response secrets."""
 
-    def __init__(self, status_code: int | None, message: str, *, retry_after_seconds: int | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int | None,
+        message: str,
+        *,
+        retry_after_seconds: int | None = None,
+        reason: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
+        self.reason = reason
 
 
 class SpotifyApiClient:
@@ -241,12 +249,18 @@ class SpotifyApiClient:
 
         if response.status_code >= 400:
             retry_after = self._retry_after(response)
+            reason = self._error_reason(response)
             messages = {
                 401: "Spotify 授權已失效。",
                 403: "Spotify 拒絕這項播放操作，請確認 Premium 與帳戶狀態。",
                 429: "Spotify 目前請求過多，請稍後再試。",
             }
-            raise SpotifyApiError(response.status_code, messages.get(response.status_code, "Spotify API 請求失敗。"), retry_after_seconds=retry_after)
+            raise SpotifyApiError(
+                response.status_code,
+                messages.get(response.status_code, "Spotify API 請求失敗。"),
+                retry_after_seconds=retry_after,
+                reason=reason,
+            )
         if response.status_code == 204 or not response.content:
             return {}
         try:
@@ -264,3 +278,19 @@ class SpotifyApiClient:
             return max(0, min(int(value), 3600)) if value is not None else None
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _error_reason(response: httpx.Response) -> str | None:
+        """Keep only a bounded provider reason; never retain arbitrary error text."""
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        error = payload.get("error") if isinstance(payload, dict) else None
+        reason = error.get("reason") if isinstance(error, dict) else None
+        if not isinstance(reason, str) or not 1 <= len(reason) <= 64:
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", reason):
+            return None
+        return reason
