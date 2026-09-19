@@ -51,6 +51,48 @@
 - Spotify extended controls 已加入下一階段 scope：shuffle on/off、repeat off/track/context、seek、Spotify device volume，以及「喜歡這首／取消喜歡這首」Library write。這些全部維持 deterministic closed actions，不交給 Local AI。
 - 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
+
+## Third-party Review Consolidation / Current Open Work (2026-09-19)
+
+Two external AI code-review reports were compared against the current `main` source. Treat the following as the current review disposition rather than copying either report's completion percentages or recommendations blindly.
+
+Confirmed code issues that still need implementation/runtime verification:
+
+1. **Windows media `SendInput` ctypes layout** — `app/adapters/windows/media.py` currently models `INPUT` without the native union layout. This is the highest-priority low-level Windows interop fix because media-key and volume fallback depend on `_send_key()`.
+2. **Shutdown expiration error-code accuracy** — `ShutdownConfirmationService.consume()` purges expired records before checking the requested record, so an expired token can be reported as invalid instead of expired. This does not allow shutdown, but the state/error contract is wrong.
+3. **Volume fallback ignores `steps`** — the pycaw fallback currently sends a single volume key regardless of requested bounded steps. Mute/unmute remains one key event; volume up/down should preserve the validated step count.
+4. **Force-close duplicate PID cleanup** — multiple top-level windows from one process can lead to repeated terminate attempts/count distortion. Force-close should operate on unique trusted PIDs.
+5. **Chinese fallback-map duplicate key** — duplicate `"體": "体"` is cleanup, not a proven functional defect. Remove duplication and rely on OpenCC plus tests; do not invent a missing mapping without evidence.
+
+Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
+
+Document inconsistencies identified by review should be fixed in their source documents rather than creating another issue file: architecture tree, Spotify redirect example, Shortcut step numbering, old config-format wording, and stale Local-AI scope wording.
+
+### Product decision: AI semantic retry for misparsed Spotify requests
+
+The real Siri case `播放死亡是生命的終點` showed an important failure class: a deterministic parser may return a syntactically valid `spotify_play_track` action while having split the utterance incorrectly. Therefore future Local AI eligibility must not be limited to complete parser failure.
+
+Long-term intended behavior:
+
+```text
+original Siri text
+→ deterministic parser
+→ deterministic Spotify resolution
+   ├─ confident usable result → continue deterministic path
+   └─ no usable result / low-confidence result / suspected entity split error
+        → AI semantic retry (Spotify play-track scope only)
+        → strict schema
+        → deterministic grounding against the original utterance
+        → policy gate
+        → rerun deterministic Spotify resolver
+```
+
+The current deterministic `的` reconstruction fallback is a tactical fix and should remain while AI is disabled. It is not the desired pattern for accumulating an unlimited list of language-specific repair rules.
+
+AI semantic retry still must not rank Spotify candidates, select Spotify track IDs/URIs, select clarification candidates, or execute playback directly. Existing deterministic clarification remains authoritative.
+
+Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry path must first run in `shadow` mode. A parser/resolver disagreement is useful failure-corpus data, not permission to execute model output.
+
 ## Local AI Phase 0.5 Preparation (2026-09-18)
 
 - 使用者已在 LM Studio 下載三個 planned benchmark candidates：
@@ -97,7 +139,7 @@
 
 - 舊規則「V1 不得加入 LLM integration」已取消。
 - V1 允許 **Local LLM**，目前指定 runtime 方向為 LM Studio；不使用雲端 LLM fallback。
-- AI 採 rule-first / fallback-only；第一版 AI scope 只處理 Spotify free-form `spotify_play_track` / `unknown` semantic parsing，歌曲 clarification selection 維持 deterministic。
+- AI 採 rule-first / guarded semantic-retry；第一版 AI scope 只處理 Spotify free-form `spotify_play_track` / `unknown` semantic parsing。AI eligibility 不只包含 parser 完全失敗，也可包含 deterministic parser 已產生 `spotify_play_track`、但 Spotify resolver 回傳 no-result／低信心／疑似 entity split 錯誤的情況；歌曲 clarification selection 維持 deterministic。
 - AI 輸出必須通過 strict closed schema 與 deterministic slot grounding；`track` 未 grounded 時不得建立 `spotify_play_track`。
 - shutdown / shutdown confirmation / force-close / firewall / system-administration 永久不交給 AI 解析。
 - LM Studio 若與 Agent 同機，production acceptance 目標為 loopback (`127.0.0.1:1234`)；目前使用者回報的 `192.168.0.199:1234` 只視為開發/測試 endpoint，尚未視為正式安全配置。
