@@ -39,6 +39,8 @@ class TrackResolution:
 class SpotifyCatalog:
     """Expose one deep search interface over the external Spotify catalog."""
 
+    _MIN_SAFE_TRACK_SCORE = 0.70
+
     def __init__(self, client) -> None:
         self.client = client
 
@@ -49,6 +51,7 @@ class SpotifyCatalog:
         album: str | None = None,
         *,
         version_hint: str | None = None,
+        source_text: str | None = None,
         access_token: str,
     ) -> TrackResolution:
         query = f"track:{track}"
@@ -88,7 +91,7 @@ class SpotifyCatalog:
                 refs = fallback_refs
                 track = reconstructed_track
                 artist = None
-            else:
+            elif self._has_explicit_chinese_artist_track_shape(source_text, artist, track):
                 retry_signal = "SPOTIFY_ENTITY_SEGMENTATION_RISK"
 
         if not refs:
@@ -153,15 +156,21 @@ class SpotifyCatalog:
                         access_token,
                     ),
                 )
-        if best_score < 0.70 or (second_score is not None and best_score - second_score < 0.08):
+        if best_score < self._MIN_SAFE_TRACK_SCORE or (
+            second_score is not None and best_score - second_score < 0.08
+        ):
             close_candidates = [
                 ref
                 for ref in ranked[1:]
                 if best_score - self._score(ref, track, artist, album, hint) < 0.08
             ]
-            if best_score >= 0.70 and close_candidates and self._same_recording_group(close_candidates + [ranked[0]]):
+            if (
+                best_score >= self._MIN_SAFE_TRACK_SCORE
+                and close_candidates
+                and self._same_recording_group(close_candidates + [ranked[0]])
+            ):
                 return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
-            if len(ranked) == 1 and best_score < 0.70:
+            if len(ranked) == 1 and best_score < self._MIN_SAFE_TRACK_SCORE:
                 return TrackResolution(
                     track=None,
                     ambiguous=False,
@@ -213,6 +222,29 @@ class SpotifyCatalog:
                 reverse=True,
             )
         )
+
+    @classmethod
+    def _has_explicit_chinese_artist_track_shape(
+        cls,
+        source_text: str | None,
+        artist: str | None,
+        track: str,
+    ) -> bool:
+        """Require the original parser-shaped utterance before labeling a split risk."""
+
+        if not source_text or not artist or not track:
+            return False
+        source = cls._compact_normalized(source_text)
+        artist_key = cls._compact_normalized(artist)
+        track_key = cls._compact_normalized(track)
+        for prefix in ("spotify播放", "播放"):
+            if source.startswith(prefix):
+                return source[len(prefix) :] == f"{artist_key}的{track_key}"
+        return False
+
+    @staticmethod
+    def _compact_normalized(value: str) -> str:
+        return normalize_chinese_text(value).replace(" ", "")
 
     @classmethod
     def _to_ref(cls, item: Any) -> SpotifyTrackRef | None:

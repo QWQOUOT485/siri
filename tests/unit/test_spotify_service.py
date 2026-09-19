@@ -122,7 +122,8 @@ def test_parser_split_reconstruction_failure_exposes_entity_retry_signal(tmp_pat
     spotify, _ = service(tmp_path, handler)
 
     result = spotify.execute(
-        ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="終點", artist="死亡是生命")
+        ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="終點", artist="死亡是生命"),
+        source_text="播放死亡是生命的終點",
     )
 
     assert result.success is False

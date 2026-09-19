@@ -329,11 +329,28 @@ def test_catalog_reports_no_results_without_creating_a_playable_reference():
 def test_catalog_marks_parser_split_reconstruction_failure_for_semantic_retry():
     catalog = SpotifyCatalog(FakeSpotifySearchClient([]))
 
-    result = catalog.find_track("終點", "死亡是生命", access_token="test-token")
+    result = catalog.find_track(
+        "終點",
+        "死亡是生命",
+        source_text="播放死亡是生命的終點",
+        access_token="test-token",
+    )
 
     assert result.track is None
     assert result.ambiguous is False
     assert result.retry_signal == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
+
+
+def test_catalog_keeps_ordinary_artist_track_miss_as_track_not_found():
+    result = SpotifyCatalog(FakeSpotifySearchClient([])).find_track(
+        "Missing Song",
+        "Known Artist",
+        source_text="play Missing Song by Known Artist",
+        access_token="test-token",
+    )
+
+    assert result.track is None
+    assert result.retry_signal is None
 
 
 def test_catalog_marks_one_weak_candidate_as_low_confidence_for_semantic_retry():
@@ -349,6 +366,19 @@ def test_catalog_marks_one_weak_candidate_as_low_confidence_for_semantic_retry()
     assert result.ambiguous is False
     assert result.candidates == ()
     assert result.retry_signal == "SPOTIFY_LOW_CONFIDENCE_TRACK"
+
+
+def test_catalog_plays_a_strong_single_candidate_at_or_above_safe_threshold():
+    client = FakeSpotifySearchClient([track("strong", "Requested Song", ["Requested Artist"])])
+
+    result = SpotifyCatalog(client).find_track(
+        "Requested Song",
+        "Requested Artist",
+        access_token="test-token",
+    )
+
+    assert result.track is not None
+    assert result.retry_signal is None
 
 
 def test_track_reference_rejects_client_controlled_non_spotify_uri():

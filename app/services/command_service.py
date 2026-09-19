@@ -38,7 +38,7 @@ class CommandService:
         self.shutdown = shutdown
         self.spotify = spotify
 
-    def execute(self, command: ValidatedAction) -> ServiceResult:
+    def execute(self, command: ValidatedAction, *, source_text: str | None = None) -> ServiceResult:
         action = command.action
         if action is ActionName.OPEN_APP:
             return self._operation(action, self.application_service.open_app(app_id=command.app_id, app_query=command.app_query))
@@ -71,7 +71,7 @@ class CommandService:
         if action in spotify_actions:
             if self.spotify is None:
                 return ServiceResult(False, "error", action.value, "Spotify 整合尚未設定。", error_code="SPOTIFY_NOT_CONFIGURED")
-            return self._operation(action, self.spotify.execute(command))
+            return self._operation(action, self.spotify.execute(command, source_text=source_text))
         if action is ActionName.SET_VOLUME:
             return self._operation(action, self.volume.set_volume(command.volume_percent))
         if action in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE}:

@@ -21,7 +21,7 @@ class SpotifyService:
         self.player = player
         self.clarification_store = clarification_store or SpotifyClarificationStore()
 
-    def execute(self, command: ValidatedAction) -> OperationResult:
+    def execute(self, command: ValidatedAction, *, source_text: str | None = None) -> OperationResult:
         if command.action not in {
             ActionName.SPOTIFY_RESUME,
             ActionName.SPOTIFY_PAUSE,
@@ -42,7 +42,7 @@ class SpotifyService:
             return OperationResult(False, str(exc), exc.error_code)
 
         try:
-            return self._execute_with_token(command, access_token)
+            return self._execute_with_token(command, access_token, source_text=source_text)
         except SpotifyApiError as exc:
             if exc.status_code == 401:
                 try:
@@ -50,7 +50,7 @@ class SpotifyService:
                 except SpotifyAuthError as auth_error:
                     return OperationResult(False, str(auth_error), auth_error.error_code)
                 try:
-                    return self._execute_with_token(command, refreshed_token)
+                    return self._execute_with_token(command, refreshed_token, source_text=source_text)
                 except SpotifyApiError as retry_error:
                     return self._api_error(retry_error)
             return self._api_error(exc)
@@ -90,7 +90,13 @@ class SpotifyService:
                     return self._api_error(retry_error)
             return self._api_error(exc)
 
-    def _execute_with_token(self, command: ValidatedAction, access_token: str) -> OperationResult:
+    def _execute_with_token(
+        self,
+        command: ValidatedAction,
+        access_token: str,
+        *,
+        source_text: str | None = None,
+    ) -> OperationResult:
         if command.action is ActionName.SPOTIFY_RESUME:
             return self.player.resume(access_token)
         if command.action is ActionName.SPOTIFY_PAUSE:
@@ -112,6 +118,7 @@ class SpotifyService:
             command.artist,
             command.album,
             version_hint=command.version_hint,
+            source_text=source_text,
             access_token=access_token,
         )
         if resolution.track is None:

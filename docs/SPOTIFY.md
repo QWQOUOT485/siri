@@ -192,6 +192,8 @@ track = 終點
 - AI 只可提出 `track` / `artist` / `album` 的語意抽取結果；第一版不處理 clarification ordinal、Spotify URI/track ID、candidate ranking 或 playback。
 - grounded `track` 必須能由原始 utterance deterministic 支持；未 grounded 則整個 AI interpretation 失效。
 - AI retry 後仍由既有 Live filtering、trusted `SpotifyTrackRef`、confidence/ambiguity、clarification store 決定是否可播放。
+- 目前 resolver 的 safe confidence threshold 為 `0.70`：單一候選低於此分數才可產生 `SPOTIFY_LOW_CONFIDENCE_TRACK` retry signal；多候選或接近候選仍走 deterministic clarification，不交給 AI 猜測。
+- `SPOTIFY_ENTITY_SEGMENTATION_RISK` 只在原始 utterance 確實符合 parser 的中文 `播放 X 的 Y` split、且原 split 與重建歌名搜尋都無結果時產生；普通 artist+track no-result 維持 `SPOTIFY_TRACK_NOT_FOUND`。
 - 目前 Phase 0.5 未過 acceptance gate，因此 production execution 仍不啟用；先以 shadow mode 記錄「原 parser 結果 vs AI grounded 結果 vs resolver 結果」。
 - 目前針對「的」的 reconstruction fallback 是 tactical deterministic repair；不要把它擴張成無限累積的特殊句型規則。
 

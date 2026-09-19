@@ -36,7 +36,7 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
             deterministic_error_code=parsed.error_code,
         )
         if ai_result.execution_allowed and ai_result.action is not None:
-            result = runtime.command_service.execute(ai_result.action)
+            result = runtime.command_service.execute(ai_result.action, source_text=body.text)
             target = ai_result.action.track or ai_result.action.artist or ai_result.action.album
             audit_event(
                 runtime.logger,
@@ -59,7 +59,7 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
             "error_code": parsed.error_code or "INVALID_COMMAND",
             "data": {},
         }
-    result = runtime.command_service.execute(parsed.action)
+    result = runtime.command_service.execute(parsed.action, source_text=body.text)
     ai_result = runtime.local_ai_service.retry(
         body.text,
         parsed,
@@ -68,7 +68,7 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
     )
     parsed_action = parsed.action
     if ai_result.execution_allowed and ai_result.action is not None:
-        result = runtime.command_service.execute(ai_result.action)
+        result = runtime.command_service.execute(ai_result.action, source_text=body.text)
         parsed_action = ai_result.action
     target = (
         parsed_action.app_query

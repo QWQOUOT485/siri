@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.adapters.local_ai import LMStudioLocalAIAdapter, LocalAIResponse, LocalAITransportError, normalize_loopback_base_url
+from app.adapters.spotify.catalog import SpotifyCatalog
+from app.adapters.windows.base import OperationResult
 from app.main import create_app
 from app.domain.actions import ParsedCommand
 from app.domain.local_ai import RawAIIntent
@@ -17,6 +19,7 @@ from app.services.ai_policy import AIPolicyGate
 from app.services.command_parser import CommandParser
 from app.services.local_ai_service import LocalAIService
 from app.services.semantic_grounder import SemanticGrounder, grounded_slot
+from app.services.spotify_service import SpotifyService
 
 
 def parser_miss(text: str = "幫我放一下周杰倫那首晴天") -> ParsedCommand:
@@ -402,9 +405,7 @@ def test_command_shadow_retries_on_spotify_resolver_signal_without_executing_ai_
             )
 
     class FakeSpotify:
-        def execute(self, command):
-            from app.adapters.windows.base import OperationResult
-
+        def execute(self, command, *, source_text=None):
             spotify_calls.append(command)
             return OperationResult(False, "低信心結果", "SPOTIFY_LOW_CONFIDENCE_TRACK")
 
@@ -418,6 +419,182 @@ def test_command_shadow_retries_on_spotify_resolver_signal_without_executing_ai_
     assert response.json()["error_code"] == "SPOTIFY_LOW_CONFIDENCE_TRACK"
     assert ai_calls == ["播放晴天"]
     assert len(spotify_calls) == 1
+
+
+def test_command_shadow_retries_from_real_spotify_resolver_signal(fake_runtime):
+    runtime, *_ = fake_runtime
+    ai_calls = []
+
+    class EmptySearchClient:
+        def search_tracks(self, _access_token, _query, *, limit=10):
+            return []
+
+    class FakeAuth:
+        def get_access_token(self):
+            return "access-token"
+
+    class NoPlayback:
+        def resume(self, *_args, **_kwargs):
+            raise AssertionError("shadow resolver test must not play")
+
+    class FakeAdapter:
+        model_id = "test-model"
+
+        def infer(self, original_text):
+            ai_calls.append(original_text)
+            return LocalAIResponse(
+                content=json.dumps(
+                    {"schema_version": 1, "intent": "unknown", "track": None, "artist": None, "album": None}
+                ),
+                model_id=self.model_id,
+                latency_ms=1.0,
+            )
+
+    runtime.command_service.spotify = SpotifyService(
+        FakeAuth(),
+        SpotifyCatalog(EmptySearchClient()),
+        NoPlayback(),
+    )
+    runtime.local_ai_service = LocalAIService(mode="shadow", adapter=FakeAdapter())
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={"text": "播放死亡是生命的終點"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["error_code"] == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
+    assert ai_calls == ["播放死亡是生命的終點"]
+
+
+def test_command_fallback_re_resolves_ai_action_through_spotify_catalog(fake_runtime):
+    runtime, *_ = fake_runtime
+    ai_calls = []
+    full_title_queries = 0
+
+    def payload(track_id, name, artist):
+        return {
+            "id": track_id,
+            "uri": f"spotify:track:{track_id}",
+            "name": name,
+            "artists": [{"name": artist}],
+            "album": {"name": "Album"},
+        }
+
+    class SequencedSearchClient:
+        def search_tracks(self, _access_token, query, *, limit=10):
+            nonlocal full_title_queries
+            if query == "track:死亡是生命的終點":
+                full_title_queries += 1
+                return [] if full_title_queries == 1 else [payload("resolved", "死亡是生命的終點", "Artist")]
+            return []
+
+    class FakeAuth:
+        def get_access_token(self):
+            return "access-token"
+
+    class FakePlayer:
+        def __init__(self):
+            self.tracks = []
+
+        def resume(self, _access_token, track):
+            self.tracks.append(track.track_id)
+            return OperationResult(True, "已播放。", data={})
+
+    class FakeAdapter:
+        model_id = "test-model"
+
+        def infer(self, original_text):
+            ai_calls.append(original_text)
+            return LocalAIResponse(
+                content=json.dumps(
+                    {
+                        "schema_version": 1,
+                        "intent": "spotify_play_track",
+                        "track": "死亡是生命的終點",
+                        "artist": None,
+                        "album": None,
+                    }
+                ),
+                model_id=self.model_id,
+                latency_ms=1.0,
+            )
+
+    player = FakePlayer()
+    runtime.command_service.spotify = SpotifyService(
+        FakeAuth(),
+        SpotifyCatalog(SequencedSearchClient()),
+        player,
+    )
+    runtime.local_ai_service = LocalAIService(
+        mode="fallback",
+        fallback_approved=True,
+        adapter=FakeAdapter(),
+    )
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={"text": "播放死亡是生命的終點"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["action"] == "spotify_play_track"
+    assert ai_calls == ["播放死亡是生命的終點"]
+    assert player.tracks == ["resolved"]
+
+
+def test_command_ambiguous_spotify_result_keeps_ai_out_of_clarification(fake_runtime):
+    runtime, *_ = fake_runtime
+
+    def payload(track_id, artist):
+        return {
+            "id": track_id,
+            "uri": f"spotify:track:{track_id}",
+            "name": "Stay",
+            "artists": [{"name": artist}],
+            "album": {"name": "Album"},
+        }
+
+    class AmbiguousSearchClient:
+        def search_tracks(self, _access_token, _query, *, limit=10):
+            return [payload("one", "The Kid LAROI"), payload("two", "The Kid LAROI")]
+
+    class FakeAuth:
+        def get_access_token(self):
+            return "access-token"
+
+    class NoPlayback:
+        def resume(self, *_args, **_kwargs):
+            raise AssertionError("ambiguous search must not play")
+
+    class NoAI:
+        model_id = "test-model"
+
+        def infer(self, _original_text):
+            raise AssertionError("clarification must not invoke Local AI")
+
+    runtime.command_service.spotify = SpotifyService(
+        FakeAuth(),
+        SpotifyCatalog(AmbiguousSearchClient()),
+        NoPlayback(),
+    )
+    runtime.local_ai_service = LocalAIService(mode="shadow", adapter=NoAI())
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={"text": "播放The Kid LAROI的Stay"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["error_code"] == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert response.json()["data"]["clarification_required"] is True
 
 
 def test_command_clarification_bypasses_local_ai(fake_runtime):

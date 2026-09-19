@@ -2114,6 +2114,14 @@ D. a deterministic segmentation-risk detector identifies a likely entity
    boundary ambiguity and the normal resolver cannot confirm the parse
 ```
 
+The current deterministic resolver instantiation makes these signals bounded:
+`SPOTIFY_LOW_CONFIDENCE_TRACK` is emitted only for one candidate below the
+`0.70` safe score; close or multiple candidates remain deterministic
+clarification. `SPOTIFY_ENTITY_SEGMENTATION_RISK` requires the original
+utterance to match the parser's Chinese `播放 X 的 Y` shape and requires both
+the split search and the reconstructed-title search to have no usable result.
+An ordinary artist+track miss remains `SPOTIFY_TRACK_NOT_FOUND`.
+
 Parser success alone is therefore not sufficient evidence that the extracted
 `track` / `artist` boundary is correct.
 
