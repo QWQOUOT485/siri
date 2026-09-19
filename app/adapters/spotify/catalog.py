@@ -63,6 +63,29 @@ class SpotifyCatalog:
             for item in payloads
             if (ref := self._to_ref(item)) is not None and self._classify_version(ref) != "live"
         )
+
+        # Chinese song titles can legitimately contain 「的」. The rule parser also
+        # uses 「X的Y」 for artist + track, so a bare title such as
+        # 「死亡是生命的終點」 may initially be split as artist=死亡是生命,
+        # track=終點. Only when that stricter artist+track search returns no usable
+        # result, retry the reconstructed phrase as a bare track title.
+        if not refs and artist and not album:
+            reconstructed_track = f"{artist}的{track}".strip()
+            fallback_payloads = self.client.search_tracks(
+                access_token,
+                f"track:{reconstructed_track}",
+                limit=10,
+            )
+            fallback_refs = tuple(
+                ref
+                for item in fallback_payloads
+                if (ref := self._to_ref(item)) is not None and self._classify_version(ref) != "live"
+            )
+            if fallback_refs:
+                refs = fallback_refs
+                track = reconstructed_track
+                artist = None
+
         if not refs:
             return TrackResolution(track=None, ambiguous=False)
 
