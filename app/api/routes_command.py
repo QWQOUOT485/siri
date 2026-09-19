@@ -11,6 +11,12 @@ from app.infrastructure.logging import audit_event
 router = APIRouter()
 
 
+def _record_command_latency(runtime, started: float) -> None:
+    metrics = getattr(runtime, "metrics", None)
+    if metrics is not None:
+        metrics.observe_ms("total_command_ms", (time.perf_counter() - started) * 1000)
+
+
 @router.post("/command")
 async def command(request: Request, body: CommandRequest, _=Depends(require_api_key)):
     runtime = request.app.state.runtime
@@ -26,6 +32,7 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
             duration_ms=(time.perf_counter() - started) * 1000,
             error_code=result.error_code,
         )
+        _record_command_latency(runtime, started)
         return response_payload(result)
 
     parsed = runtime.parser.parse(body.text)
@@ -47,8 +54,10 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
                 duration_ms=(time.perf_counter() - started) * 1000,
                 error_code=result.error_code,
             )
+            _record_command_latency(runtime, started)
             return response_payload(result)
         audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action="parse_command", target=None, success=False, duration_ms=(time.perf_counter() - started) * 1000, error_code=parsed.error_code)
+        _record_command_latency(runtime, started)
         return {
             "success": False,
             "status": "error",
@@ -80,4 +89,5 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
         or parsed_action.album
     )
     audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action=result.action, target=target, success=result.success, duration_ms=(time.perf_counter() - started) * 1000, error_code=result.error_code)
+    _record_command_latency(runtime, started)
     return response_payload(result)

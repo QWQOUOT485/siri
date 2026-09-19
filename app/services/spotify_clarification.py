@@ -18,6 +18,7 @@ class ClarificationContext:
     candidates: tuple[SpotifyTrackRef, ...]
     expires_at: float
     failed_attempts: int = 0
+    observed_alias: str | None = None
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ClarificationSelection:
     error_code: str | None = None
     candidates: tuple[SpotifyTrackRef, ...] = ()
     clarification_token: str | None = None
+    observed_alias: str | None = None
 
 
 class SpotifyClarificationStore:
@@ -53,7 +55,12 @@ class SpotifyClarificationStore:
         self._used_tokens: dict[str, float] = {}
         self._lock = threading.RLock()
 
-    def create(self, candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef]) -> str:
+    def create(
+        self,
+        candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef],
+        *,
+        observed_alias: str | None = None,
+    ) -> str:
         trusted = tuple(candidates)
         if not trusted or len(trusted) > 3:
             raise ValueError("clarification requires one to three trusted candidates")
@@ -65,7 +72,11 @@ class SpotifyClarificationStore:
                 oldest = min(self._contexts, key=lambda token: self._contexts[token].expires_at)
                 self._contexts.pop(oldest, None)
             token = secrets.token_urlsafe(32)
-            self._contexts[token] = ClarificationContext(trusted, expires_at)
+            self._contexts[token] = ClarificationContext(
+                trusted,
+                expires_at,
+                observed_alias=observed_alias,
+            )
             return token
 
     def select(self, token: str, text: str) -> ClarificationSelection:
@@ -94,18 +105,23 @@ class SpotifyClarificationStore:
                     self._contexts.pop(token, None)
                     self._used_tokens[token] = now + self.ttl_seconds
                     return ClarificationSelection(
-                        error_code="SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED"
+                        error_code="SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED",
+                        observed_alias=context.observed_alias,
                     )
                 self._contexts[token] = replace(context, failed_attempts=failed_attempts)
                 return ClarificationSelection(
                     error_code="SPOTIFY_CLARIFICATION_UNCLEAR",
                     candidates=context.candidates,
                     clarification_token=token,
+                    observed_alias=context.observed_alias,
                 )
 
             self._contexts.pop(token, None)
             self._used_tokens[token] = now + self.ttl_seconds
-            return ClarificationSelection(track=context.candidates[index])
+            return ClarificationSelection(
+                track=context.candidates[index],
+                observed_alias=context.observed_alias,
+            )
 
     def _purge(self, now: float) -> None:
         expired = [token for token, context in self._contexts.items() if now >= context.expires_at]
