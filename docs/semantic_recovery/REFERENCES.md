@@ -28,11 +28,14 @@ These references motivate the retrieve-before-generate and candidate-constrain-b
 - SymSpell (reference only; not Phase 1)  
   https://github.com/wolfgarbe/SymSpell
 
+- marisa-trie — compact static trie reference for future prefix-oriented retrieval  
+  https://github.com/pytries/marisa-trie
+
 ## Future local vector candidates
 
 Not selected for Phase 1:
 
-- sqlite-vec  
+- sqlite-vec — local SQLite vector extension; upstream currently describes it as pre-v1, so breaking changes must be expected  
   https://github.com/asg017/sqlite-vec
 
 - hnswlib  
@@ -45,4 +48,4 @@ Not selected for Phase 1:
 
 ## Project decision
 
-Phase 1 intentionally uses SQLite + RAM exact alias index + RapidFuzz candidate retrieval. Vector search remains deferred until a real user-utterance corpus demonstrates incremental benefit.
+Phase 1 intentionally uses SQLite + RAM exact alias index + RapidFuzz candidate retrieval. The first preferred scale-up experiment is SQLite FTS5 as a lexical prefilter followed by RapidFuzz reranking, and only if Windows-host benchmarks show the full scan is materially expensive. SymSpell/trie approaches remain optional measured experiments. Vector search remains deferred until a real user-utterance corpus demonstrates incremental benefit. See `SEARCH_OPTIMIZATION.md` for the layered retrieval roadmap.

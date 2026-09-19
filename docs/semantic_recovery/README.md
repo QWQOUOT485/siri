@@ -87,6 +87,7 @@ Do not implement in Phase 1:
 - [Security boundaries](SECURITY.md)
 - [Implementation plan](IMPLEMENTATION_PLAN.md)
 - [Testing and acceptance](TESTING.md)
+- [Search optimization roadmap](SEARCH_OPTIMIZATION.md)
 - [Research and references](REFERENCES.md)
 
 ## Non-negotiable invariants
