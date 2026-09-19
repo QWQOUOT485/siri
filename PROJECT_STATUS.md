@@ -136,6 +136,17 @@
 - API key 未出現在測試 log 中。
 
 
+
+## Resolved Source Bug: Chinese title containing 「的」 misparsed as artist + track (2026-09-19)
+
+- 使用者實機案例：`播放死亡是生命的終點` 會完成 Shortcut，但沒有實際播放。
+- Root cause：rule parser 的中文 artist grammar 使用 `播放<artist>的<track>`。因此 bare title `死亡是生命的終點` 會先被解析成 `artist=死亡是生命`、`track=終點`，Spotify primary search 變成 `track:終點 artist:死亡是生命`。
+- Source 已在 `SpotifyCatalog` 加入保守 fallback：只有當 artist+track primary search 沒有任何可用候選、且沒有 album hint 時，才把原 split 重組為 `死亡是生命的終點`，以 bare track title 再搜尋一次。
+- 若 primary artist+track search 本來有結果，fallback 不會執行，因此既有 `播放周杰倫的晴天` 等 artist grammar 行為不變。
+- fallback 仍只使用 Spotify Search API，結果仍需通過既有 Live filtering、trusted `SpotifyTrackRef`、ranking / ambiguity safety；不接受 client URI / track ID。
+- 已新增 regression test，固定驗證 primary query `track:終點 artist:死亡是生命` 無結果時會 retry `track:死亡是生命的終點` 並解析為可信 track。
+- 目前只完成 source + regression test 寫入 GitHub；尚未跑完整 pytest、部署 Windows Agent、用真實 Spotify/Siri 重測此歌曲，因此不能標成 real-world acceptance 完成。
+
 ## Resolved Source Bug: Long Spotify title rejected by 200-character metadata cap (2026-09-19)
 
 - 使用者實機回報：歌名較長時會直接變成無效指令。
@@ -253,6 +264,8 @@ D:\ai\windows-siri-agent\scripts\start.bat
 9. 後續 Spotify 工作重點：先做候選個人化排序（saved/liked → top tracks/artists → recently played → search relevance → final tie-breaker），再加入 shuffle/repeat/seek/Spotify volume/like/unlike current track；同時評估 `market=TW` 的 availability 行為，不把它誤當熱門度排序；不得降低 ambiguity safety。
 
 ## Important: What Is NOT Yet Proven
+
+- 「死亡是生命的終點」fallback 修正已完成 source + regression test，但尚未部署 Windows Agent 或做真實 Spotify/Siri 回歸。
 
 - 長歌名修正已完成 source 與 regression test 寫入，但尚未跑完整測試、部署 Windows Agent 或做 Siri 實機回歸。
 
