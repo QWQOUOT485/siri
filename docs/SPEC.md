@@ -92,11 +92,11 @@ Agent 會自動找出 Windows 電腦上已安裝的應用程式，建立「應�
 - 命令提示字元 -> Command Prompt
 - PowerShell -> Windows PowerShell
 
-使用者亦可透過 `config.yaml` 或 `config.toml` 自訂別名（如 Discord -> 語音、Chrome -> 瀏覽器、OBS Studio -> 錄影、Adobe Photoshop -> PS）。
+使用者可透過目前的本機設定來源自訂別名：一般 runtime 設定放在 `.env`，應用程式與網站清單放在 `config/manual_apps.yaml`、`config/websites.yaml` 等專用 YAML；不使用單一 `config.yaml` / `config.toml` 作為目前實作的設定入口。
 
 ## 4. 系統配置與部署 (Configuration & Deployment)
 
-- **設定檔 (Configuration)**：一般使用者可直接修改 `config.yaml` 或 `config.toml`，無須更動 Python 原始碼。可設定 Port、Bind address、Allowed networks、Volume step、Shutdown confirmation timeout、Website/App aliases 等。
+- **設定檔 (Configuration)**：runtime 設定使用 `.env`；清單型設定使用 `config/*.yaml`（例如 `allowed_networks.yaml`、`websites.yaml`、`manual_apps.yaml`）。可設定 Port、Bind address、Allowed networks、Volume step、Shutdown confirmation timeout、Website/App aliases 等，無須更動 Python 原始碼。
 - **相依性 (Dependencies)**：最小化依賴，優先使用 Python 內建函式庫與 Windows API。核心依賴僅限 FastAPI, uvicorn, pydantic, python-dotenv。
 - **安裝與啟動**：提供自動化腳本（`setup.ps1` 處理 venv 與依賴安裝、`start.bat` 啟動、自動建立 `requirements.txt` / `pyproject.toml` 等）。
 - **版本資訊**：內含 `VERSION` 檔案，可透過 API `GET /info` 查詢。
