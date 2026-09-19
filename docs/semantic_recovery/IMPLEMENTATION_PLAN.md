@@ -201,11 +201,15 @@ Track-first Spotify evidence, still candidate-only.
 
 ### Phase 2
 
-SQLite FTS5 trigram only if measured RapidFuzz full-scan latency justifies it.
+Benchmark lexical retrieval at 100 / 1,000 / 10,000 / 50,000 aliases. Keep RapidFuzz-only if measured latency is already acceptable. If full-scan cost is material, evaluate SQLite FTS5 trigram/prefix as a **candidate prefilter**, followed by bounded RapidFuzz reranking. Preserve exact/short-alias fallbacks and keep the FTS index derived/rebuildable from SQLite authoritative alias rows.
+
+SymSpell or trie/radix structures may be benchmarked only if FTS5 + RapidFuzz still leaves a demonstrated lexical-retrieval problem. They remain candidate-only and require maintenance/license/Windows-support review before adoption.
+
+Detailed research and decision rules are in [SEARCH_OPTIMIZATION.md](SEARCH_OPTIMIZATION.md).
 
 ### Phase 3
 
-User-utterance semantic vector retrieval in shadow mode only.
+User-utterance semantic vector retrieval in shadow mode only. `sqlite-vec` / HNSW-class ANN backends remain optional research choices, not default Phase 2 dependencies.
 
 ### Phase 4
 
