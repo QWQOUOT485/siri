@@ -134,7 +134,7 @@ Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes
 
 ## Local AI Semantic Fallback (V1 allowed, gated)
 
-V1 may use a small **local-only LLM** through LM Studio to improve free-form Spotify language understanding and clarification replies.
+V1 may use a small **local-only LLM** through LM Studio to improve free-form Spotify play-track language understanding. The existing Spotify clarification flow remains deterministic in the initial AI integration.
 
 This does not replace the rule parser or the trusted execution pipeline.
 
@@ -151,7 +151,7 @@ Rule-based Parser
           ↓
      deterministic slot grounding
           ↓
-     ValidatedAction / ClarificationSelection
+     ValidatedAction
           ↓
      existing deterministic Spotify resolver
           ↓
@@ -163,7 +163,7 @@ Rule-based Parser
 V1 Local AI constraints:
 
 - fallback-only; deterministic rules stay first
-- Spotify scope only for the initial integration
+- initial AI scope is only free-form Spotify `spotify_play_track` language; pause/resume/next/previous and clarification selection remain deterministic
 - local LM Studio runtime; production same-host deployment should use loopback
 - no cloud LLM fallback
 - AI output is untrusted until strict schema validation and deterministic grounding pass
@@ -173,6 +173,90 @@ V1 Local AI constraints:
 - model capability must be proven by the Phase 0.5 feasibility PoC before production integration
 
 See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md).
+
+## Next Optimization Priorities
+
+After the successful Siri clarification E2E, implementation work should proceed in this order.
+
+### Priority 1 — Spotify candidate quality
+
+This is the highest-impact current UX issue. Bare or ambiguous song titles can return obscure candidates even though the clarification mechanism itself now works.
+
+Planned work:
+
+- evaluate adding `market=TW` to Spotify Search requests
+- preserve Spotify's original relevance order as an input signal instead of discarding it completely
+- evaluate popularity or another availability-safe popularity-like signal only as a **tie-breaker**
+- never let popularity override an explicitly provided artist, album, version intent, or genuine ambiguity
+- same-title tracks from different plausible artists must still enter clarification rather than auto-play
+- add regression fixtures for ambiguous Chinese song titles and common Traditional/Simplified variants
+- verify any ranking change against real Spotify responses before calling it accepted
+
+The goal is better ordering of the 2–3 candidates the user sees, not less-safe automatic guessing.
+
+### Priority 2 — Improve deterministic spoken-song parsing
+
+Before expanding Local AI, improve the rule parser for common natural phrases that are easy to support deterministically.
+
+Target examples include:
+
+```text
+幫我播周杰倫那首晴天
+我想聽晴天
+放一下周杰倫的晴天
+來個周杰倫的晴天
+```
+
+Prefer explicit aliases/patterns when they can be implemented clearly and regression-tested. Do not use the LLM merely to replace simple deterministic grammar.
+
+### Priority 3 — Keep the Siri Shortcut in the accepted stable shape
+
+The accepted clarification flow is:
+
+```text
+第一輪語音
+→ POST /command
+→ 有 clarification_token？
+   ├─ 是
+   │  → 朗讀候選
+   │  → 關閉 Siri 並繼續
+   │  → 第二次聽寫
+   │  → POST /command + clarification_token
+   │  → 播放成功後結束
+   └─ 否
+      → 朗讀一般結果
+```
+
+Remove obsolete test-only actions, duplicate dictionary extraction, and duplicate Speak actions when maintaining the Shortcut. Do not move `Dismiss Siri and Continue` back to the start of the Shortcut; it belongs after candidate speech and immediately before the second dictation.
+
+### Priority 4 — Rotate the exposed API key
+
+A previous troubleshooting screenshot exposed part of the API key. Rotate it before treating the current setup as cleaned up:
+
+- generate a new high-entropy API key
+- update the Windows Agent local configuration
+- update the iPhone Shortcut header
+- invalidate/remove the old key
+- never commit or log either key
+
+This is operational hygiene; it does not require an architecture change.
+
+### Priority 5 — Local AI stays gated
+
+The completed Phase 0.5 benchmark did not meet the project's safety/quality acceptance thresholds. Do not wire Local AI into production `/command` execution yet.
+
+Next AI work should be:
+
+```text
+improve prompt / grounding
+→ add off / shadow / fallback modes
+→ run shadow mode only
+→ collect real Siri failure corpus
+→ rerun benchmark
+→ enable guarded fallback only if thresholds pass
+```
+
+Initial AI responsibility remains limited to free-form `spotify_play_track` semantic extraction. Existing deterministic Spotify clarification, playback controls, app control, volume, shutdown, force-close, firewall, and system-administration paths must remain outside the first AI execution scope.
 
 ## Directory Structure (v2)
 
@@ -259,6 +343,6 @@ windows-siri-agent/
 8. **Windows 內建工具走 `system_apps` mapping**：Task Manager、Settings、Calculator 等視為 Trusted Launch Source 的固定入口，不依賴一般 Discovery，也不算「把所有應用程式寫死」。
 9. **測試分兩類**：`tests/unit/`（mock 化，可在任何環境含本容器完整執行）與 `tests/integration_windows/`（只能在真實 Windows 執行，且明確禁止 shutdown / lock / force kill 等破壞性操作，只做唯讀或安全的探測）。
 10. **V1 音樂來源固定為 Spotify**：`play` 恢復 Spotify；指定歌名使用 `spotify_play_track` 搜尋 Spotify Catalog 並播放可信 track URI。取消 YouTube Music / Apple Music provider 選擇流程。歌名與歌手僅能進 Spotify搜尋，不可形成 executable path、command、argument 或 arbitrary URL。
-11. **V1 允許 Local LLM semantic fallback，但不是 execution engine**：Rule parser 仍優先；AI 僅處理經批准的低風險 Spotify 語意/clarification，輸出必須通過 closed schema + deterministic grounding。高風險操作永久 deterministic-only；LM Studio/模型不可直接產生 trusted execution target。
+11. **V1 允許 Local LLM semantic fallback，但不是 execution engine**：Rule parser 仍優先；第一個 AI integration scope 只處理 free-form `spotify_play_track` 語意抽取，既有歌曲 clarification 與基本播放控制維持 deterministic。AI 輸出必須通過 closed schema + deterministic grounding，且 Phase 0.5 未過門檻，因此正式 execution 前先走 shadow mode；高風險操作永久 deterministic-only，LM Studio/模型不可直接產生 trusted execution target。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).
