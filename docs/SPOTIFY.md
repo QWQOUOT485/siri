@@ -33,7 +33,7 @@
 使用 **Authorization Code with PKCE**。
 
 - 不使用 Implicit Grant。
-- Redirect URI 使用 loopback IP，例如 `http://127.0.0.1:8787/callback`。
+- Redirect URI 使用 loopback IP；本專案目前使用 `http://127.0.0.1:8000/spotify/callback`。
 - 不使用 `localhost` alias。
 - OAuth state 必須驗證。
 - Access token / refresh token 僅保存在 Windows 本機。
@@ -126,6 +126,47 @@ Start/Resume Playback
 若使用者明確要求 Live／現場版，服務會在搜尋前拒絕播放。未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手。若最高候選與第二名仍無足夠安全分差，不得播放。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
+
+### Semantic Retry for Parser/Resolver Disagreement
+
+歌曲語意解析不能把「rule parser 有輸出」等同於「語意一定正確」。例如：
+
+```text
+播放死亡是生命的終點
+```
+
+deterministic grammar 可能先切成：
+
+```text
+artist = 死亡是生命
+track = 終點
+```
+
+這在語法上合法，但 Spotify resolver 若找不到可用候選，就是可能切錯 entity boundary 的證據。
+
+長期流程：
+
+```text
+原始 Siri 文字
+→ deterministic parser
+→ deterministic Spotify resolver
+   ├─ 高信心可用結果 → 照既有 deterministic 流程
+   └─ no result / low confidence / 明確定義的 segmentation-risk
+        → Local AI semantic retry（僅 spotify_play_track）
+        → strict schema
+        → deterministic grounding against 原始 Siri 文字
+        → policy gate
+        → 重新進入 deterministic Spotify resolver
+```
+
+規則：
+
+- semantic retry 必須使用**原始 utterance**，不能只把第一次 parser 切錯後的 `track` / `artist` 餵給模型。
+- AI 只可提出 `track` / `artist` / `album` 的語意抽取結果；第一版不處理 clarification ordinal、Spotify URI/track ID、candidate ranking 或 playback。
+- grounded `track` 必須能由原始 utterance deterministic 支持；未 grounded 則整個 AI interpretation 失效。
+- AI retry 後仍由既有 Live filtering、trusted `SpotifyTrackRef`、confidence/ambiguity、clarification store 決定是否可播放。
+- 目前 Phase 0.5 未過 acceptance gate，因此 production execution 仍不啟用；先以 shadow mode 記錄「原 parser 結果 vs AI grounded 結果 vs resolver 結果」。
+- 目前針對「的」的 reconstruction fallback 是 tactical deterministic repair；不要把它擴張成無限累積的特殊句型規則。
 
 ### Personalized Candidate Ranking
 
@@ -376,8 +417,9 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - Apple Music
 - YouTube Music
 - 多 provider 選擇
-- LLM 解析歌曲名稱
+- production Local AI execution（目前仍 gated / disabled）
+- AI 直接選 Spotify candidate、track ID、URI 或直接播放
 - 自動產生 arbitrary Spotify API request
 - 把 Spotify token 放進 Siri Shortcut
 
-未來若加入本地 AI，只能用於 intent/entity extraction；最終仍必須收斂成既有 ValidatedAction 與本文件的 Spotify 安全資料流。
+Local AI 若後續通過 shadow + benchmark gate，只能用於受限的 Spotify intent/entity extraction / semantic retry；最終仍必須收斂成既有 ValidatedAction 與本文件的 deterministic Spotify 安全資料流。
