@@ -73,6 +73,24 @@ class SpotifyApiClient:
             raise SpotifyApiError(200, "Spotify 回應格式無效。")
         return list(payload)
 
+    def get_top_tracks(self, access_token: str, *, limit: int = 50) -> list[dict[str, Any]]:
+        payload = self._api_json(
+            "GET",
+            "/me/top/tracks",
+            access_token=access_token,
+            params={"limit": str(max(1, min(limit, 50)))},
+        )
+        return self._top_items(payload)
+
+    def get_top_artists(self, access_token: str, *, limit: int = 50) -> list[dict[str, Any]]:
+        payload = self._api_json(
+            "GET",
+            "/me/top/artists",
+            access_token=access_token,
+            params={"limit": str(max(1, min(limit, 50)))},
+        )
+        return self._top_items(payload)
+
     def get_devices(self, access_token: str) -> list[dict[str, Any]]:
         payload = self._api_json("GET", "/me/player/devices", access_token=access_token)
         devices = payload.get("devices", []) if isinstance(payload, dict) else []
@@ -129,6 +147,13 @@ class SpotifyApiClient:
     @staticmethod
     def _device_params(device_id: str | None) -> Mapping[str, str] | None:
         return {"device_id": device_id} if device_id else None
+
+    @staticmethod
+    def _top_items(payload: Any) -> list[dict[str, Any]]:
+        items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise SpotifyApiError(200, "Spotify 回應格式無效。")
+        return items
 
     def _api_json(self, method: str, path: str, *, access_token: str, allow_non_json_success: bool = False, **kwargs) -> dict[str, Any]:
         headers = dict(kwargs.pop("headers", {}) or {})

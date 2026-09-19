@@ -233,7 +233,9 @@ GET /me/library/contains?uris=spotify:track:...
 - 此訊號只用於排序，不進 AI prompt，不進 Shortcut，不寫入一般 API response。
 - 不使用 Library write scope，也不自動幫使用者按讚或取消按讚。
 
-saved/liked 的第一個 deterministic source slice 已完成：Agent 只在既有 ambiguity 的最多三個 server-owned candidates 內查詢 membership，並只重排候選，不會改變自動播放或 ambiguity safety。Library lookup 失敗、缺少 scope 或回應格式異常時會退回原本 deterministic ranking。既有 token 需要重新授權取得 `user-library-read`；在此之前尚未完成 saved=true 的真實候選排序驗收。Top Tracks / Top Artists、Recently Played 仍是後續 planned optimization。
+saved/liked 的第一個 deterministic source slice 已完成：Agent 只在既有 ambiguity 的最多三個 server-owned candidates 內查詢 membership，並只重排候選，不會改變自動播放或 ambiguity safety。Library lookup 失敗、缺少 scope 或回應格式異常時會退回原本 deterministic ranking。既有 token 需要重新授權取得 `user-library-read`；目前 read-only acceptance probe 尚未找到能證明 saved candidate 從原始 Search 順序被提升的 genuine ambiguity case。
+
+Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/top/tracks` 與 `GET /me/top/artists`，並只對既有 server-owned ambiguity candidates 排序。Top signal 不會覆蓋 explicit artist / album / version、不會消除 ambiguity，也不會進入 AI、Shortcut 或一般 API response。top lookup malformed / timeout / 401 / 403 / 429 時會忽略該 signal；若 Library lookup 本身失敗，仍回到原 deterministic order。此 slice 需要 `user-top-read`，目前尚未完成 real-account acceptance。可用 `scripts/spotify_saved_ranking_acceptance.py` 執行 saved slice 的純讀取驗收；該 probe 不播放且不修改 Library。Recently Played 仍是後續 planned optimization。
 
 真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 
