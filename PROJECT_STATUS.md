@@ -106,7 +106,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 
 **尚未驗證：** saved signal 是否能在 Spotify 原始 Search 排序不同的 genuine ambiguity case 中實際改善候選順序。
 
-目前的 read-only acceptance probe 使用固定 20 個 bare-title queries，得到 15 個 genuine ambiguity 結果、0 個 saved membership；沒有執行 playback 或 Library write，因此 Slice A real-account acceptance 仍維持未通過。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py`；它找不到 qualifying case 時會明確回報 blocker。
+2026-09-20 current-source read-only acceptance probe 使用固定 20 個 bare-title queries，得到 15 個 genuine ambiguity 結果、0 個 saved membership、0 個 library error、0 個 API error；沒有執行 playback 或 Library write，因此 Slice A real-account acceptance 仍維持未通過。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py`；它找不到 qualifying case 時會明確回報 blocker。詳細精確結果見 [`docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Top Tracks / Top Artists source slice
 
