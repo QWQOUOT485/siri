@@ -256,3 +256,30 @@ def test_track_reference_rejects_client_controlled_non_spotify_uri():
             artist_names=("Unknown",),
             album_name="Unknown",
         )
+
+
+def test_catalog_retries_bare_chinese_title_when_de_separator_was_misparsed_as_artist():
+    class StagedClient:
+        def __init__(self):
+            self.queries = []
+
+        def search_tracks(self, access_token, query, *, limit=10):
+            self.queries.append((access_token, query, limit))
+            if query == "track:終點 artist:死亡是生命":
+                return []
+            if query == "track:死亡是生命的終點":
+                return [track("death-end", "死亡是生命的終點", ["Sasi"], album="納薩力克")]
+            raise AssertionError(query)
+
+    client = StagedClient()
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("終點", "死亡是生命", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "death-end"
+    assert result.track.track_name == "死亡是生命的終點"
+    assert client.queries == [
+        ("test-token", "track:終點 artist:死亡是生命", 10),
+        ("test-token", "track:死亡是生命的終點", 10),
+    ]
