@@ -91,6 +91,7 @@ Catalog / resolution 已有：
 - 最多 3 個 clarification candidates
 - popularity 僅作同分候選 tie-breaker
 - saved/liked membership signal 僅用於 genuine ambiguity candidate ordering
+- Top Tracks / Top Artists 目前已有固定 read-only adapter 與 server-side ambiguity ranking source slice
 
 Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh 已驗證。
 
@@ -103,6 +104,16 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - saved status 不進 AI、Shortcut 或一般 API response。
 
 **尚未驗證：** saved signal 是否能在 Spotify 原始 Search 排序不同的 genuine ambiguity case 中實際改善候選順序。
+
+目前的 read-only acceptance probe 使用固定 20 個 bare-title queries，得到 15 個 genuine ambiguity 結果、0 個 saved membership；沒有執行 playback 或 Library write，因此 Slice A real-account acceptance 仍維持未通過。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py`；它找不到 qualifying case 時會明確回報 blocker。
+
+### Spotify Top Tracks / Top Artists source slice
+
+- 固定使用 `GET /me/top/tracks` 與 `GET /me/top/artists`，不接受 client endpoint、權重、Spotify ID 或 URI。
+- Top track / artist 只在既有最多三個 trusted genuine-ambiguity candidates 內作排序 evidence。
+- saved → top track → top artist → deterministic relevance → popularity 的順序只影響 candidate ordering；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
+- malformed 或失敗的 top lookup 只忽略該訊號；Library lookup 失敗時整體回到原 deterministic order。
+- source/unit regression 已完成；真實帳號 top-signal acceptance 尚未完成。現有本機 token 尚未包含 `user-top-read`，需重新授權後才能驗證 real-account ordering。
 
 ### Windows exact volume
 
@@ -230,9 +241,9 @@ Phase 1 原則：
    - 找一個原始 Spotify Search 順序不理想、且其中一個 trusted candidate 是 saved=true 的 case。
    - 驗證 saved signal 只改善候選順序、不消除 genuine ambiguity、不自動播放。
 
-2. **Spotify personalization next signals**
-   - Top Tracks / Top Artists
-   - Recently Played
+2. **Spotify personalization real acceptance and next signal**
+   - 重新授權 `user-top-read` 後，驗證 Top Tracks / Top Artists 的 genuine-ambiguity ordering。
+   - Recently Played 尚未實作。
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
@@ -268,13 +279,14 @@ Phase 1 原則：
 
 ```text
 1. genuine-ambiguity saved-ranking acceptance
-2. Top/Recent personalization signals
-3. deterministic Spotify playback-state controls
-4. Local Semantic Recovery Phase 1
-5. Local AI production-loopback shadow acceptance
-6. sanitized promotion evidence
-7. independent Local AI promotion review
-8. only then consider guarded fallback execution
+2. Top Tracks / Top Artists real-account acceptance after `user-top-read` reauthorization
+3. Recently Played personalization source slice
+4. deterministic Spotify playback-state controls
+5. Local Semantic Recovery Phase 1
+6. Local AI production-loopback shadow acceptance
+7. sanitized promotion evidence
+8. independent Local AI promotion review
+9. only then consider guarded fallback execution
 ```
 
 ## Installed Runtime
