@@ -166,3 +166,28 @@ Security tests MUST NOT be deleted to make CI pass. See [Testing Specification](
 - If the current profile is Public: warn the user, don't silently change it.
 - `allowed_networks` should be configurable for RFC1918 ranges.
 - Consider multi-subnet (192.168.x.x, 10.x.x.x, 172.16-31.x.x).
+
+
+## Local Semantic Recovery Memory Security
+
+The semantic-memory layer is interpretation state, not execution authority.
+
+Phase 1 permits automatic canonicalization only for exact confirmed, active, non-conflicted aliases. Fuzzy, track-first, vector and AI signals are candidate/evidence-only unless a later separately gated design is accepted.
+
+A client must never be able to submit a trusted provider entity ID, memory trust state, canonical Spotify URI/ID, or memory database path.
+
+Automatic promotion to a confirmed alias requires:
+
+```text
+server-owned clarification candidate
+→ explicit user selection
+→ successful playback
+```
+
+AI/fuzzy/vector/popularity/personalization signals cannot confirm memory. Conflicts remove an alias from the automatic fast path.
+
+Observation logging is disabled by default. Database corruption/unavailability disables semantic memory and preserves the existing deterministic command/Spotify behavior.
+
+The current design must not feed Spotify catalog metadata into AI/embedding models. Future vector memory, if accepted, embeds user-authored/Siri-transcribed utterances only.
+
+See [semantic recovery security](semantic_recovery/SECURITY.md).

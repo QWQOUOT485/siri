@@ -128,6 +128,32 @@ Start/Resume Playback
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
 
+
+### Local Semantic Recovery / ASR Alias Memory
+
+Siri may mistranscribe stylized artist names before the Agent receives text, for example:
+
+```text
+spoken: SASIOVERLXRD
+ASR: Sad overlxrd
+```
+
+Phase 1 adds local alias memory without giving memory new playback authority:
+
+```text
+normalize
+→ exact confirmed alias lookup
+→ normal Spotify resolver
+→ fuzzy/track-first evidence only if unresolved
+→ existing deterministic clarification
+```
+
+Only exact confirmed non-conflicted aliases may auto-canonicalize. RapidFuzz/track-first results remain candidate-only; they may help form clarification candidates but cannot silently rewrite the artist.
+
+Automatic alias confirmation requires a trusted clarification selection and successful Spotify playback. AI/fuzzy/vector/popularity/personalization signals cannot independently confirm a mapping.
+
+The implementation specification is in [semantic_recovery/README.md](semantic_recovery/README.md).
+
 ### Semantic Retry for Parser/Resolver Disagreement
 
 歌曲語意解析不能把「rule parser 有輸出」等同於「語意一定正確」。例如：

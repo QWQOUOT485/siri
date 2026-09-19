@@ -132,6 +132,29 @@ For playback, resolve the configured or active Spotify Connect device. If the de
 
 Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes; token handling belongs in infrastructure, not domain. See [SPOTIFY.md](SPOTIFY.md).
 
+
+## Local Semantic Recovery / Alias Memory
+
+Spotify named-track requests may pass through a local ASR/entity-recovery layer before Local AI.
+
+```text
+Siri text
+→ deterministic parser
+→ entity normalization
+→ exact confirmed alias memory
+→ deterministic Spotify resolver
+→ fuzzy / track-first candidate evidence if unresolved
+→ deterministic clarification
+→ optional future vector evidence
+→ Local AI semantic retry only if still eligible
+```
+
+Phase 1 authority rule: only an **exact confirmed non-conflicted alias** may automatically canonicalize an entity. Fuzzy similarity, track-first evidence, vector similarity and AI are not identity/execution authority.
+
+Alias promotion is controlled by a single `MemoryLearner`; automatic confirmation requires a server-owned clarification selection followed by successful playback. Conflicted aliases leave the automatic fast path.
+
+See [Local Semantic Recovery](semantic_recovery/README.md) for the implementation specification.
+
 ## Local AI Semantic Fallback (V1 allowed, not currently enabled)
 
 The Phase 0.5 benchmark did not produce a model that met the project safety and

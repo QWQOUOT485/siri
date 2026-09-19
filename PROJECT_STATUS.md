@@ -52,6 +52,25 @@
 - 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
 
+## Local Semantic Recovery / Alias Memory Phase 1 (approved 2026-09-19)
+
+Claude review accepted the architecture with the required Phase 1 scope reduction: only an **exact confirmed non-conflicted alias** may auto-canonicalize. RapidFuzz and track-first recovery are candidate/evidence-only until a fixed adversarial corpus proves zero wrong automatic canonicalizations.
+
+Implementation is now authorized but is **not yet claimed complete**. The split implementation specification is under `docs/semantic_recovery/`:
+
+- `README.md` — scope, authority chain, invariants
+- `RECOVERY_PIPELINE.md` — deterministic recovery ladder and AI boundary
+- `MEMORY_MODEL.md` — SQLite/RAM model, five trust states, conflict handling
+- `SECURITY.md` — poisoning/privacy/provider-ID boundaries
+- `IMPLEMENTATION_PLAN.md` — implementation slices and rollout
+- `TESTING.md` — blocking tests and Windows acceptance
+- `REFERENCES.md` — research/technical references
+
+Phase 1 implementation target: EntityNormalizer + SQLite persistence + confirmed-alias RAM index + RapidFuzz candidate-only + MemoryLearner. Confirmed learning requires server-owned clarification selection **and successful playback**. `alias_observations` defaults off; `scope_context` is reserved but unused; text-derived phonetic keys and vector memory are deferred/removed from Phase 1.
+
+Canonical regression: Siri/ASR `Sad overlxrd` must be learnable, after trusted clarification/playback, as a local alias for the trusted Spotify artist `SASIOVERLXRD`. The second identical ASR error should take the exact confirmed-alias fast path without AI.
+
+
 ## Third-party Review Consolidation / Non-AI Repair Batch (2026-09-19)
 
 Two external AI code-review reports were compared against the current `main` source. Treat the following as the current review disposition rather than copying either report's completion percentages or recommendations blindly.
