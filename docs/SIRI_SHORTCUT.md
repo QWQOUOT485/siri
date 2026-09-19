@@ -16,18 +16,19 @@ Windows 管家
 
 不建議只依賴過於泛用的名稱，因為後續若捷徑已結束，像「下一首」「第二首」這類短句可能會被 Siri 當成 iPhone 自己的指令。
 
-**穩定版運作流程：**
+**目前實機驗收通過的穩定流程：**
 
-1. 對 Siri 說捷徑名稱，例如：「嘿 Siri，Windows 管家」
-2. 捷徑先用「朗讀文字」說：「請說電腦指令」
-3. 捷徑立刻執行「聽寫文字」，由 Shortcut 自己接住下一句
-4. 使用者說：「下一首」「播放晴天」「開啟 Discord」等
-5. 捷徑把聽寫結果 POST 到 Windows Agent
-6. Agent 回傳 JSON
-7. 捷徑朗讀 `message`
-8. 如果需要 clarification，捷徑在**同一次捷徑執行內**再次朗讀候選並執行第二次「聽寫文字」
+1. 對 Siri 說捷徑名稱，例如：「嘿 Siri，電腦管家」
+2. Shortcut 取得第一輪語音輸入並 POST 到 Windows Agent
+3. Agent 若能直接執行，就完成一般控制
+4. Agent 若回傳 `clarification_token`，Shortcut 先朗讀最多三個候選
+5. **只有在 clarification 分支內**執行「關閉 Siri 並繼續（Dismiss Siri and Continue）」
+6. 關閉 Siri 後立即執行第二次「聽寫文字」
+7. 使用者說「第一首／第二首／第三首」等選擇
+8. Shortcut 將第二輪文字 + 原 `clarification_token` POST 回 Agent
+9. Agent 只在原 server-created candidate set 中選擇並播放
 
-> **核心原則：** 「下一首」「第二首」等語句必須在 Shortcut 的「聽寫文字」動作正在等待輸入時說出。若捷徑已經結束，Siri 會把下一句當成 iPhone 自己的普通 Siri 指令，而不是送到 Windows Agent。
+> **核心原則：** 「關閉 Siri 並繼續」不要放在捷徑最前面。它應放在「候選已朗讀完成」之後、第二次聽寫之前。這樣一般指令保持 Siri 語音體驗，只有歌曲需要消歧時才退出 Siri session，避免 Siri 把「第一首」誤判成自己的排程／提醒指令。
 
 ## 2. 建立穩定版 Siri Shortcut
 
@@ -43,45 +44,25 @@ Windows 管家
 
 或其他不容易和 Siri 原生功能撞名的名稱。
 
-### 步驟 A：朗讀提示
+### 步驟 A：取得第一輪語音指令
 
-加入 **朗讀文字 (Speak Text)**：
-
-```text
-請說電腦指令
-```
-
-這一步很重要，目的是讓使用者知道接下來的語音會由捷徑自己的 Dictate Text 收取，而不是交回一般 Siri。
-
-### 步驟 B：取得語音指令
-
-加入 **聽寫文字 (Dictate Text)** 動作。
+使用目前可正常由 Siri 啟動的語音輸入動作取得第一輪指令，並將結果作為第一次 POST 的 `text`。
 
 設定建議：
 
 - 語言：**中文（台灣）**
-- 聽寫結果作為後續 POST 的 `text`
-- 不要在這個動作前結束捷徑
+- 第一輪不要先執行「關閉 Siri 並繼續」
+- 一般指令直接沿用 Siri 語音流程
 
-正常體驗：
+例如：
 
 ```text
-你：嘿 Siri，Windows 管家
-捷徑：請說電腦指令
-你：下一首
-→ 「下一首」進入 Dictate Text
+你：嘿 Siri，電腦管家
+你：播放 Stay
 → POST 到 Windows Agent
 ```
 
-錯誤體驗：
-
-```text
-你：嘿 Siri，Windows 管家
-捷徑：已完成
-你：下一首
-→ 此時「下一首」已不屬於捷徑
-→ Siri 可能控制 iPhone 媒體或誤判成其他原生指令
-```
+「關閉 Siri 並繼續」只在 Agent 回傳歌曲 clarification 時使用，位置見下方 Spotify 流程。
 
 ### 步驟 C：傳送指令到電腦
 加入 **取得 URL 內容 (Get Contents of URL)** 動作。
@@ -92,7 +73,7 @@ Windows 管家
   - 值 (Value) 填入您在 Windows 電腦端產生的 API 密碼。
 - **要求主體 (Request Body)**：選擇 `JSON`，並新增一個文字欄位：
   - 鍵 (Key) 填入 `text`
-  - 值 (Value) 選擇步驟 B 的「聽寫的文字」
+  - 值 (Value) 選擇步驟 A 的第一輪語音輸入結果
 
 ### 步驟 D：讀取電腦的回應
 Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息。捷徑會自動解析這些內容。
@@ -145,14 +126,16 @@ Spotify 搜尋
 穩定版 Shortcut 應在**同一次捷徑執行內**完成第二輪：
 
 ```text
-第一次 Dictate Text
+第一輪語音輸入
 → POST /command
-→ clarification_required == true
-→ Speak message
-→ 保存 clarification_token
+→ 從 URL 內容取得辭典
+→ 取得 clarification_token
+→ If Token 包含任何數值
+→ Speak 候選 message
+→ 關閉 Siri 並繼續
 → 第二次 Dictate Text
 → POST /command + clarification_token
-→ Speak final message
+→ 播放成功後結束 Shortcut
 ```
 
 第二次語音例如：
@@ -166,7 +149,7 @@ Spotify 搜尋
 
 都必須由第二個 Dictate Text 接住。
 
-不要讓第一次 POST 後就直接結束捷徑，否則使用者接著說「第二首」時，Siri 會把它當一般 iPhone 指令。
+**已驗證的關鍵修正：** 先讓 Siri 朗讀候選，再執行「關閉 Siri 並繼續」，接著立刻啟動第二個 Dictate Text。若把「關閉 Siri 並繼續」放在捷徑最前面，後續輸入可能退成打字；若完全不關 Siri，第二輪「第一首」可能被 Siri 自己攔截並追問「要設在什麼時候」。
 
 Shortcut 只能保存/回傳 opaque `clarification_token`，不得自行組造 Spotify URI 或 track ID。
 
@@ -185,21 +168,18 @@ Shortcut 只能保存/回傳 opaque `clarification_token`，不得自行組造 S
 
 ---
 
-## 5. Siri 優先執行手機指令的排查
+## 5. Siri 第二輪搶走「第一首」的已驗證修正
 
-如果你說：
-
-```text
-嘿 Siri，Windows 管家
-```
-
-之後再說：
+如果歌曲需要 clarification，而你說「第一首／第二首／第三首」時 Siri 跳去自己的提醒事項、日期／時間流程，甚至追問「要設在什麼時候」，請確認 Shortcut 的順序是：
 
 ```text
-下一首
+朗讀候選
+→ 關閉 Siri 並繼續
+→ 第二次聽寫文字
+→ POST②
 ```
 
-卻出現 iPhone 自己的媒體控制、提醒事項、日期/時間追問，優先檢查以下項目：
+這個順序已完成 iPhone 實機驗收，可保留全語音操作。
 
 ### 5.1 確認第二句是否發生在 Dictate Text 中
 
