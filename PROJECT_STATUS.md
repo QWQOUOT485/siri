@@ -135,6 +135,16 @@
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - API key 未出現在測試 log 中。
 
+
+## Resolved Source Bug: Long Spotify title rejected by 200-character metadata cap (2026-09-19)
+
+- 使用者實機回報：歌名較長時會直接變成無效指令。
+- Source inspection 找到長度限制不一致：`POST /command` 與 parser 允許最多 300 字元，但 `ValidatedAction.track/artist/album` 與 `ActionRequest.track/artist/album` 原本只允許 200 字元。
+- 因此長度 201～約 297 字元的歌曲名稱可以先通過 command/parser，卻在建立 Spotify action 時被 Pydantic metadata cap 擋掉。
+- Source 已將 Spotify `track` / `artist` / `album` 的封閉上限由 200 對齊到 300；沒有放寬 shell/path/URL/URI 等既有安全邊界。
+- 已新增 regression tests：220 字元歌曲名稱必須可由 parser 建立 `spotify_play_track`；250 字元 Spotify metadata 可通過 schema，301 字元仍必須拒絕。
+- 目前只完成 source + regression test 寫入 GitHub；尚未在真實 Windows runtime 執行完整 pytest、部署並用 iPhone/Siri 重測長歌名，因此不得標成 real-world acceptance 完成。
+
 ## Resolved Bug: `暫停音樂` parser alias (2026-09-18)
 
 - 使用者實機回報 iPhone Shortcut 的「暫停音樂」沒有作用；原 parser 只有 exact alias `暫停`，因此請求未進入 Spotify pause service。
@@ -243,6 +253,8 @@ D:\ai\windows-siri-agent\scripts\start.bat
 9. 後續 Spotify 工作重點：先做候選個人化排序（saved/liked → top tracks/artists → recently played → search relevance → final tie-breaker），再加入 shuffle/repeat/seek/Spotify volume/like/unlike current track；同時評估 `market=TW` 的 availability 行為，不把它誤當熱門度排序；不得降低 ambiguity safety。
 
 ## Important: What Is NOT Yet Proven
+
+- 長歌名修正已完成 source 與 regression test 寫入，但尚未跑完整測試、部署 Windows Agent 或做 Siri 實機回歸。
 
 除非有新的實機測試結果，**不要把以下項目寫成已完成**：
 
