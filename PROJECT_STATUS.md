@@ -230,7 +230,7 @@ production fallback 仍是 **NO-GO**，直到完成：
 
 ## Local Semantic Recovery / Alias Memory
 
-Phase 1 source implementation 已完成一個可 review 的 Slice 1–10 vertical implementation，但尚未宣稱 runtime/real-world acceptance complete。
+Phase 1 source implementation 已完成一個可 review 的 Slice 1–10 vertical implementation；2026-09-20 的 current-source Windows lifecycle harness 也已通過，但尚未宣稱 installed runtime / real-world acceptance complete。詳細證據與界線見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md)。
 
 Phase 1 原則：
 
@@ -247,7 +247,8 @@ Phase 1 原則：
 - 已建立 bounded domain models、schema-versioned SQLite persistence、RAM exact index、candidate-only RapidFuzz evidence、MemoryLearner、EntityRecoveryService、optional runtime config 與 aggregate-only metrics。
 - `Sad overlxrd` 首次 trusted clarification + successful mocked playback 會建立 alias；第二次相同 artist text 走 exact RAM canonicalization；mocked playback failure 不會學習。
 - source/security/concurrency regression 已納入完整 pytest suite；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 以 code-level false gate fail closed。
-- 本次沒有在 installed Windows Agent、真實 Spotify 帳號或 iPhone Siri Shortcut 上做 Semantic Recovery acceptance；因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
+- current-source Windows harness 已驗證 disabled startup、fresh SQLite schema v1/FK、controlled enabled startup、restart persistence/RAM rebuild、corrupt/unavailable fallback、fuzzy candidate-only、conflict 與 8-way concurrent confirmation；exact lookup 1,000 次的 P50/P95 為 0.0174/0.0231 ms（temporary fixture，非 installed-host benchmark）。
+- installed Windows Agent 仍沒有 Semantic Memory modules/config flags/SQLite artifact，且尚未在真實 Spotify 帳號或 iPhone Siri Shortcut 上做 acceptance；因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
 
 規格位於 `docs/semantic_recovery/`。
 
@@ -274,8 +275,9 @@ Phase 1 原則：
    - 都不得擴張 Local AI allowlist。
 
 4. **Local Semantic Recovery Phase 1 runtime acceptance**
-   - source implementation與poisoning/conflict tests已完成。
-   - 仍需 Windows SQLite create/migration、restart persistence、RAM rebuild、真實 `Sad overlxrd` clarification/playback/second exact-hit、latency與既有 Siri/Spotify regression。
+   - current-source Windows SQLite/create/restart/RAM/fallback harness 已完成；source/unit與mocked Spotify regression已通過。
+   - blocker 是 installed Agent 尚未部署這個 Slice，仍需 installed-host latency/RAM、真實 `Sad overlxrd` clarification/playback/second exact-hit，以及既有 Siri/Spotify real-world regression。
+   - rollout decision 與 evidence boundary 見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md)；memory 保持 disabled。
 
 5. **Local AI promotion evidence**
    - 保持 off/shadow。
