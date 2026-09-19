@@ -133,7 +133,11 @@ class SpotifyService:
                     "SPOTIFY_CLARIFICATION_REQUIRED",
                     self._clarification_data(token, options),
                 )
-            return OperationResult(False, f"Spotify 找不到歌曲 {command.track}。", "SPOTIFY_TRACK_NOT_FOUND")
+            return OperationResult(
+                False,
+                f"Spotify 找不到歌曲 {command.track}。",
+                resolution.retry_signal or "SPOTIFY_TRACK_NOT_FOUND",
+            )
         return self._play_candidate(access_token, resolution.track)
 
     def _play_candidate(self, access_token: str, track) -> OperationResult:

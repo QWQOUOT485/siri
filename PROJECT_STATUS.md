@@ -247,8 +247,8 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - Promotion evidence 仍不完整：目前 benchmark 明確不宣稱 Windows Agent、Spotify playback、Siri 或 production fallback acceptance；green unit tests 不能替代 real-host acceptance。
 - High-priority implementation gaps：啟用 AI 但省略 `LOCAL_AI_MODE` 時 config 會選 `shadow` 而非 fail-closed `off`；eligibility 未完整阻擋 UNC path 與未由 deterministic parser 處理的 version marker；`spotify:playlist:` 等非 track/album/artist Spotify URI 尚可進入 AI。
 - Grounding gap：同一個原文 span 可同時被接受為 `track` 與 `artist`，沒有阻止 cross-slot inference；這與「不得發明缺失 artist」的規格不符。
-- Semantic-retry wiring gap：eligibility 列出 low-confidence / entity-segmentation error code，但目前 Spotify runtime 只實際產生 `SPOTIFY_TRACK_NOT_FOUND` 或 clarification，故該類 retry 尚未有 production evidence。
-- Next smallest safe action：先修上述 deterministic gates/grounding 與對應 adversarial regression tests，再重新跑固定 corpus；之後才可考慮 separate Windows/Spotify/Siri fallback acceptance。不得因本 review 結束而修改 installed `.env` 或啟用 fallback。
+- Semantic-retry wiring gap：eligibility 列出的 low-confidence / entity-segmentation signal 已在後續 source slice 接上；仍沒有 production fallback acceptance evidence。
+- Next smallest safe action：完成 source-level resolver signal regression 與固定 corpus 重跑；之後才可考慮 separate Windows/Spotify/Siri fallback acceptance。不得因本 review 結束而修改 installed `.env` 或啟用 fallback。
 
 ## Local AI Gate Hardening Slice (2026-09-19)
 
@@ -259,7 +259,16 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 完整 pytest 為 `144 passed, 4 failed`；4 個 failure 屬目前未提交的非 AI Spotify personalization/auth 變更（saved-track lookup 與 scope expectation），不是本 slice 的 Local AI tests。故 promotion 仍維持 **NO-GO**，且尚未重新部署或啟用 fallback。
 - 已以可還原 backup `D:\ai\windows-siri-agent\work\local-ai-gate-backup-20260919-214605` 同步三個 gate 檔案到 installed Agent；hash readback 與 source 一致。重啟後 `/health`=200，authenticated `/info` 回報 `mode=shadow`、`adapter_configured=true`、`fallback_approved=false`。
 - Installed shadow regression：`幫我放晴天` 回傳 `INVALID_COMMAND` 且 log 為 `shadow_accepted`、沒有 executable action；`幫我放一下晴天 remix` 回傳 `INVALID_COMMAND` 且 log 為 `version_marker_requires_deterministic_parser`、沒有 model transport 或播放。LM Studio listener 維持 `127.0.0.1:1234`。
-- **本輪 Local AI shadow gate hardening milestone 完成**；這不是 fallback promotion，也不代表 Windows/Spotify/Siri executable fallback acceptance。下一個 blocker 仍是 resolver low-confidence/entity-segmentation signal wiring 與獨立 promotion gate。
+- **本輪 Local AI shadow gate hardening milestone 完成**；這不是 fallback promotion，也不代表 Windows/Spotify/Siri executable fallback acceptance。resolver signal wiring 已在後續 source slice 完成；下一個 blocker 是完整測試／corpus 重跑與獨立 promotion gate。
+
+## Spotify Resolver Semantic-Retry Signal Wiring (2026-09-19)
+
+- `TrackResolution` 現在保留 bounded `retry_signal`；parser 已提供 artist/title split、且重建完整歌名仍無結果時回傳 `SPOTIFY_ENTITY_SEGMENTATION_RISK`。
+- Spotify Search 只有單一候選但最高分低於既有 `0.70` safe threshold 時，回傳 `SPOTIFY_LOW_CONFIDENCE_TRACK`；多候選 ambiguity 仍維持既有 deterministic clarification，不改成 AI 猜測。
+- `SpotifyService` 只在沒有 trusted track 且不是 clarification 的情況，把 signal 映射成既有 `OperationResult.error_code`；因此現有 `/command` eligibility gate 可辨識 retry，AI 仍須經過既有 grounding/policy，shadow 仍不可執行。
+- 新增 catalog/service regression tests；`tests/unit/test_spotify_catalog.py` 與 `tests/unit/test_spotify_service.py` 共 `36 passed`。這是 source/unit evidence，不是 Windows/Spotify/Siri fallback acceptance。
+- Source change 後重跑固定 109-case loopback corpus：`qwen2.5-coder-1.5b-instruct`、LM Studio `127.0.0.1:1234`、timeout 2 秒；prompt/schema 的 transport、JSON、schema、intent 均 `100%`，semantic `95.24%`、semantic-retry `100%`、deterministic-only 與 safety-only safe-unknown `100%`、post-grounding false accept `0%`、false execution `0%`，P95 為 `196.1/200.2 ms`。這是 benchmark evidence，未包含 Windows/Spotify/Siri executable acceptance。
+- Installed Agent 未重新部署，`LOCAL_AI_FALLBACK_APPROVED=false` 保持不變；下一步是由使用者另行指示是否做 installed shadow regression 或 independent promotion review，期間保持 shadow/off。
 
 ## Local AI Product Decision (2026-09-18)
 

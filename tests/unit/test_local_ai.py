@@ -383,6 +383,43 @@ def test_command_shadow_mode_preserves_deterministic_user_behavior(fake_runtime)
     assert calls == ["幫我放晴天"]
 
 
+def test_command_shadow_retries_on_spotify_resolver_signal_without_executing_ai_action(fake_runtime):
+    runtime, *_ = fake_runtime
+    ai_calls = []
+    spotify_calls = []
+
+    class FakeAdapter:
+        model_id = "test-model"
+
+        def infer(self, original_text):
+            ai_calls.append(original_text)
+            return LocalAIResponse(
+                content=json.dumps(
+                    {"schema_version": 1, "intent": "spotify_play_track", "track": "晴天", "artist": None, "album": None}
+                ),
+                model_id=self.model_id,
+                latency_ms=1.0,
+            )
+
+    class FakeSpotify:
+        def execute(self, command):
+            from app.adapters.windows.base import OperationResult
+
+            spotify_calls.append(command)
+            return OperationResult(False, "低信心結果", "SPOTIFY_LOW_CONFIDENCE_TRACK")
+
+    runtime.command_service.spotify = FakeSpotify()
+    runtime.local_ai_service = LocalAIService(mode="shadow", adapter=FakeAdapter())
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post("/command", headers={"X-API-Key": "test-key"}, json={"text": "播放晴天"})
+
+    assert response.status_code == 200
+    assert response.json()["error_code"] == "SPOTIFY_LOW_CONFIDENCE_TRACK"
+    assert ai_calls == ["播放晴天"]
+    assert len(spotify_calls) == 1
+
+
 def test_command_clarification_bypasses_local_ai(fake_runtime):
     runtime, *_ = fake_runtime
     calls = []

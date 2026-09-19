@@ -111,6 +111,47 @@ def test_named_track_live_rejection_happens_before_authentication(tmp_path):
     assert result.error_code == "SPOTIFY_LIVE_UNSUPPORTED"
 
 
+def test_parser_split_reconstruction_failure_exposes_entity_retry_signal(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        assert request.url.path == "/v1/search"
+        return httpx.Response(200, json={"tracks": {"items": []}})
+
+    spotify, _ = service(tmp_path, handler)
+
+    result = spotify.execute(
+        ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="終點", artist="死亡是生命")
+    )
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
+    assert len(calls) == 2
+
+
+def test_single_weak_candidate_exposes_low_confidence_retry_signal(tmp_path):
+    def handler(request: httpx.Request):
+        assert request.url.path == "/v1/search"
+        return httpx.Response(
+            200,
+            json={"tracks": {"items": [spotify_track("weak", "Completely Different", "Other Artist")]}},
+        )
+
+    spotify, _ = service(tmp_path, handler)
+
+    result = spotify.execute(
+        ValidatedAction(
+            action=ActionName.SPOTIFY_PLAY_TRACK,
+            track="Requested Song",
+            artist="Requested Artist",
+        )
+    )
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_LOW_CONFIDENCE_TRACK"
+
+
 def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
     calls = []
 

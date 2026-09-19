@@ -326,6 +326,31 @@ def test_catalog_reports_no_results_without_creating_a_playable_reference():
     assert result.candidates == ()
 
 
+def test_catalog_marks_parser_split_reconstruction_failure_for_semantic_retry():
+    catalog = SpotifyCatalog(FakeSpotifySearchClient([]))
+
+    result = catalog.find_track("終點", "死亡是生命", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is False
+    assert result.retry_signal == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
+
+
+def test_catalog_marks_one_weak_candidate_as_low_confidence_for_semantic_retry():
+    client = FakeSpotifySearchClient([track("weak", "Completely Different", ["Other Artist"])])
+
+    result = SpotifyCatalog(client).find_track(
+        "Requested Song",
+        "Requested Artist",
+        access_token="test-token",
+    )
+
+    assert result.track is None
+    assert result.ambiguous is False
+    assert result.candidates == ()
+    assert result.retry_signal == "SPOTIFY_LOW_CONFIDENCE_TRACK"
+
+
 def test_track_reference_rejects_client_controlled_non_spotify_uri():
     with pytest.raises(ValidationError):
         SpotifyTrackRef(

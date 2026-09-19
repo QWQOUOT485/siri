@@ -33,6 +33,7 @@ class TrackResolution:
     track: SpotifyTrackRef | None
     ambiguous: bool
     candidates: tuple[SpotifyTrackRef, ...] = ()
+    retry_signal: str | None = None
 
 
 class SpotifyCatalog:
@@ -58,6 +59,7 @@ class SpotifyCatalog:
         hint = self._hint_value(version_hint)
         if hint == "live":
             return TrackResolution(track=None, ambiguous=False)
+        retry_signal: str | None = None
         payloads = self.client.search_tracks(access_token, query, limit=10)
         refs = tuple(
             ref
@@ -86,9 +88,11 @@ class SpotifyCatalog:
                 refs = fallback_refs
                 track = reconstructed_track
                 artist = None
+            else:
+                retry_signal = "SPOTIFY_ENTITY_SEGMENTATION_RISK"
 
         if not refs:
-            return TrackResolution(track=None, ambiguous=False)
+            return TrackResolution(track=None, ambiguous=False, retry_signal=retry_signal)
 
         ranked = sorted(
             refs,
@@ -157,6 +161,12 @@ class SpotifyCatalog:
             ]
             if best_score >= 0.70 and close_candidates and self._same_recording_group(close_candidates + [ranked[0]]):
                 return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
+            if len(ranked) == 1 and best_score < 0.70:
+                return TrackResolution(
+                    track=None,
+                    ambiguous=False,
+                    retry_signal="SPOTIFY_LOW_CONFIDENCE_TRACK",
+                )
             return TrackResolution(
                 track=None,
                 ambiguous=True,
