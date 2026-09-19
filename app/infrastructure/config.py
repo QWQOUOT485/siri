@@ -201,7 +201,7 @@ def load_config(*, root_dir: Path | None = None, environ: Mapping[str, str] | No
         token_path = root / token_path
 
     local_ai_enabled = _parse_bool(_env_value(env, dotenv_values, "LOCAL_AI_ENABLED", "false"))
-    requested_ai_mode = _env_value(env, dotenv_values, "LOCAL_AI_MODE", "shadow").strip().casefold()
+    requested_ai_mode = _env_value(env, dotenv_values, "LOCAL_AI_MODE", "off").strip().casefold()
     if requested_ai_mode not in {"off", "shadow", "fallback"}:
         requested_ai_mode = "off"
     local_ai_mode = requested_ai_mode if local_ai_enabled else "off"

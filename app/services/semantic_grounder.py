@@ -12,14 +12,26 @@ from app.domain.local_ai import GroundedAIIntent, RawAIIntent
 
 _FORBIDDEN_AUTHORITY_PATTERNS = (
     re.compile(r"https?://", re.IGNORECASE),
-    re.compile(r"spotify\s*:\s*(?:track|album|artist)\s*:", re.IGNORECASE),
+    re.compile(r"spotify\s*:", re.IGNORECASE),
     re.compile(r"(?:^|\b)(?:powershell|pwsh)(?:\.exe)?(?:\b|\s*-)", re.IGNORECASE),
     re.compile(r"(?:^|\b)cmd(?:\.exe)?(?:\b|\s*/)", re.IGNORECASE),
     re.compile(r"(?:^|\b)python(?:\.exe)?(?:\b|\s*-)", re.IGNORECASE),
     re.compile(r"(?:^|\b)(?:shutdown|rm|del|format)(?:\b|\s+/)", re.IGNORECASE),
     re.compile(r"\b(?:shell|exec(?:ute)?|command)\b", re.IGNORECASE),
     re.compile(r"\b[A-Za-z]:[\\/]"),
+    re.compile(r"\\\\"),
     re.compile(r"[;&|`$<>]"),
+)
+
+_EXPLICIT_VERSION_MARKER_PATTERNS = (
+    re.compile(
+        r"(?:現場版|现场版|演唱會版|演唱会版|演唱會|演唱会|live(?:\s+version)?|concert(?:\s+version)?)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"(?:錄音室版|录音室版|錄音室|录音室|studio(?:\s+version)?)", re.IGNORECASE),
+    re.compile(r"(?:原版|原始版|正式版|original(?:\s+version)?)", re.IGNORECASE),
+    re.compile(r"(?:remix(?:ed)?|\bmix\b|acoustic|karaoke|instrumental|cover)", re.IGNORECASE),
+    re.compile(r"(?:混音|重混|不插電|不插电|卡拉OK|伴奏版|翻唱)"),
 )
 
 _LEFT_BOUNDARY_MARKERS = (
@@ -65,6 +77,12 @@ def contains_forbidden_authority(value: str | None) -> bool:
     if not value:
         return False
     return any(pattern.search(value) for pattern in _FORBIDDEN_AUTHORITY_PATTERNS)
+
+
+def contains_explicit_version_marker(value: str | None) -> bool:
+    if not value:
+        return False
+    return any(pattern.search(value) for pattern in _EXPLICIT_VERSION_MARKER_PATTERNS)
 
 
 def contains_unresolved_reference(value: str | None) -> bool:
@@ -136,8 +154,14 @@ class SemanticGrounder:
         if not grounded_slot(original_text, raw.track):
             return GroundingResult(False, "track_not_grounded")
 
-        artist = raw.artist if grounded_slot(original_text, raw.artist) else None
-        album = raw.album if grounded_slot(original_text, raw.album) else None
+        used_slots = {canonical(raw.track)}
+        artist = None
+        if raw.artist and canonical(raw.artist) not in used_slots and grounded_slot(original_text, raw.artist):
+            artist = raw.artist
+            used_slots.add(canonical(raw.artist))
+        album = None
+        if raw.album and canonical(raw.album) not in used_slots and grounded_slot(original_text, raw.album):
+            album = raw.album
         return GroundingResult(
             True,
             "accepted_grounded_track",

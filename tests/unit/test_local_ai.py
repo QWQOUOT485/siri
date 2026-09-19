@@ -14,6 +14,7 @@ from app.domain.actions import ParsedCommand
 from app.domain.local_ai import RawAIIntent
 from app.services.ai_eligibility import SemanticRetryEligibilityGate
 from app.services.ai_policy import AIPolicyGate
+from app.services.command_parser import CommandParser
 from app.services.local_ai_service import LocalAIService
 from app.services.semantic_grounder import SemanticGrounder, grounded_slot
 
@@ -113,6 +114,19 @@ def test_grounder_rejects_referential_track_hallucination():
     assert result.reason == "unresolved_reference"
 
 
+def test_grounder_does_not_reuse_track_span_as_artist_or_album():
+    result = SemanticGrounder().ground(
+        "播放晴天",
+        raw_play(artist="晴天", album="晴天"),
+    )
+
+    assert result.accepted is True
+    assert result.grounded is not None
+    assert result.grounded.track == "晴天"
+    assert result.grounded.artist is None
+    assert result.grounded.album is None
+
+
 def test_policy_gate_is_the_only_stage_that_creates_a_validated_action():
     decision = AIPolicyGate().apply(
         SemanticGrounder().ground("播放周杰倫的晴天", raw_play()).grounded
@@ -133,6 +147,35 @@ def test_eligibility_gate_rejects_clarification_hostile_and_non_spotify_text():
     assert gate.evaluate("播放 A; echo unsafe", parsed).reason == "hostile_input"
     assert gate.evaluate("播放周杰倫那首", parsed).reason == "unresolved_reference"
     assert gate.evaluate("開啟 Discord", parsed).reason == "unsupported_domain"
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "播放 \\\\server\\share",
+        "播放 spotify:playlist:123456",
+        "播放晴天 remix",
+    ),
+)
+def test_eligibility_rejects_untrusted_paths_uris_and_unhandled_versions(text):
+    decision = SemanticRetryEligibilityGate().evaluate(text, parser_miss(text))
+
+    assert decision.eligible is False
+
+
+def test_eligibility_rejects_ai_retry_when_deterministic_version_hint_exists():
+    text = "播放晴天原版"
+    parsed = CommandParser().parse(text)
+
+    assert parsed.accepted is True
+    assert parsed.action is not None
+    decision = SemanticRetryEligibilityGate().evaluate(
+        text,
+        parsed,
+        deterministic_error_code="SPOTIFY_TRACK_NOT_FOUND",
+    )
+
+    assert decision.eligible is False
 
 
 def test_eligibility_gate_accepts_parser_miss_and_resolver_failure_only():

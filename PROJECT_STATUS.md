@@ -233,6 +233,23 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 已在實際 port 8000 installed runtime 完成 shadow-only acceptance：`/health` 回傳 200；authenticated `/info` 回報 `mode=shadow`、adapter 已設定、`fallback_approved=false`；parser-miss 的 `幫我放晴天` log 為 `shadow_accepted`，unsupported-domain 的 `幫我播放一首歌曲` log 為 `ineligible`，兩者都沒有 executable action 或 Spotify playback。
 - LM Studio listener 已重新讀回為 `127.0.0.1:1234`，不再是 `0.0.0.0`。這只完成 installed shadow acceptance，不是 fallback promotion；port 8000 目前仍是 shadow、fallback 關閉，後續仍需獨立 promotion review 才能考慮 executable fallback。
 
+## Local AI Independent Promotion Review (2026-09-19) — NO-GO
+
+- Standards 與 Spec 兩個獨立 review 均完成；結論是 **NO-GO for executable fallback**，installed runtime 必須維持 `shadow` / `LOCAL_AI_FALLBACK_APPROVED=false`。
+- Promotion evidence 仍不完整：目前 benchmark 明確不宣稱 Windows Agent、Spotify playback、Siri 或 production fallback acceptance；green unit tests 不能替代 real-host acceptance。
+- High-priority implementation gaps：啟用 AI 但省略 `LOCAL_AI_MODE` 時 config 會選 `shadow` 而非 fail-closed `off`；eligibility 未完整阻擋 UNC path 與未由 deterministic parser 處理的 version marker；`spotify:playlist:` 等非 track/album/artist Spotify URI 尚可進入 AI。
+- Grounding gap：同一個原文 span 可同時被接受為 `track` 與 `artist`，沒有阻止 cross-slot inference；這與「不得發明缺失 artist」的規格不符。
+- Semantic-retry wiring gap：eligibility 列出 low-confidence / entity-segmentation error code，但目前 Spotify runtime 只實際產生 `SPOTIFY_TRACK_NOT_FOUND` 或 clarification，故該類 retry 尚未有 production evidence。
+- Next smallest safe action：先修上述 deterministic gates/grounding 與對應 adversarial regression tests，再重新跑固定 corpus；之後才可考慮 separate Windows/Spotify/Siri fallback acceptance。不得因本 review 結束而修改 installed `.env` 或啟用 fallback。
+
+## Local AI Gate Hardening Slice (2026-09-19)
+
+- 已先以 TDD 補上 regression coverage：AI enabled 但省略 `LOCAL_AI_MODE` 時 fail-closed 為 `off`；UNC path、任意 `spotify:` URI、明確版本標記不得進入 AI retry；grounding 不得重用 track span 作為 artist/album。
+- Deterministic gate / grounding 已修正：config mode default 改為 `off`；authority filter 改為阻擋所有 `spotify:` scheme 與 UNC；version marker 一律交回 deterministic parser；相同 canonical span 只保留第一個 semantic slot。
+- Targeted Local AI/config tests：`25 passed`，2 個既有 dependency deprecation warnings；compileall 與 pip check 通過，`git diff --check` 只有既有 CRLF warnings。
+- 以 LM Studio loopback `127.0.0.1:1234`、`qwen2.5-coder-1.5b-instruct`、固定 109 cases、runtime-aligned timeout 2 秒重跑：prompt/schema 都是 transport/JSON/schema/intent 100%、semantic 95.24%、semantic-retry 100%、deterministic-only 與 safety-only safe-unknown 100%、post-grounding false accept 0%、false execution 0%；P95 為 201.8/202.1 ms。
+- 完整 pytest 為 `144 passed, 4 failed`；4 個 failure 屬目前未提交的非 AI Spotify personalization/auth 變更（saved-track lookup 與 scope expectation），不是本 slice 的 Local AI tests。故 promotion 仍維持 **NO-GO**，且尚未重新部署或啟用 fallback。
+
 ## Local AI Product Decision (2026-09-18)
 
 - 舊規則「V1 不得加入 LLM integration」已取消。

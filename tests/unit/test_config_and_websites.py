@@ -57,3 +57,17 @@ def test_local_ai_is_off_by_default_and_shadow_is_explicit(tmp_path: Path):
     assert shadow.local_ai_enabled is True
     assert shadow.local_ai_mode == "shadow"
     assert shadow.local_ai_fallback_approved is False
+
+
+def test_local_ai_enabled_without_explicit_mode_fails_closed_to_off(tmp_path: Path):
+    config = load_config(
+        root_dir=tmp_path,
+        environ={
+            "LOCAL_AI_ENABLED": "true",
+            "LOCAL_AI_BASE_URL": "http://127.0.0.1:1234/v1",
+            "LOCAL_AI_MODEL": "test-model",
+        },
+    )
+
+    assert config.local_ai_enabled is True
+    assert config.local_ai_mode == "off"
