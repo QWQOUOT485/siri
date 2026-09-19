@@ -37,6 +37,7 @@ class SemanticMemoryDatabase:
         self,
         path: Path,
         *,
+        enabled: bool = True,
         observations_enabled: bool = False,
         max_aliases: int = 1000,
         max_observations: int = 1000,
@@ -44,6 +45,7 @@ class SemanticMemoryDatabase:
         clock=time.time,
     ) -> None:
         self.path = Path(path)
+        self.enabled = bool(enabled)
         self.observations_enabled = bool(observations_enabled)
         self.max_aliases = max(1, min(int(max_aliases), 100_000))
         self.max_observations = max(1, min(int(max_observations), 100_000))
@@ -54,7 +56,10 @@ class SemanticMemoryDatabase:
         self.available = False
         self.schema_version: int | None = None
         self.error_code: str | None = None
-        self._initialize()
+        if self.enabled:
+            self._initialize()
+        else:
+            self.error_code = "SEMANTIC_MEMORY_DISABLED"
 
     @property
     def foreign_keys_enabled(self) -> bool:

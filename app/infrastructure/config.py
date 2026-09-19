@@ -83,6 +83,15 @@ class AppConfig:
     local_ai_timeout_seconds: float = 2.0
     local_ai_max_response_bytes: int = 32 * 1024
     local_ai_fallback_approved: bool = False
+    semantic_memory_enabled: bool = False
+    semantic_memory_path: Path | None = None
+    semantic_memory_observations_enabled: bool = False
+    semantic_memory_max_aliases: int = 1000
+    semantic_memory_max_observations: int = 1000
+    # This remains a code-level fail-closed gate in Phase 1.  It is exposed in
+    # config for diagnostics/forward compatibility but cannot be enabled by an
+    # environment variable alone.
+    semantic_memory_fuzzy_auto_retry: bool = False
 
     @property
     def cache_path(self) -> Path:
@@ -95,6 +104,10 @@ class AppConfig:
     @property
     def spotify_token_file(self) -> Path:
         return self.spotify_token_path or (self.runtime_dir / "spotify_token.json")
+
+    @property
+    def semantic_memory_file(self) -> Path:
+        return self.semantic_memory_path or (self.runtime_dir / "semantic_memory" / "semantic_memory.sqlite3")
 
     def ensure_directories(self) -> None:
         self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -206,6 +219,19 @@ def load_config(*, root_dir: Path | None = None, environ: Mapping[str, str] | No
         requested_ai_mode = "off"
     local_ai_mode = requested_ai_mode if local_ai_enabled else "off"
 
+    semantic_memory_enabled = _parse_bool(
+        _env_value(env, dotenv_values, "LOCAL_SEMANTIC_MEMORY_ENABLED", "false")
+    )
+    semantic_memory_path_value = _env_value(
+        env,
+        dotenv_values,
+        "LOCAL_SEMANTIC_MEMORY_PATH",
+        str(Path(runtime_dir_name) / "semantic_memory" / "semantic_memory.sqlite3"),
+    )
+    semantic_memory_path = Path(semantic_memory_path_value)
+    if not semantic_memory_path.is_absolute():
+        semantic_memory_path = root / semantic_memory_path
+
     return AppConfig(
         root_dir=root,
         config_dir=config_dir,
@@ -264,4 +290,23 @@ def load_config(*, root_dir: Path | None = None, environ: Mapping[str, str] | No
         local_ai_fallback_approved=_parse_bool(
             _env_value(env, dotenv_values, "LOCAL_AI_FALLBACK_APPROVED", "false")
         ),
+        semantic_memory_enabled=semantic_memory_enabled,
+        semantic_memory_path=semantic_memory_path.resolve(),
+        semantic_memory_observations_enabled=_parse_bool(
+            _env_value(env, dotenv_values, "LOCAL_SEMANTIC_MEMORY_OBSERVATIONS_ENABLED", "false")
+        ),
+        semantic_memory_max_aliases=_parse_int(
+            _env_value(env, dotenv_values, "LOCAL_SEMANTIC_MEMORY_MAX_ALIASES", "1000"),
+            1000,
+            1,
+            100_000,
+        ),
+        semantic_memory_max_observations=_parse_int(
+            _env_value(env, dotenv_values, "LOCAL_SEMANTIC_MEMORY_MAX_OBSERVATIONS", "1000"),
+            1000,
+            1,
+            100_000,
+        ),
+        # Never turn fuzzy evidence into an execution retry through config.
+        semantic_memory_fuzzy_auto_retry=False,
     )

@@ -71,3 +71,43 @@ def test_local_ai_enabled_without_explicit_mode_fails_closed_to_off(tmp_path: Pa
 
     assert config.local_ai_enabled is True
     assert config.local_ai_mode == "off"
+
+
+def test_semantic_memory_is_disabled_by_default_with_runtime_path(tmp_path: Path):
+    config = load_config(root_dir=tmp_path, environ={})
+
+    assert config.semantic_memory_enabled is False
+    assert config.semantic_memory_path == (tmp_path / "runtime" / "semantic_memory" / "semantic_memory.sqlite3").resolve()
+    assert config.semantic_memory_observations_enabled is False
+    assert config.semantic_memory_max_aliases == 1000
+    assert config.semantic_memory_max_observations == 1000
+    assert config.semantic_memory_fuzzy_auto_retry is False
+
+
+def test_semantic_memory_config_is_bounded_and_fuzzy_retry_fails_closed(tmp_path: Path):
+    config = load_config(
+        root_dir=tmp_path,
+        environ={
+            "LOCAL_SEMANTIC_MEMORY_ENABLED": "true",
+            "LOCAL_SEMANTIC_MEMORY_PATH": "runtime/custom-memory.sqlite3",
+            "LOCAL_SEMANTIC_MEMORY_OBSERVATIONS_ENABLED": "true",
+            "LOCAL_SEMANTIC_MEMORY_MAX_ALIASES": "999999999",
+            "LOCAL_SEMANTIC_MEMORY_MAX_OBSERVATIONS": "999999999",
+            "LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY": "true",
+        },
+    )
+
+    assert config.semantic_memory_enabled is True
+    assert config.semantic_memory_path == (tmp_path / "runtime" / "custom-memory.sqlite3").resolve()
+    assert config.semantic_memory_observations_enabled is True
+    assert config.semantic_memory_max_aliases == 100000
+    assert config.semantic_memory_max_observations == 100000
+    assert config.semantic_memory_fuzzy_auto_retry is False
+
+
+def test_runtime_keeps_semantic_memory_optional(fake_runtime):
+    runtime, *_ = fake_runtime
+
+    assert runtime.semantic_memory_db.available is False
+    assert runtime.alias_memory.lookup_exact("Sad overlxrd") is None
+    assert runtime.info()["semantic_memory"]["enabled"] is False
