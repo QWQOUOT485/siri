@@ -198,7 +198,14 @@ def test_lm_studio_adapter_is_loopback_only_and_transport_only():
     payload = json.loads(request.data)
     assert request.full_url == "http://127.0.0.1:1234/v1/chat/completions"
     assert payload["model"] == "test-model"
-    assert payload["response_format"] == {"type": "json_object"}
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert payload["response_format"]["type"] == "json_schema"
+    assert payload["response_format"]["json_schema"]["strict"] is True
+    assert payload["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
+    assert payload["response_format"]["json_schema"]["schema"]["properties"]["schema_version"] == {
+        "type": "integer",
+        "enum": [1],
+    }
     assert timeout == 2.0
     assert "clarification_token" not in request.data.decode()
 

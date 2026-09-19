@@ -16,6 +16,19 @@ from typing import Any, Protocol
 MAX_AI_RESPONSE_BYTES = 32 * 1024
 MAX_AI_COMPLETION_TOKENS = 256
 
+AI_RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "schema_version": {"type": "integer", "enum": [1]},
+        "intent": {"type": "string", "enum": ["spotify_play_track", "unknown"]},
+        "track": {"type": ["string", "null"], "maxLength": 300},
+        "artist": {"type": ["string", "null"], "maxLength": 300},
+        "album": {"type": ["string", "null"], "maxLength": 300},
+    },
+    "required": ["schema_version", "intent", "track", "artist", "album"],
+}
+
 AI_SYSTEM_PROMPT = """You are a closed Spotify semantic parser.
 Return exactly one JSON object with exactly these keys:
 schema_version, intent, track, artist, album.
@@ -129,7 +142,17 @@ class LMStudioLocalAIAdapter:
                 "temperature": 0,
                 "max_tokens": MAX_AI_COMPLETION_TOKENS,
                 "stream": False,
-                "response_format": {"type": "json_object"},
+                # Qwen-family models can spend a small completion budget on
+                # hidden reasoning unless this LM Studio template hint is set.
+                "chat_template_kwargs": {"enable_thinking": False},
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "spotify_intent",
+                        "strict": True,
+                        "schema": AI_RESPONSE_SCHEMA,
+                    },
+                },
             }
             request = urllib.request.Request(
                 f"{self.base_url}/chat/completions",
@@ -166,6 +189,10 @@ class LMStudioLocalAIAdapter:
             content = choices[0]["message"]["content"]
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
             raise LocalAITransportError("invalid_response") from exc
+        if isinstance(content, list):
+            chunks = [part.get("text", "") for part in content if isinstance(part, dict)]
+            if chunks and all(isinstance(chunk, str) for chunk in chunks):
+                content = "".join(chunks)
         if not isinstance(content, str) or not content or len(content.encode("utf-8")) > self.max_response_bytes:
             raise LocalAITransportError("invalid_response")
         return content

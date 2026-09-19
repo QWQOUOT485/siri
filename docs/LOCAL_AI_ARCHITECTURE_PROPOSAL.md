@@ -2203,16 +2203,18 @@ default or the deterministic execution boundary:
 - `app/services/ai_policy.py` is the only module that can turn a grounded AI
   intent into the existing `ValidatedAction` shape.
 - `app/adapters/local_ai.py` is a loopback-only, no-redirect, bounded,
-  single-flight LM Studio transport adapter. It returns model JSON content, not
-  an execution target.
+  single-flight LM Studio transport adapter. It requests the tested strict
+  `json_schema` response format and returns model JSON content, not an
+  execution target.
 - `app/services/local_ai_service.py` composes the stages and supports `off`,
   `shadow`, and promotion-gated `fallback` modes. Shadow and unapproved
   fallback never return an executable action.
 
 The runtime remains `LOCAL_AI_ENABLED=false` / `LOCAL_AI_MODE=off` by default.
-This slice is source/unit-test complete only; loopback LM Studio shadow runs,
-the revised benchmark, Windows acceptance, and any fallback promotion remain
-not yet proven.
+One bounded loopback shadow smoke has now been verified against the configured
+LM Studio instance; this proves only the transport/schema path and shadow
+fail-closed behavior. The revised benchmark, Windows acceptance, and any
+fallback promotion remain not yet proven.
 
 ## Review request
 
