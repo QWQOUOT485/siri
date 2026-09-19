@@ -69,5 +69,7 @@ TASKS cannot override security or product specifications.
 - Can reference: Microsoft docs, Python docs, FastAPI docs, Windows API docs, Apple Shortcuts docs
 
 ## Source of Truth
-- Original specification: docs/SOURCE_SPEC.md (read-only reference, don't modify)
-- If you find a conflict between docs, SOURCE_SPEC.md is the final arbiter
+- Active maintained specifications are authoritative in this order: `docs/SECURITY.md` → `docs/SPEC.md` → `docs/ARCHITECTURE.md` → task/platform documents.
+- `PROJECT_STATUS.md` records current implementation/acceptance state and decisions, but cannot weaken active security requirements.
+- `docs/SOURCE_SPEC.md` is a read-only historical snapshot. Keep it for provenance, but do not use it to override newer accepted product/spec/security decisions.
+- When historical SOURCE_SPEC text conflicts with the active maintained specifications, follow the active maintained specifications.
