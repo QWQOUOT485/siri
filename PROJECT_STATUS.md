@@ -42,7 +42,7 @@
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
-- 消歧修正與播放控制回歸測試的完整 unit/security tests 已通過（91 passed，2 個既有 dependency deprecation warnings）；這不等同於 Siri 實機端到端驗收。
+- 消歧修正、播放控制與本輪非 AI 修復的完整 source unit/security tests 已通過（112 passed，2 個既有 dependency deprecation warnings）；這不等同於所有 Windows adapter 的硬體實機驗收。
 - Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
@@ -52,18 +52,24 @@
 - 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
 
-## Third-party Review Consolidation / Current Open Work (2026-09-19)
+## Third-party Review Consolidation / Non-AI Repair Batch (2026-09-19)
 
 Two external AI code-review reports were compared against the current `main` source. Treat the following as the current review disposition rather than copying either report's completion percentages or recommendations blindly.
 
-Confirmed code issues that still need implementation/runtime verification:
+本輪只處理與 Local AI 無關的 review 項目；AI parser、policy、grounding 與相關未追蹤草稿不在本輪範圍內，也沒有納入本輪 commit。
 
-1. **Windows media `SendInput` ctypes layout** — `app/adapters/windows/media.py` currently models `INPUT` without the native union layout. This is the highest-priority low-level Windows interop fix because media-key and volume fallback depend on `_send_key()`.
-2. **Shutdown expiration error-code accuracy** — `ShutdownConfirmationService.consume()` purges expired records before checking the requested record, so an expired token can be reported as invalid instead of expired. This does not allow shutdown, but the state/error contract is wrong.
-3. **Volume fallback ignores `steps`** — the pycaw fallback currently sends a single volume key regardless of requested bounded steps. Mute/unmute remains one key event; volume up/down should preserve the validated step count.
-4. **Force-close duplicate PID cleanup** — multiple top-level windows from one process can lead to repeated terminate attempts/count distortion. Force-close should operate on unique trusted PIDs.
-5. **Chinese fallback-map duplicate key** — duplicate `"體": "体"` is cleanup, not a proven functional defect. Remove duplication and rely on OpenCC plus tests; do not invent a missing mapping without evidence.
-6. **`start.bat` diagnostic text hardcodes port 8000** — runtime can use configured port, but the startup banner/error hint can become misleading when `SIRI_AGENT_PORT` changes. Treat this as an operational UX fix, not a core runtime failure.
+以下六項已完成 source 修正與 regression tests：
+
+1. **Windows media `SendInput` ctypes layout** — `_INPUT` now uses the native `INPUT` union layout, pointer-sized `dwExtraInfo`, and a typed pointer passed to `SendInput`.
+2. **Shutdown expiration error-code accuracy** — a requested expired token now returns `SHUTDOWN_TOKEN_EXPIRED` and is removed, while invalid and reused token behavior remains separate.
+3. **Volume fallback steps** — bounded volume up/down requests now emit the requested number of key events; mute/unmute remain one event.
+4. **Force-close duplicate PID cleanup** — force-close deduplicates trusted process IDs before attempting termination and counting results.
+5. **Chinese fallback-map duplicate key** — the duplicate `"體": "体"` mapping was removed; the normalization regression test remains explicit.
+6. **`start.bat` configured-port diagnostics** — startup and failure text now read `SIRI_AGENT_PORT` from the local `.env`, defaulting to 8000.
+
+Source verification for this batch: `pytest -q` reported `112 passed` with the same 2 dependency deprecation warnings; `compileall`, `pip check`, and `git diff --check` passed. The six matching runtime files were deployed to `D:\ai\windows-siri-agent` and their hashes matched source. A controlled Windows runtime started through `scripts/start.bat`, returned healthy/authenticated responses, and successfully played `死亡是生命的終點` / `SASIOVERLXRD` / `納薩力克`.
+
+The remaining acceptance boundary is explicit: no real shutdown or force-close action was executed; native media-key/volume hardware behavior was covered by mocked layout/step tests but not promoted from those tests to a separate physical-device acceptance claim. The runtime remains available on port 8000 for safe user testing.
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 

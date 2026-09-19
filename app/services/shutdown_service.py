@@ -37,14 +37,15 @@ class ShutdownConfirmationService:
             return False, "SHUTDOWN_TOKEN_INVALID"
         digest = self._digest(token)
         with self._lock:
-            self._purge_locked()
             record = self._records.get(digest)
             if record is None or not hmac.compare_digest(record.digest, digest):
                 return False, "SHUTDOWN_TOKEN_INVALID"
             if record.used:
                 return False, "SHUTDOWN_TOKEN_REUSED"
             if record.expires_at <= self._clock():
+                self._records.pop(digest, None)
                 return False, "SHUTDOWN_TOKEN_EXPIRED"
+            self._purge_locked()
             record.used = True
             return True, ""
 

@@ -26,4 +26,14 @@ def test_invalid_and_expired_token_do_not_consume_another_token():
     token, _ = service.request()
     assert service.consume("wrong") == (False, "SHUTDOWN_TOKEN_INVALID")
     clock.value += 16
-    assert service.consume(token) == (False, "SHUTDOWN_TOKEN_INVALID")
+    assert service.consume(token) == (False, "SHUTDOWN_TOKEN_EXPIRED")
+
+
+def test_expired_requested_token_reports_expired_not_invalid():
+    clock = Clock()
+    service = ShutdownConfirmationService(15, clock=clock)
+    token, _ = service.request()
+
+    clock.value += 16
+
+    assert service.consume(token) == (False, "SHUTDOWN_TOKEN_EXPIRED")

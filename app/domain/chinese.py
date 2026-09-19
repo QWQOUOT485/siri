@@ -65,7 +65,6 @@ _FALLBACK_TRADITIONAL_TO_SIMPLIFIED = str.maketrans(
         "網": "网",
         "頁": "页",
         "軟": "软",
-        "體": "体",
     }
 )
 

@@ -27,7 +27,8 @@ class WindowsProcessController:
         if not targets:
             return OperationResult(False, "目前找不到這個應用程式的可關閉視窗。", "APP_NOT_RUNNING")
         if force:
-            closed = sum(1 for pid, _ in targets if self._terminate(pid))
+            unique_pids = list(dict.fromkeys(pid for pid, _ in targets))
+            closed = sum(1 for pid in unique_pids if self._terminate(pid))
             return OperationResult(bool(closed), "已嘗試強制結束程序。" if closed else "無法強制結束程序。", None if closed else "FORCE_CLOSE_FAILED", {"count": closed})
         for _, hwnd in targets:
             ctypes.windll.user32.PostMessageW(hwnd, self.WM_CLOSE, 0, 0)

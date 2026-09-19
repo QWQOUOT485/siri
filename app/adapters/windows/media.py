@@ -9,6 +9,54 @@ from ctypes import wintypes
 from .base import OperationResult
 
 
+_ULONG_PTR = ctypes.c_size_t
+
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = [
+        ("wVk", wintypes.WORD),
+        ("wScan", wintypes.WORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", _ULONG_PTR),
+    ]
+
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = [
+        ("dx", wintypes.LONG),
+        ("dy", wintypes.LONG),
+        ("mouseData", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", _ULONG_PTR),
+    ]
+
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [
+        ("uMsg", wintypes.DWORD),
+        ("wParamL", wintypes.WORD),
+        ("wParamH", wintypes.WORD),
+    ]
+
+
+class _INPUT_UNION(ctypes.Union):
+    _fields_ = [
+        ("mi", _MOUSEINPUT),
+        ("ki", _KEYBDINPUT),
+        ("hi", _HARDWAREINPUT),
+    ]
+
+
+class _INPUT(ctypes.Structure):
+    _anonymous_ = ("u",)
+    _fields_ = [
+        ("type", wintypes.DWORD),
+        ("u", _INPUT_UNION),
+    ]
+
+
 class WindowsMediaController:
     _keys = {
         "play_pause": 0xB3,
@@ -38,24 +86,19 @@ class WindowsMediaController:
         user32 = ctypes.windll.user32
         KEYEVENTF_KEYUP = 0x0002
 
-        class KEYBDINPUT(ctypes.Structure):
-            _fields_ = [("wVk", wintypes.WORD), ("wScan", wintypes.WORD), ("dwFlags", wintypes.DWORD), ("time", wintypes.DWORD), ("dwExtraInfo", ctypes.POINTER(wintypes.ULONG))]
-
-        class INPUT(ctypes.Structure):
-            _fields_ = [("type", wintypes.DWORD), ("ki", KEYBDINPUT)]
-
-        input_array_type = INPUT * 2
-        inputs = input_array_type(
-            INPUT(1, KEYBDINPUT(virtual_key, 0, 0, 0, None)),
-            INPUT(1, KEYBDINPUT(virtual_key, 0, KEYEVENTF_KEYUP, 0, None)),
-        )
+        input_array_type = _INPUT * 2
+        inputs = input_array_type()
+        inputs[0].type = 1
+        inputs[0].ki = _KEYBDINPUT(virtual_key, 0, 0, 0, 0)
+        inputs[1].type = 1
+        inputs[1].ki = _KEYBDINPUT(virtual_key, 0, KEYEVENTF_KEYUP, 0, 0)
         send_input = user32.SendInput
         try:
-            send_input.argtypes = (wintypes.UINT, ctypes.POINTER(INPUT), ctypes.c_int)
+            send_input.argtypes = (wintypes.UINT, ctypes.POINTER(_INPUT), ctypes.c_int)
             send_input.restype = wintypes.UINT
         except AttributeError:
             # Test doubles and non-Windows shims do not expose ctypes metadata.
             pass
-        sent = send_input(2, ctypes.byref(inputs), ctypes.sizeof(INPUT))
+        sent = send_input(len(inputs), ctypes.byref(inputs), ctypes.sizeof(_INPUT))
         if sent != 2:
             raise OSError("SendInput did not send the complete key sequence")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import ctypes
 from types import SimpleNamespace
 
-from app.adapters.windows.media import WindowsMediaController
+from app.adapters.windows.media import WindowsMediaController, _INPUT, _INPUT_UNION
 
 
 class PointerCheckingUser32:
@@ -25,3 +25,9 @@ def test_send_input_receives_a_pointer_to_the_input_array(monkeypatch):
 
     assert len(user32.calls) == 1
     assert user32.calls[0][0] == 2
+
+
+def test_send_input_uses_native_union_layout():
+    assert issubclass(_INPUT_UNION, ctypes.Union)
+    assert [name for name, _ in _INPUT._fields_] == ["type", "u"]
+    assert ctypes.sizeof(_INPUT) == (28 if ctypes.sizeof(ctypes.c_void_p) == 4 else 40)

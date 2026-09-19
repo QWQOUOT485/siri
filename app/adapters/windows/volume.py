@@ -51,7 +51,10 @@ class WindowsVolumeController:
         fallback = {"volume_up": "volume_up", "volume_down": "volume_down", "mute": "mute", "unmute": "mute", "toggle_mute": "mute"}.get(action)
         if fallback:
             try:
-                self._media._send_key({"volume_up": 0xAF, "volume_down": 0xAE, "mute": 0xAD}[fallback])
+                key_events = steps if action in {"volume_up", "volume_down"} else 1
+                virtual_key = {"volume_up": 0xAF, "volume_down": 0xAE, "mute": 0xAD}[fallback]
+                for _ in range(key_events):
+                    self._media._send_key(virtual_key)
                 message = "已送出系統音量按鍵。"
                 if action == "unmute":
                     message = "已送出取消靜音按鍵（系統按鍵模式為 best-effort）。"
