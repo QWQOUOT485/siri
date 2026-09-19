@@ -73,3 +73,13 @@ def test_generic_media_playback_is_not_a_remote_action_anymore():
     parsed = parser().parse("play pause")
 
     assert parsed.accepted is False
+
+
+def test_long_spotify_track_name_is_not_rejected_by_internal_field_limit():
+    track = "很" * 220
+    parsed = parser().parse(f"播放{track}")
+
+    assert parsed.accepted is True
+    assert parsed.action is not None
+    assert parsed.action.action is ActionName.SPOTIFY_PLAY_TRACK
+    assert parsed.action.track == track
