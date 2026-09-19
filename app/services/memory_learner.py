@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.domain.semantic_memory import AliasTrustState, SemanticEntity
 from app.infrastructure.semantic_memory_db import SemanticMemoryDatabase
 
 from .alias_memory import AliasMemory
 from .entity_normalizer import EntityNormalizer
+
+if TYPE_CHECKING:
+    from .semantic_memory_metrics import SemanticMemoryMetrics
 
 
 @dataclass(frozen=True)
@@ -44,10 +48,12 @@ class MemoryLearner:
         database: SemanticMemoryDatabase,
         memory: AliasMemory,
         normalizer: EntityNormalizer | None = None,
+        metrics: "SemanticMemoryMetrics | None" = None,
     ) -> None:
         self.database = database
         self.memory = memory
         self.normalizer = normalizer or EntityNormalizer()
+        self.metrics = metrics
 
     def learn(self, event: MemoryLearningEvent) -> MemoryLearningResult:
         if not isinstance(event, MemoryLearningEvent):
@@ -73,9 +79,13 @@ class MemoryLearner:
             source=self._AUTHORITATIVE_EVIDENCE,
         )
         if result.success:
+            if self.metrics is not None:
+                self.metrics.increment("semantic_memory_confirmed_write")
             self._rebuild_after_commit()
             return MemoryLearningResult(confirmed=True, trust_state=AliasTrustState.CONFIRMED)
         if result.conflict:
+            if self.metrics is not None:
+                self.metrics.increment("semantic_memory_conflict")
             self._rebuild_after_commit()
             return MemoryLearningResult(
                 conflicted=True,
