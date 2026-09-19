@@ -1970,7 +1970,8 @@ The intended boundary is:
 ```text
 free-form Siri text
 → Rule Parser
-→ AI fallback only if eligible
+→ deterministic Spotify resolution when parser produced spotify_play_track
+→ AI semantic retry only if deterministic eligibility gate says the parse/result is unresolved
 → RawAIIntent
 → GroundedAIIntent
 → AIPolicyGate
@@ -1996,9 +1997,10 @@ Codex should prefer this order:
 4. implement minimal LocalAIAdapter + LM Studio transport
 5. add AI modes: off / shadow / fallback
 6. integrate shadow mode only
-7. collect/evaluate real Siri failure corpus
-8. rerun model benchmark against revised prompt/grounding
-9. enable guarded fallback only if acceptance thresholds are met
+7. include parser-success/resolver-failure cases in the shadow corpus
+8. collect/evaluate real Siri failure corpus
+9. rerun model benchmark against revised prompt/grounding
+10. enable guarded fallback only if acceptance thresholds are met
 ```
 
 Do not modify Spotify clarification behavior as part of the first AI integration.
@@ -2071,6 +2073,116 @@ clarification bounded-attempt source/unit gate is complete. The next
 implementation order is: improve Spotify candidate quality, then define the
 minimal trust-state models and eligibility gate, implement adapter transport
 only, add `off`/`shadow` modes, and then run a new measured PoC.
+
+## 39. Semantic retry after a syntactically valid but semantically wrong parse
+
+The real Siri utterance `播放死亡是生命的終點` demonstrates why “AI only when the rule parser returns invalid” is too narrow.
+
+A deterministic grammar can produce a structurally valid action while assigning the wrong entity boundary:
+
+```text
+input:
+播放死亡是生命的終點
+
+possible rule parse:
+artist = 死亡是生命
+track  = 終點
+```
+
+This is not a schema failure. It is a semantic segmentation failure.
+
+### 39.1 Revised eligibility model
+
+The AI eligibility gate may admit only Spotify named-track cases that satisfy one of these categories:
+
+```text
+A. parser could not produce a supported deterministic command
+B. parser produced spotify_play_track, but deterministic Spotify resolution
+   returned no usable candidate
+C. parser produced spotify_play_track, but resolver confidence is below an
+   explicitly defined safe threshold
+D. a deterministic segmentation-risk detector identifies a likely entity
+   boundary ambiguity and the normal resolver cannot confirm the parse
+```
+
+Parser success alone is therefore not sufficient evidence that the extracted
+`track` / `artist` boundary is correct.
+
+### 39.2 Original text is the source of truth
+
+Semantic retry must receive the **original Siri utterance**, not merely the
+already-split parser fields.
+
+Required flow:
+
+```text
+original utterance
+→ rule parse
+→ deterministic resolution evidence
+→ semantic-retry eligibility gate
+→ AI semantic parser(original utterance)
+→ RawAIIntent
+→ strict schema
+→ SemanticGrounder(original utterance)
+→ GroundedAIIntent
+→ AIPolicyGate
+→ deterministic Spotify resolver
+```
+
+The model must not be told that the first parser split is authoritative.
+
+### 39.3 Tactical deterministic repair vs long-term behavior
+
+The current `的` reconstruction fallback is an acceptable tactical repair
+while Local AI remains disabled. It should not become a pattern of endlessly
+adding special-case language rewrites for every title shape.
+
+Use simple deterministic grammar for stable, obvious forms. Use the future
+semantic-retry path for open-ended entity-boundary ambiguity once the model
+passes the measured safety/quality gate.
+
+### 39.4 Shadow-mode evidence to collect
+
+For eligible semantic-retry cases, record non-secret diagnostic categories:
+
+```text
+original normalized utterance
+rule parser fields
+deterministic resolver outcome category
+AI schema outcome
+grounded AI fields
+whether AI differs from rule parse
+second deterministic resolver outcome category
+latency
+model id
+```
+
+Do not record secrets, Spotify tokens, clarification tokens, or client-provided
+execution targets.
+
+A particularly useful metric is:
+
+```text
+rule parse failed resolution
+→ grounded AI reinterpretation
+→ deterministic resolver succeeds safely
+```
+
+This directly measures whether Local AI solves the real failure mode that
+motivated the integration.
+
+### 39.5 Execution boundary remains unchanged
+
+Even when semantic retry is eventually enabled:
+
+- AI never selects a Spotify candidate ID/URI;
+- AI never ranks search results;
+- AI never consumes or creates clarification selection;
+- AI never calls playback;
+- AI never handles shutdown, force-close, firewall, app control, or system administration;
+- every AI-derived track must pass deterministic grounding and then the existing Spotify resolver.
+
+Until a new benchmark passes, this entire path remains `off` or `shadow`.
 
 ## Review request
 
