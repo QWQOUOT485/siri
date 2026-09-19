@@ -197,7 +197,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-最近記錄的完整 source test run為 **160 passed**，另有 2 個既有 dependency deprecation warnings；compileall、pip check、git diff check 也有通過紀錄。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+最近在乾淨的 Phase 1 PR 分支記錄的完整 source test run為 **214 passed**，另有 2 個既有 dependency deprecation warnings；compileall 與 pip check 通過，diff check 在修正檔尾空白後重跑。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 2026-09-20 的 loopback shadow benchmark 已開始但依使用者要求暫停；部分結果與未完成邊界記錄在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式維持 95.24% supported semantic accuracy；`qwen3-4b` 僅完成 prompt mode，schema mode 尚未完成。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
@@ -216,7 +216,7 @@ production fallback 仍是 **NO-GO**，直到完成：
 
 ## Local Semantic Recovery / Alias Memory
 
-Phase 1 architecture 已批准，但尚未宣稱 implementation complete。
+Phase 1 source implementation 已完成並納入本分支，且已有 unit/security regression coverage；但 Windows runtime、重啟持久化與真實 Spotify/Siri acceptance 尚未完成，因此仍不可啟用。
 
 Phase 1 原則：
 
@@ -232,6 +232,21 @@ Phase 1 原則：
 - DB corruption/unavailability 必須退回既有 deterministic behavior。
 
 規格位於 `docs/semantic_recovery/`。
+
+目前已完成的 source slice：
+
+- bounded domain models 與 five-state trust model
+- schema-versioned SQLite persistence、foreign keys、transactional migration 與 safe failure
+- deterministic `EntityNormalizer`
+- confirmed/active/non-conflicted exact RAM fast path
+- RapidFuzz candidate-only retrieval
+- `MemoryLearner` promotion gate：trusted clarification selection + successful playback
+- candidate-only `EntityRecoveryService`
+- disabled-by-default runtime/config wiring
+- trusted Spotify clarification/playback learning integration
+- bounded metrics、conflict handling 與 poisoning/security regressions
+
+Source completion 不等於 deployment acceptance。`LOCAL_SEMANTIC_MEMORY_ENABLED=false` 必須維持不變，直到下方 runtime acceptance 完成。
 
 ## Not Yet Proven / Remaining Work
 
@@ -255,13 +270,11 @@ Phase 1 原則：
    - like/unlike current track
    - 都不得擴張 Local AI allowlist。
 
-4. **Local Semantic Recovery Phase 1 implementation**
-   - EntityNormalizer
-   - SQLite persistence
-   - confirmed-alias RAM index
-   - candidate-only fuzzy path
-   - MemoryLearner
-   - poisoning/conflict tests
+4. **Local Semantic Recovery Phase 1 runtime acceptance**
+   - source implementation、unit/security coverage 已完成；尚缺真實 Windows DB creation/migration、restart persistence、DB→RAM rebuild 與 on-host latency evidence。
+   - 完成 `SASIOVERLXRD ↔ Sad overlxrd` first-run clarification/playback → confirmation，以及 second-run exact-alias fast path。
+   - 驗證既有 Spotify resolver、Live filtering、clarification 與 Siri E2E 無 regression。
+   - acceptance 完成前保持 `LOCAL_SEMANTIC_MEMORY_ENABLED=false`。
 
 5. **Local AI promotion evidence**
    - 保持 off/shadow。
@@ -282,7 +295,7 @@ Phase 1 原則：
 2. Top Tracks / Top Artists real-account acceptance after `user-top-read` reauthorization
 3. Recently Played personalization source slice
 4. deterministic Spotify playback-state controls
-5. Local Semantic Recovery Phase 1
+5. Local Semantic Recovery Phase 1 runtime acceptance
 6. Local AI production-loopback shadow acceptance
 7. sanitized promotion evidence
 8. independent Local AI promotion review
