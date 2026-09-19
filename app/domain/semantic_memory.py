@@ -38,7 +38,10 @@ def _reject_control_characters(value: str | None) -> str | None:
 
 
 class _MemoryModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    # Raw alias text is evidence and must remain non-destructive.  Callers
+    # explicitly provide the derived comparison forms instead of relying on
+    # pydantic to trim the source string.
+    model_config = ConfigDict(extra="forbid")
 
 
 class NormalizedEntityText(_MemoryModel):
