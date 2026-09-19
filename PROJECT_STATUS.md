@@ -114,14 +114,14 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Top track / artist 只在既有最多三個 trusted genuine-ambiguity candidates 內作排序 evidence。
 - saved → top track → top artist → deterministic relevance → popularity 的順序只影響 candidate ordering；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - malformed 或失敗的 top lookup 只忽略該訊號；Library lookup 失敗時整體回到原 deterministic order。
-- source/unit regression 已完成；真實帳號 top-signal acceptance 尚未完成。現有本機 token 尚未包含 `user-top-read`，需重新授權後才能驗證 real-account ordering。
+- source/unit regression 已完成。2026-09-20 token 已重新授權並包含 `user-top-read`、`user-read-recently-played` 與 `user-library-read`；current-source read-only probe 使用固定 20 個 bare-title 加上 bounded in-memory 的 50 個 Top Track title seed，得到 34 個 genuine ambiguity、34 個可比對 raw candidate set、0 個 API/library error，並觀察到 1 個 `top_track` candidate 從原始位置 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Top Artist data 在 19 個 candidates 命中，但本次沒有獨立的 Top-Artist-only reorder，因此目前是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。詳細結果見 [`docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Recently Played source slice
 
 - 固定呼叫 `GET /me/player/recently-played`，只使用 server-owned track ID / artist name 作為既有最多三個 genuine-ambiguity candidates 的 ranking evidence。
 - 排序順序維持 saved → top track → top artist → recent track → recent artist → deterministic relevance → popularity；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - response limit 固定 bounded；empty/malformed history、timeout、401、403、429、缺少 scope 或 optional method 都安全忽略並退回既有 deterministic ranking。
-- source/unit regression 已完成；本次未取得 real-account acceptance。已安裝 runtime 的 token 已過期且 scope 尚未包含 `user-read-recently-played`，read-only acceptance probe 因此明確 blocked，沒有播放或 Library write。
+- source/unit regression 已完成；本次尚未執行 Recently Played real-account acceptance。2026-09-20 重新授權後 token 已包含 `user-read-recently-played`，但本任務只驗證 Top ranking，沒有播放或 Library write；Recently Played gate 仍待單獨 probe。
 
 ### Windows exact volume
 
@@ -262,8 +262,8 @@ Phase 1 原則：
    - 驗證 saved signal 只改善候選順序、不消除 genuine ambiguity、不自動播放。
 
 2. **Spotify personalization real acceptance and next signal**
-   - 重新授權 `user-top-read` 後，驗證 Top Tracks / Top Artists 的 genuine-ambiguity ordering。
-   - 重新授權 `user-read-recently-played` 後，驗證 Recently Played 的 genuine-ambiguity ordering；目前 installed token 已過期且缺少該 scope。
+   - Top Track 的 genuine-ambiguity ordering 已取得 1 個 real-account partial acceptance；仍需決定是否補一個 Top-Artist-only reorder 以完成 combined Top Tracks / Top Artists gate。
+   - `user-read-recently-played` 已在 2026-09-20 重新授權取得；仍需單獨驗證 Recently Played 的 genuine-ambiguity ordering。
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
