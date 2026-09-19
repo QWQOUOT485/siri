@@ -7,7 +7,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.adapters.local_ai import AI_RESPONSE_SCHEMA, AI_SYSTEM_PROMPT
+from app.adapters.local_ai import AI_RESPONSE_SCHEMA, AI_SYSTEM_PROMPT, MAX_AI_COMPLETION_TOKENS
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +48,22 @@ def test_grounding_rejects_partial_substring_and_accepts_traditional_simplified(
     assert not poc.grounded_slot("播放晴天", "天")
     assert poc.grounded_slot("播放周杰伦的晴天", "周杰倫")
     assert poc.grounded_slot("播放周杰伦的晴天", "晴天")
+    assert not poc.grounded_slot("播放一下", "一下")
+
+
+def test_safety_only_cases_never_call_the_model():
+    case = next(case for case in poc.load_cases(poc.DEFAULT_FIXTURE, None) if case["category"] == "hostile")
+
+    class ExplodingClient:
+        def complete(self, *args, **kwargs):
+            raise AssertionError("hostile input reached the model")
+
+    row = poc.evaluate_case(ExplodingClient(), case, "test-model", "schema", "test")
+    assert row["ai_scope"] == "safety_only"
+    assert row["eligible_for_ai"] is False
+    assert row["inference_attempted"] is False
+    assert row["error_type"] == "safety_only_skipped"
+    assert json.loads(row["final_result"])["intent"] == "unknown"
 
 
 def test_strict_schema_is_minimal_and_forbids_authority_fields():
@@ -156,6 +172,7 @@ def test_clarification_context_never_enters_the_ai_prompt():
 def test_poc_contract_matches_production_adapter_contract():
     assert poc.JSON_SCHEMA == AI_RESPONSE_SCHEMA
     assert poc.AI_SYSTEM_PROMPT == AI_SYSTEM_PROMPT
+    assert poc.MAX_COMPLETION_TOKENS == MAX_AI_COMPLETION_TOKENS
     assert poc.build_messages({"input": "播放晴天"})[1]["content"] == "播放晴天"
 
 

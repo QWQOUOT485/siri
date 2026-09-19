@@ -199,7 +199,9 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 新增 unit/API coverage：strict schema authority-field rejection、slot grounding、eligibility rejection、loopback endpoint、transport bounds、shadow fail-closed 與 clarification bypass。
 - 已完成一次受限真實 loopback LM Studio shadow smoke：`127.0.0.1:1234/v1` 的 `qwen2.5-coder-1.5b-instruct` 在 `播放晴天` 上回傳 `shadow_accepted`，且 `execution_allowed=false`；另一個輸入安全落到 `accepted_unknown`。期間確認 LM Studio 此版本拒絕 `json_object`，adapter 已改用已驗證的 strict `json_schema`。
 - 修訂後 benchmark 已完成：fixture 共 109 cases；與 production eligibility 對齊後，沒有明確歌名的 unresolved-reference / hallucination cases 在送模型前標為 deterministic-only，仍保留在 corpus 量測 safe-unknown，不把它們混入 supported AI accuracy。
-- `qwen2.5-coder-1.5b-instruct` 的 prompt/schema 兩種模式結果一致：supported semantic `95.24%`（63 cases）、intent `100%`、semantic-retry `100%`、deterministic-only safe-unknown `100%`、false execution `0%`、post-grounding false accept `0%`、P95 `203.8/207.4 ms`。剩餘 3 個 supported failure 都是 `X 專輯的 Y` 的 album/artist role 誤判；一次額外 role-prompt A/B 未帶來穩定淨改善，未寫入 production prompt。
+- `qwen2.5-coder-1.5b-instruct` 的 prompt/schema 兩種模式結果一致：supported semantic `95.24%`（63 cases）、intent `100%`、semantic-retry `100%`、deterministic-only safe-unknown `100%`、safety-only safe-unknown `100%`、false execution `0%`、post-grounding false accept `0%`、P95 `203.8/212.4 ms`。剩餘 3 個 supported failure 都是 `X 專輯的 Y` 的 album/artist role 誤判；一次額外 role-prompt A/B 未帶來穩定淨改善，未寫入 production prompt。
+- Review 後補強：hostile `safety_only` case 不再呼叫模型；`一下` 不再可被 grounding 成歌名，但複合口令 `播放一下晴天` 仍保留正常 track boundary。
+- 規格 blocker：`docs/SOURCE_SPEC.md` §94 仍明確禁止 V1 Local LLM，§95 只允許未來擴充；較新的 `docs/SPEC.md` 與 `docs/SECURITY.md` 已寫入 gated Local AI。依 `AGENTS.md` 的 Source of Truth 規則，這個衝突在明確修訂權威規格前，不得宣稱 AI 已獲 V1 production authorization，也不應 push 作為最終整合。
 - 這是 loopback shadow / offline corpus evidence，不是 fallback promotion：AI 仍預設 `off`，尚未完成 Windows/Spotify/Siri acceptance、independent review 或任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
 
 ## Local AI Product Decision (2026-09-18)

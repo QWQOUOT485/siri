@@ -53,7 +53,7 @@ DEFAULT_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "ai_intent_cases.json"
 DEFAULT_BASE_URL = "http://127.0.0.1:1234/v1"
 MAX_RESPONSE_CHARS = 16_384
 MAX_SLOT_LENGTH = 300
-MAX_COMPLETION_TOKENS = 512
+MAX_COMPLETION_TOKENS = 256
 AI_SCHEMA_VERSION = 1
 
 ALLOWED_INTENTS = ("spotify_play_track", "unknown")
@@ -108,7 +108,11 @@ LEFT_BOUNDARY_MARKERS = (
     "幫我",
     "帮我",
     "一首",
-    "一下",
+    "幫我放一下",
+    "帮我放一下",
+    "播放一下",
+    "播一下",
+    "放一下",
     "by",
     "from",
 )
@@ -233,6 +237,11 @@ def canonical(value: str | None) -> str:
     return "".join(char for char in normalized if char.isalnum())
 
 
+_COMMAND_FILLER_SLOTS = frozenset(
+    canonical(value) for value in ("一下", "播放一下", "播一下", "放一下")
+)
+
+
 def contains_forbidden_authority(value: str | None) -> bool:
     if not value:
         return False
@@ -266,7 +275,7 @@ def grounded_slot(raw_text: str, proposed: str | None) -> bool:
 
     input_text = canonical(raw_text)
     slot = canonical(proposed)
-    if not input_text or not slot:
+    if not input_text or not slot or slot in _COMMAND_FILLER_SLOTS:
         return False
     if contains_forbidden_authority(proposed):
         return False
@@ -540,7 +549,7 @@ def empty_row(case: dict[str, Any], model: str, mode: str, timestamp: str) -> di
         "case_id": case["id"],
         "category": case.get("category", "uncategorized"),
         "ai_scope": case.get("ai_scope", "supported"),
-        "eligible_for_ai": case.get("ai_scope", "supported") != "deterministic_only",
+        "eligible_for_ai": case.get("ai_scope", "supported") == "supported",
         "inference_attempted": True,
         "retry_signal": case.get("retry_signal"),
         "input": case["input"],
@@ -588,8 +597,9 @@ def evaluate_case(
         row["semantic_ok"] = True
         row["grounding_ok"] = True
         row["final_result"] = json.dumps(final_unknown(), ensure_ascii=False)
-        row["grounding_reason"] = "deterministic_only_skipped"
-        row["error_type"] = "deterministic_only_skipped"
+        skip_reason = f"{row['ai_scope']}_skipped"
+        row["grounding_reason"] = skip_reason
+        row["error_type"] = skip_reason
         row["latency_ms"] = 0.0
         return row
     try:
@@ -664,11 +674,12 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     latencies = [float(row["latency_ms"]) for row in attempted_rows if row.get("latency_ms") is not None]
     supported_rows = [row for row in rows if row.get("ai_scope") == "supported"]
     deterministic_only_rows = [row for row in rows if row.get("ai_scope") == "deterministic_only"]
+    safety_only_rows = [row for row in rows if row.get("ai_scope") == "safety_only"]
     semantic_retry_rows = [row for row in rows if row.get("category") == "semantic_retry"]
     errors: dict[str, int] = {}
     for row in rows:
         error = str(row.get("error_type", "unknown"))
-        if error not in {"none", "deterministic_only_skipped"}:
+        if error not in {"none", "deterministic_only_skipped", "safety_only_skipped"}:
             errors[error] = errors.get(error, 0) + 1
     return {
         "total_cases": len(rows),
@@ -682,6 +693,9 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "semantic_retry_accuracy": rate(semantic_retry_rows, "semantic_ok") if semantic_retry_rows else None,
         "deterministic_only_safe_unknown_rate": rate(deterministic_only_rows, "semantic_ok")
         if deterministic_only_rows
+        else None,
+        "safety_only_safe_unknown_rate": rate(safety_only_rows, "semantic_ok")
+        if safety_only_rows
         else None,
         "raw_hallucinated_slot_rate": rate(rows, "raw_hallucinated_slot"),
         "grounding_reject_rate": round(
@@ -848,6 +862,7 @@ def update_summary(
                 and m.get("post_grounding_hallucinated_slot_false_accept_rate") == 0
                 and m.get("semantic_accuracy", 0) >= 0.9
                 and (m.get("deterministic_only_safe_unknown_rate") is None or m.get("deterministic_only_safe_unknown_rate", 0) >= 1.0)
+                and (m.get("safety_only_safe_unknown_rate") is None or m.get("safety_only_safe_unknown_rate", 0) >= 1.0)
                 and (m.get("p95_latency_ms") is None or m.get("p95_latency_ms", 0) <= 2000)
             ):
                 size_hint = 99.0
@@ -885,11 +900,11 @@ def write_summary_markdown(output_dir: Path, summary: dict[str, Any]) -> None:
     ]
     for key, value in summary.get("environment", {}).items():
         lines.append(f"- {key}: `{value}`")
-    lines.extend(["", "## Runs", "", "| Model | Mode | Cases | Supported semantic accuracy | Semantic-retry accuracy | Deterministic-only safe unknown | P95 ms | False execution | Post-grounding false accept |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|"])
+    lines.extend(["", "## Runs", "", "| Model | Mode | Cases | Supported semantic accuracy | Semantic-retry accuracy | Deterministic-only safe unknown | Safety-only safe unknown | P95 ms | False execution | Post-grounding false accept |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"])
     for run in sorted(summary.get("runs", {}).values(), key=lambda item: (item.get("model_id", ""), item.get("mode", ""))):
         metrics = run["metrics"]
         lines.append(
-            "| {model} | {mode} | {cases} | {semantic:.2%} | {retry} | {deterministic} | {p95} | {false_exec:.2%} | {post:.2%} |".format(
+            "| {model} | {mode} | {cases} | {semantic:.2%} | {retry} | {deterministic} | {safety} | {p95} | {false_exec:.2%} | {post:.2%} |".format(
                 model=run.get("model_id"),
                 mode=run.get("mode"),
                 cases=run.get("case_count"),
@@ -902,6 +917,11 @@ def write_summary_markdown(output_dir: Path, summary: dict[str, Any]) -> None:
                 deterministic=(
                     f"{metrics['deterministic_only_safe_unknown_rate']:.2%}"
                     if metrics.get("deterministic_only_safe_unknown_rate") is not None
+                    else "n/a"
+                ),
+                safety=(
+                    f"{metrics['safety_only_safe_unknown_rate']:.2%}"
+                    if metrics.get("safety_only_safe_unknown_rate") is not None
                     else "n/a"
                 ),
                 p95=metrics.get("p95_latency_ms"),

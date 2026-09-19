@@ -96,6 +96,7 @@ def test_grounder_rejects_partial_or_ungrounded_track_and_authority_values():
     assert grounded_slot("播放晴天", "晴天")
     assert grounded_slot("幫我放一下晴天", "晴天")
     assert grounded_slot("播放周杰倫專輯葉惠美裡的晴天", "葉惠美")
+    assert not grounded_slot("播放一下", "一下")
     assert not grounded_slot("播放晴天", "天")
     assert not grounded_slot("播放晴天", "晴")
     assert not grounded_slot("播放晴天", "https://evil.example")

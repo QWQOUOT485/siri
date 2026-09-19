@@ -26,7 +26,7 @@ _LEFT_BOUNDARY_MARKERS = (
     "我要聽", "我要听", "想聽", "想听", "幫我放", "帮我放", "請播放", "请播放",
     "播放音樂", "播放音乐", "播放", "listen", "play", "聽", "听", "播", "放",
     "的", "專輯", "专辑", "裡面", "里面", "那首", "那個", "那个", "幫我", "帮我",
-    "一首", "一下", "by", "from",
+    "一首", "幫我放一下", "帮我放一下", "播放一下", "播一下", "放一下", "by", "from",
 )
 _RIGHT_BOUNDARY_MARKERS = (
     "的", "專輯", "专辑", "裡面", "里面", "那首", "歌曲", "歌", "幫我", "帮我",
@@ -54,6 +54,11 @@ def canonical(value: str | None) -> str:
         return ""
     normalized = normalize_chinese_text(unicodedata.normalize("NFKC", value))
     return "".join(char for char in normalized if char.isalnum() or "\u3400" <= char <= "\u9fff").casefold()
+
+
+_COMMAND_FILLER_SLOTS = frozenset(
+    canonical(value) for value in ("一下", "播放一下", "播一下", "放一下")
+)
 
 
 def contains_forbidden_authority(value: str | None) -> bool:
@@ -86,7 +91,7 @@ def grounded_slot(raw_text: str, proposed: str | None) -> bool:
 
     input_text = canonical(raw_text)
     slot = canonical(proposed)
-    if not input_text or not slot or contains_forbidden_authority(proposed):
+    if not input_text or not slot or slot in _COMMAND_FILLER_SLOTS or contains_forbidden_authority(proposed):
         return False
 
     start = 0
