@@ -7,6 +7,13 @@
 > It is intended for architecture/security review first. Do **not** treat the existence of this file as proof that AI integration has been approved, implemented, tested, or accepted.
 >
 > Current project truth remains in `PROJECT_STATUS.md`. Mandatory security invariants remain in `docs/SECURITY.md`.
+>
+> **Historical-scope notice (2026-09-19):** Sections 1–36 contain the
+> pre-PoC proposal and may mention broader intents, AI clarification, or
+> candidate selection. Those earlier concepts are superseded for the first
+> integration by Sections 37–40 and the current `docs/SECURITY.md`,
+> `docs/ARCHITECTURE.md`, and `docs/API.md` contract. Do not use an earlier
+> section to expand runtime authority.
 
 ## 1. Goal
 
@@ -2231,5 +2238,27 @@ In particular, identify:
 - better separation of domain/service/adapter responsibilities
 - places where deterministic code should be preferred over AI
 - anything that would violate `docs/SECURITY.md`
+
+## 41. Current-scope supersession record (2026-09-19)
+
+The following earlier proposal concepts are retained only as design history and
+must not be implemented in the first guarded integration:
+
+- `spotify_resume`, `spotify_pause`, `spotify_next`, and `spotify_previous`
+  remain deterministic-only.
+- `select_candidate`, `candidate_ordinal`, and all AI clarification parsing are
+  superseded; the server-owned clarification store remains authoritative.
+- Candidate labels, clarification tokens, Spotify IDs/URIs, catalog objects,
+  and version hints are not AI inputs or outputs.
+- The active AI schema is only `schema_version=1` with
+  `spotify_play_track` / `unknown` and bounded `track`/`artist`/`album` slots.
+- The active execution sequence is RawAIIntent → deterministic grounding →
+  AIPolicyGate → existing deterministic Spotify resolver. The model never
+  ranks candidates or calls playback.
+
+Sections 37–40 describe the active guarded semantic-retry design. The proposal
+is not an authority to enable fallback; `LOCAL_AI_MODE=off` remains the default
+until the separate source-of-truth, runtime-acceptance, and promotion gates are
+resolved.
 
 After review, accepted decisions should be incorporated into the authoritative architecture/security/API documents before implementation.

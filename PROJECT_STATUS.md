@@ -201,8 +201,14 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 修訂後 benchmark 已完成：fixture 共 109 cases；與 production eligibility 對齊後，沒有明確歌名的 unresolved-reference / hallucination cases 在送模型前標為 deterministic-only，仍保留在 corpus 量測 safe-unknown，不把它們混入 supported AI accuracy。
 - `qwen2.5-coder-1.5b-instruct` 的 prompt/schema 兩種模式結果一致：supported semantic `95.24%`（63 cases）、intent `100%`、semantic-retry `100%`、deterministic-only safe-unknown `100%`、safety-only safe-unknown `100%`、false execution `0%`、post-grounding false accept `0%`、P95 `203.8/212.4 ms`。剩餘 3 個 supported failure 都是 `X 專輯的 Y` 的 album/artist role 誤判；一次額外 role-prompt A/B 未帶來穩定淨改善，未寫入 production prompt。
 - Review 後補強：hostile `safety_only` case 不再呼叫模型；`一下` 不再可被 grounding 成歌名，但複合口令 `播放一下晴天` 仍保留正常 track boundary。
-- 規格 blocker：`docs/SOURCE_SPEC.md` §94 仍明確禁止 V1 Local LLM，§95 只允許未來擴充；較新的 `docs/SPEC.md` 與 `docs/SECURITY.md` 已寫入 gated Local AI。依 `AGENTS.md` 的 Source of Truth 規則，這個衝突在明確修訂權威規格前，不得宣稱 AI 已獲 V1 production authorization，也不應 push 作為最終整合。
+- 規格 blocker：`docs/SOURCE_SPEC.md` §94 仍明確禁止 V1 Local LLM，§95 只允許未來擴充；較新的 `docs/SPEC.md` 與 `docs/SECURITY.md` 已寫入 gated Local AI。依 `AGENTS.md` 的 Source of Truth 規則，這個衝突在明確修訂權威規格前，不得宣稱 AI 已獲 V1 production authorization；目前 GitHub 上傳僅供 review，不代表最終整合或 promotion。
 - 這是 loopback shadow / offline corpus evidence，不是 fallback promotion：AI 仍預設 `off`，尚未完成 Windows/Spotify/Siri acceptance、independent review 或任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
+
+## Local AI Shadow Remediation / Auditable Evidence (2026-09-19)
+
+- `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` 已新增 historical-scope / supersession record；早期 `select_candidate`、clarification AI、播放控制等廣泛概念不得再被當成第一整合 scope。
+- 已新增 `docs/LOCAL_AI_BENCHMARK_2026-09-19.md`，固定 source commit、fixture hash、prompt/schema hash、LM Studio/model/config 與 sanitized metrics；不提交 raw prompts、model output、tokens 或 credentials。
+- GitHub PR #5 的 independent gate review 判定 production fallback **NO-GO**、shadow-only remediation **GO**。目前仍須先解除 SOURCE_SPEC authority conflict、完成 production-aligned Windows/Spotify/Siri shadow acceptance，才可另開 promotion review。
 
 ## Local AI Product Decision (2026-09-18)
 
