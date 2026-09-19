@@ -151,7 +151,7 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - Production LM Studio endpoint 是 `127.0.0.1` hard gate；目前 LAN endpoint 只可作隔離 benchmark，不能由 runtime 自動 fallback。AI 前置 eligibility gate、RawAIIntent → GroundedAIIntent → AIPolicyGate trust states、strict versioned schema 與 off/shadow/fallback promotion gate 已明確化。
 - `SpotifyClarificationStore` 已補上 bounded `failed_attempts` / `max_attempts`（預設最多三次不清楚回覆），並以同一個 lock 保護成功選擇與失敗次數更新；unit tests 已覆蓋 attempt exhaustion、並發成功選擇與並發失敗次數上限。
 - 本次 source regression 完整 pytest 為 `102 passed`，保留 2 個既有 dependency deprecation warnings；compileall、pip check 與 diff check 通過。安裝目錄兩個服務檔 hash 已與 source 一致，並以 runtime venv 完成並發 clarification smoke test；隔離的 `127.0.0.1:8001` runtime `/health` 回傳 200；port 8000 現行進程尚未重啟。
-- Review 結論仍是 gated future design，不是 Local AI production execution approval；clarification abuse-resistance 的 source/unit gate 已完成，Local AI 的 minimal trust-state/eligibility/transport skeleton 已完成，下一步是 loopback-only shadow 與 candidate-quality/failure-corpus 驗證。
+- Review 結論仍是 gated future design，不是 Local AI production execution approval；clarification abuse-resistance 的 source/unit gate 已完成，Local AI 的 minimal trust-state/eligibility/transport skeleton 已完成，下一步是 shadow failure-corpus 與 candidate-quality 驗證。
 
 ## Local AI Guarded Semantic-Retry Skeleton (2026-09-19)
 
@@ -159,7 +159,8 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - `/command` 的 clarification token 分支仍在 AI 之前直接走既有 deterministic store；Local AI 只會在安全 Spotify parser miss 或明確 resolver-failure retry signal 上被考慮。
 - Runtime 設定預設為 `LOCAL_AI_ENABLED=false`、`LOCAL_AI_MODE=off`。`shadow` 只記錄 bounded category diagnostics、永不回傳 executable action；`fallback` 需要 `LOCAL_AI_FALLBACK_APPROVED=true` promotion gate，尚未獲 production approval。
 - 新增 unit/API coverage：strict schema authority-field rejection、slot grounding、eligibility rejection、loopback endpoint、transport bounds、shadow fail-closed 與 clarification bypass。
-- 尚未完成：真實 loopback LM Studio shadow run、修訂後 benchmark、Windows/Spotify/Siri acceptance，以及任何 fallback promotion。既有工作樹中的其他 Windows review 修正未與本 AI slice 混提交。
+- 已完成一次受限真實 loopback LM Studio shadow smoke：`127.0.0.1:1234/v1` 的 `qwen2.5-coder-1.5b-instruct` 在 `播放晴天` 上回傳 `shadow_accepted`，且 `execution_allowed=false`；另一個輸入安全落到 `accepted_unknown`。期間確認 LM Studio 此版本拒絕 `json_object`，adapter 已改用已驗證的 strict `json_schema`。
+- 尚未完成：修訂後 benchmark、Windows/Spotify/Siri acceptance，以及任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
 
 ## Local AI Product Decision (2026-09-18)
 
