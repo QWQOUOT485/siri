@@ -1721,6 +1721,304 @@ Do not enable Local AI by default until all applicable items are proven:
 - [ ] Siri Shortcut E2E passes
 - [ ] documentation updated to reflect actual, not planned, behavior
 
+
+## 37. Post-PoC simplification guidance for Codex
+
+The completed Phase 0.5 benchmark and the now-successful deterministic Siri clarification E2E change the recommended implementation shape. The first production-facing AI iteration should be **smaller than the earlier proposal**, not broader.
+
+### 37.1 Narrow V1 AI responsibility
+
+For the first real integration, Local AI should handle only:
+
+```text
+free-form Spotify play-track language
+→ semantic extraction of user-stated track / artist / album / version_hint
+```
+
+Examples:
+
+```text
+幫我放一下周杰倫那首晴天
+我想聽葉惠美裡面的晴天
+來個周杰倫的晴天
+播一下晴天原版
+```
+
+Do not initially route these through AI:
+
+```text
+spotify_pause
+spotify_resume
+spotify_next
+spotify_previous
+clarification ordinal selection
+app open/close
+volume
+shutdown
+force-close
+firewall/system administration
+```
+
+Reason: deterministic code already handles these paths more reliably and with lower latency. The current Spotify clarification path has also completed real iPhone E2E without AI, so adding AI there would increase failure surface without solving a current blocker.
+
+### 37.2 Remove AI from clarification selection in the first integration
+
+The earlier proposal allowed:
+
+```text
+clarification reply
+→ Local AI
+→ candidate_ordinal
+```
+
+Do not implement that in the first production-facing AI phase.
+
+Keep the current deterministic clarification store/parser authoritative for:
+
+```text
+第一首
+第二首
+第三首
+artist name
+album name
+```
+
+The PoC clarification metric did not justify replacing this working path. AI clarification can be reconsidered only if a concrete unsupported user-language case appears later.
+
+Accordingly, the initial AI output schema should not contain `candidate_ordinal` and should not contain `select_candidate`.
+
+### 37.3 Use explicit intermediate trust states
+
+Do not convert model output directly into `ValidatedAction`.
+
+Use distinct models/stages:
+
+```text
+RawAIIntent
+    ↓
+strict schema validation
+    ↓
+SemanticGrounder
+    ↓
+GroundedAIIntent
+    ↓
+AIPolicyGate
+    ↓
+ValidatedAction
+```
+
+Suggested semantics:
+
+- `RawAIIntent`: untrusted model output only.
+- `GroundedAIIntent`: contains only slots deterministically supported by the original utterance.
+- `AIPolicyGate`: checks that the intent is in the currently enabled AI allowlist and that required grounded slots are present.
+- `ValidatedAction`: existing trusted domain object used by normal services.
+
+This separation is important for diagnostics and testing. It must remain possible to distinguish:
+
+```text
+model semantic error
+schema rejection
+grounding rejection
+policy rejection
+Spotify resolver failure
+```
+
+### 37.4 Make grounding a first-class service
+
+Implement grounding as an independent deterministic component, e.g.:
+
+```text
+app/services/semantic_grounder.py
+```
+
+The model must never validate its own evidence.
+
+Required behavior for `spotify_play_track`:
+
+- grounded `track` is mandatory;
+- ungrounded `track` invalidates the entire AI interpretation;
+- ungrounded optional `artist` / `album` are forced to null;
+- Traditional/Simplified normalization is deterministic;
+- no catalog lookup may retroactively justify an AI-invented slot;
+- no nickname/world-knowledge expansion unless separately specified in deterministic code.
+
+Example:
+
+```text
+input: 幫我播周杰伦的晴天
+
+model:
+track=晴天
+artist=周杰倫
+album=葉惠美
+
+grounder:
+track=晴天      ACCEPT
+artist=周杰倫   ACCEPT after Chinese canonicalization
+album=葉惠美    REJECT / null
+
+final grounded intent:
+track=晴天
+artist=周杰倫
+album=null
+```
+
+### 37.5 Keep the LM Studio adapter intentionally dumb
+
+`LMStudioLocalAIAdapter` should own only runtime transport concerns:
+
+- HTTP call
+- configured model identifier
+- timeout
+- structured-output / JSON response transport
+- maximum response size
+- runtime/network error mapping
+
+It should not contain:
+
+- Spotify matching
+- Chinese grounding policy
+- clarification logic
+- action allowlist policy
+- execution decisions
+
+A runtime replacement must not require rewriting security policy.
+
+Preferred dependency shape:
+
+```text
+AI semantic service
+→ LocalAIAdapter protocol
+→ LMStudioLocalAIAdapter
+
+SemanticGrounder / AIPolicyGate
+→ independent deterministic services
+```
+
+### 37.6 Add shadow mode before guarded execution
+
+Do not move directly from PoC to:
+
+```text
+rule miss → AI → execute
+```
+
+Add an explicit deployment mode:
+
+```text
+off
+shadow
+fallback
+```
+
+`shadow` behavior:
+
+```text
+rule parser cannot resolve supported free-form Spotify request
+→ run AI
+→ schema validate
+→ ground
+→ apply AI policy
+→ record safe diagnostic result
+→ DO NOT create an executable action from the AI result
+→ preserve existing user-visible fallback behavior
+```
+
+Shadow-mode diagnostics should record only non-secret data needed for evaluation, for example:
+
+- normalized input or appropriately redacted input according to logging policy
+- model identifier
+- raw schema success/failure category
+- grounded slots
+- rejection reason
+- inference latency
+- total AI pipeline latency
+
+Do not log API keys, OAuth tokens, clarification tokens, Spotify URIs, or other secrets.
+
+The purpose is to build a real failure corpus from actual Siri phrasing before enabling AI execution.
+
+### 37.7 Initial schema should be minimal
+
+Recommended initial model schema:
+
+```json
+{
+  "schema_version": 1,
+  "intent": "spotify_play_track",
+  "track": "晴天",
+  "artist": "周杰倫",
+  "album": null,
+  "version_hint": null
+}
+```
+
+Allowed initial intents:
+
+```text
+spotify_play_track
+unknown
+```
+
+Do not initially include deterministic playback controls merely because they are easy for a model to recognize.
+
+### 37.8 AI work ends before Spotify candidate resolution
+
+The intended boundary is:
+
+```text
+free-form Siri text
+→ Rule Parser
+→ AI fallback only if eligible
+→ RawAIIntent
+→ GroundedAIIntent
+→ AIPolicyGate
+→ ValidatedAction
+→ END OF AI RESPONSIBILITY
+→ SpotifyService
+→ SpotifyCatalog
+→ deterministic Live filtering / ranking / identity checks
+→ deterministic clarification if ambiguous
+→ SpotifyPlayer
+```
+
+The model must not rank Spotify search results, choose trusted track IDs, resolve ISRC/release identity, or participate in playback.
+
+### 37.9 Revised implementation order
+
+Codex should prefer this order:
+
+```text
+1. define RawAIIntent / GroundedAIIntent
+2. implement SemanticGrounder with unit tests
+3. implement AIPolicyGate
+4. implement minimal LocalAIAdapter + LM Studio transport
+5. add AI modes: off / shadow / fallback
+6. integrate shadow mode only
+7. collect/evaluate real Siri failure corpus
+8. rerun model benchmark against revised prompt/grounding
+9. enable guarded fallback only if acceptance thresholds are met
+```
+
+Do not modify Spotify clarification behavior as part of the first AI integration.
+
+### 37.10 Acceptance rule for moving from shadow to fallback
+
+Moving from `shadow` to `fallback` requires a new measured result. The previous Phase 0.5 benchmark did not pass the project thresholds, so it is not sufficient authorization for production execution.
+
+At minimum, the next evaluation must demonstrate:
+
+- zero observed false execution in the fixed safety corpus;
+- zero observed post-grounding hallucinated-slot false acceptance in the fixed safety corpus;
+- materially improved semantic accuracy on the supported free-form Spotify scope;
+- acceptable P95 latency on the real Windows host;
+- deterministic parser behavior unchanged;
+- AI unavailable/timeout still fails closed and does not break existing commands;
+- existing Siri clarification E2E remains unchanged and passing.
+
+If these conditions are not met, keep AI in `shadow` or `off`; do not weaken grounding or broaden the action allowlist to make the benchmark pass.
+
 ---
 
 ## Review request
