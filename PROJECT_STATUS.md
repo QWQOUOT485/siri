@@ -92,6 +92,7 @@ Catalog / resolution 已有：
 - popularity 僅作同分候選 tie-breaker
 - saved/liked membership signal 僅用於 genuine ambiguity candidate ordering
 - Top Tracks / Top Artists 目前已有固定 read-only adapter 與 server-side ambiguity ranking source slice
+- Recently Played 目前已有固定 read-only adapter 與 server-side ambiguity ranking source slice；排序位於 Top Signals 之後、Search relevance 之前
 
 Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh 已驗證。
 
@@ -114,6 +115,13 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - saved → top track → top artist → deterministic relevance → popularity 的順序只影響 candidate ordering；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - malformed 或失敗的 top lookup 只忽略該訊號；Library lookup 失敗時整體回到原 deterministic order。
 - source/unit regression 已完成；真實帳號 top-signal acceptance 尚未完成。現有本機 token 尚未包含 `user-top-read`，需重新授權後才能驗證 real-account ordering。
+
+### Spotify Recently Played source slice
+
+- 固定呼叫 `GET /me/player/recently-played`，只使用 server-owned track ID / artist name 作為既有最多三個 genuine-ambiguity candidates 的 ranking evidence。
+- 排序順序維持 saved → top track → top artist → recent track → recent artist → deterministic relevance → popularity；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
+- response limit 固定 bounded；empty/malformed history、timeout、401、403、429、缺少 scope 或 optional method 都安全忽略並退回既有 deterministic ranking。
+- source/unit regression 已完成；本次未取得 real-account acceptance。已安裝 runtime 的 token 已過期且 scope 尚未包含 `user-read-recently-played`，read-only acceptance probe 因此明確 blocked，沒有播放或 Library write。
 
 ### Windows exact volume
 
@@ -197,7 +205,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-目前完整 source test run為 **228 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **237 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 2026-09-20 的 loopback benchmark 三個模型、兩種模式的固定 corpus rows 已完成；完整 sanitized evidence 位於 `docs/LOCAL_AI_BENCHMARK_2026-09-20.md`，中斷過程仍保留在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 已完成但為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 Windows/Spotify/Siri acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
@@ -251,7 +259,7 @@ Phase 1 原則：
 
 2. **Spotify personalization real acceptance and next signal**
    - 重新授權 `user-top-read` 後，驗證 Top Tracks / Top Artists 的 genuine-ambiguity ordering。
-   - Recently Played 尚未實作。
+   - 重新授權 `user-read-recently-played` 後，驗證 Recently Played 的 genuine-ambiguity ordering；目前 installed token 已過期且缺少該 scope。
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
@@ -276,6 +284,7 @@ Phase 1 原則：
 
 - exact Windows volume：尚缺 Siri voice E2E / independent physical-speaker check。
 - clarification store bounded attempts / concurrency hardening：source/unit 已完成，但未因這個內部修正另外重跑完整 Siri E2E。
+- Recently Played 尚缺 real Spotify account acceptance；本次 probe 因 installed token expired / missing scope blocked，未執行 playback 或 Library write。
 - Spotify OAuth callback 曾出現「瀏覽器顯示通用失敗，但 status/token 實際成功保存」的不一致；功能可用，但 UI/root cause 尚未釐清。
 - GitHub hosted CI 尚未建立；目前 source test evidence 主要由本機執行與狀態文件記錄。
 
@@ -284,7 +293,7 @@ Phase 1 原則：
 ```text
 1. genuine-ambiguity saved-ranking acceptance
 2. Top Tracks / Top Artists real-account acceptance after `user-top-read` reauthorization
-3. Recently Played personalization source slice
+3. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
 4. deterministic Spotify playback-state controls
 5. Local Semantic Recovery Phase 1 runtime acceptance
 6. Local AI production-loopback shadow acceptance

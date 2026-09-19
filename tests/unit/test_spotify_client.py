@@ -71,6 +71,37 @@ def test_top_lookup_rejects_malformed_items_without_exposing_generic_http():
     assert error.value.status_code == 200
 
 
+def test_recently_played_lookup_uses_fixed_endpoint_and_bounded_limit():
+    recent_item = {
+        "played_at": "2026-09-20T00:00:00.000Z",
+        "track": {
+            "id": "recent-track",
+            "name": "Stay",
+            "artists": [{"name": "Recent Artist"}],
+        },
+    }
+
+    def handler(request: httpx.Request):
+        assert request.method == "GET"
+        assert request.url.path == "/v1/me/player/recently-played"
+        assert request.url.params["limit"] == "50"
+        assert request.headers["Authorization"] == "Bearer access-token"
+        return httpx.Response(200, json={"items": [recent_item]})
+
+    client = client_for(handler)
+
+    assert client.get_recently_played("access-token", limit=999) == [recent_item]
+
+
+def test_recently_played_lookup_rejects_malformed_items_without_generic_fallback():
+    client = client_for(lambda _request: httpx.Response(200, json={"items": [{"track": "not-a-track"}]}))
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_recently_played("access-token")
+
+    assert error.value.status_code == 200
+
+
 def test_pkce_code_exchange_uses_form_data_and_does_not_use_a_client_secret():
     def handler(request: httpx.Request):
         assert request.method == "POST"

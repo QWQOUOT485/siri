@@ -235,7 +235,9 @@ GET /me/library/contains?uris=spotify:track:...
 
 saved/liked 的第一個 deterministic source slice 已完成：Agent 只在既有 ambiguity 的最多三個 server-owned candidates 內查詢 membership，並只重排候選，不會改變自動播放或 ambiguity safety。Library lookup 失敗、缺少 scope 或回應格式異常時會退回原本 deterministic ranking。既有 token 需要重新授權取得 `user-library-read`；目前 read-only acceptance probe 尚未找到能證明 saved candidate 從原始 Search 順序被提升的 genuine ambiguity case。
 
-Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/top/tracks` 與 `GET /me/top/artists`，並只對既有 server-owned ambiguity candidates 排序。Top signal 不會覆蓋 explicit artist / album / version、不會消除 ambiguity，也不會進入 AI、Shortcut 或一般 API response。top lookup malformed / timeout / 401 / 403 / 429 時會忽略該 signal；若 Library lookup 本身失敗，仍回到原 deterministic order。此 slice 需要 `user-top-read`，目前尚未完成 real-account acceptance。可用 `scripts/spotify_saved_ranking_acceptance.py` 執行 saved slice 的純讀取驗收；該 probe 不播放且不修改 Library。Recently Played 仍是後續 planned optimization。
+Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/top/tracks` 與 `GET /me/top/artists`，並只對既有 server-owned ambiguity candidates 排序。Top signal 不會覆蓋 explicit artist / album / version、不會消除 ambiguity，也不會進入 AI、Shortcut 或一般 API response。top lookup malformed / timeout / 401 / 403 / 429 時會忽略該 signal；若 Library lookup 本身失敗，仍回到原 deterministic order。此 slice 需要 `user-top-read`，目前尚未完成 real-account acceptance。可用 `scripts/spotify_saved_ranking_acceptance.py` 執行 saved slice 的純讀取驗收；該 probe 不播放且不修改 Library。
+
+Recently Played 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/player/recently-played`，將 server 回傳的 track ID / artist name 作為既有 ambiguity candidates 內的次級排序 evidence，順序位於 Top Tracks / Top Artists 之後、Search relevance 之前。它不建立新候選、不消除 genuine ambiguity、不覆蓋 explicit metadata，也不進 AI、Shortcut 或一般 API response。空歷史、malformed item、timeout、401、403、429、缺少 optional method 或其他 lookup failure 都會忽略該訊號並維持既有 deterministic ranking。此 slice 需要 `user-read-recently-played`；目前 token 未完成重新授權，因此 real-account acceptance 尚未完成。
 
 真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 

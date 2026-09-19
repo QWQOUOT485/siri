@@ -235,7 +235,7 @@ Planned work:
 - preserve Spotify's original relevance order as an input signal instead of discarding it completely
 - **Completed source slice:** query whether the existing top-three trusted ambiguity candidates are already saved in the user's Spotify Library and use that as the strongest personalization signal after explicit user intent; scope failure falls back to deterministic order
 - **Completed source slice:** query the user's Top Tracks / Top Artists as a secondary personalization signal; real-account acceptance remains separate
-- query Recently Played as a tertiary personalization signal
+- **Completed source slice:** query Recently Played as a tertiary personalization signal; real-account acceptance remains separate
 - use Spotify search relevance after explicit intent + saved/top/recent personalization
 - evaluate popularity or another availability-safe popularity-like signal only as a final tie-breaker
 - never let personalization/popularity override an explicitly provided artist, album, version intent, or genuine ambiguity

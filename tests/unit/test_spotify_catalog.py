@@ -230,6 +230,149 @@ def test_catalog_uses_top_artist_signal_after_saved_and_top_track_signals():
     assert [candidate.track_id for candidate in result.candidates] == ["top", "other"]
 
 
+def test_catalog_applies_saved_then_top_then_recent_precedence_inside_existing_candidates():
+    class PersonalizedClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [uri.endswith(":saved") for uri in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            return [track("top", "Stay", ["Top Artist"])]
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return [
+                {"track": track("recent", "Stay", ["Recent Artist"])},
+                {"track": track("recent", "Stay", ["Recent Artist"])},
+                {"track": track("other", "Other Song", ["Recent Artist"])},
+            ]
+
+    client = PersonalizedClient(
+        [
+            track("recent", "Stay", ["Recent Artist"]),
+            track("top", "Stay", ["Top Artist"]),
+            track("saved", "Stay", ["Saved Artist"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client).find_track("Stay", None, access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["saved", "top", "recent"]
+
+
+def test_catalog_uses_recent_artist_signal_when_track_is_not_in_recent_history():
+    class RecentClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            return []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return [{"track": track("history-track", "Other Song", ["Recent Artist"])}]
+
+    client = RecentClient(
+        [
+            track("other", "Stay", ["Other Artist"]),
+            track("recentartist", "Stay", ["Recent Artist"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client).find_track("Stay", None, access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["recentartist", "other"]
+
+
+def test_catalog_recent_signal_cannot_create_a_new_candidate():
+    class RecentOnlyClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            return []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return [{"track": track("not-in-search", "Stay", ["Unseen Artist"])}]
+
+    client = RecentOnlyClient(
+        [
+            track("one", "Stay", ["Artist One"]),
+            track("two", "Stay", ["Artist Two"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client).find_track("Stay", None, access_token="test-token")
+
+    assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
+def test_catalog_malformed_recent_history_falls_back_to_deterministic_order():
+    class MalformedRecentClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            return []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return [{"track": {"id": "bad", "artists": [{"name": ""}]}}]
+
+    client = MalformedRecentClient(
+        [
+            track("one", "Stay", ["Artist One"]),
+            track("two", "Stay", ["Artist Two"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client).find_track("Stay", None, access_token="test-token")
+
+    assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
+@pytest.mark.parametrize("status_code", [401, 403, 429])
+def test_catalog_recent_history_api_failure_falls_back_safely(status_code):
+    class FailedRecentClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            return []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            from app.adapters.spotify.client import SpotifyApiError
+
+            raise SpotifyApiError(status_code, "recent history unavailable")
+
+    client = FailedRecentClient(
+        [
+            track("one", "Stay", ["Artist One"]),
+            track("two", "Stay", ["Artist Two"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client).find_track("Stay", None, access_token="test-token")
+
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
 def test_catalog_ignores_malformed_top_signals_and_keeps_deterministic_order():
     class MalformedTopSignalsClient(FakeSpotifySearchClient):
         def check_saved_tracks(self, _access_token, track_uris):
@@ -265,6 +408,9 @@ def test_catalog_explicit_artist_relevance_precedes_top_signals():
 
         def get_top_artists(self, _access_token):
             return [{"name": "Artist Oner"}]
+
+        def get_recently_played(self, _access_token):
+            return [{"track": track("weaker", "Stay", ["Artist Oner"])}]
 
     client = TopSignalsClient(
         [

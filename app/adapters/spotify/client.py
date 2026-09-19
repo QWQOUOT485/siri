@@ -91,6 +91,17 @@ class SpotifyApiClient:
         )
         return self._top_items(payload)
 
+    def get_recently_played(self, access_token: str, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Read a bounded list of server-side Recently Played track items."""
+
+        payload = self._api_json(
+            "GET",
+            "/me/player/recently-played",
+            access_token=access_token,
+            params={"limit": str(max(1, min(limit, 50)))},
+        )
+        return self._recent_items(payload)
+
     def get_devices(self, access_token: str) -> list[dict[str, Any]]:
         payload = self._api_json("GET", "/me/player/devices", access_token=access_token)
         devices = payload.get("devices", []) if isinstance(payload, dict) else []
@@ -152,6 +163,15 @@ class SpotifyApiClient:
     def _top_items(payload: Any) -> list[dict[str, Any]]:
         items = payload.get("items") if isinstance(payload, dict) else None
         if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise SpotifyApiError(200, "Spotify 回應格式無效。")
+        return items
+
+    @staticmethod
+    def _recent_items(payload: Any) -> list[dict[str, Any]]:
+        items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(items, list) or len(items) > 50:
+            raise SpotifyApiError(200, "Spotify 回應格式無效。")
+        if any(not isinstance(item, dict) or not isinstance(item.get("track"), dict) for item in items):
             raise SpotifyApiError(200, "Spotify 回應格式無效。")
         return items
 
