@@ -49,3 +49,12 @@ Not selected for Phase 1:
 ## Project decision
 
 Phase 1 intentionally uses SQLite + RAM exact alias index + RapidFuzz candidate retrieval. The first preferred scale-up experiment is SQLite FTS5 as a lexical prefilter followed by RapidFuzz reranking, and only if Windows-host benchmarks show the full scan is materially expensive. SymSpell/trie approaches remain optional measured experiments. Vector search remains deferred until a real user-utterance corpus demonstrates incremental benefit. See `SEARCH_OPTIMIZATION.md` for the layered retrieval roadmap.
+
+
+## Attribution / license provenance
+
+For project/author/license tracking and future dependency-adoption notes, see:
+
+- [Open-source references and attribution notes](../OPEN_SOURCE_REFERENCES.md)
+
+That file distinguishes current dependencies from research-only references and should be re-checked against the exact upstream version before code is copied, vendored, packaged, or distributed.
