@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過、第二輪架構/安全 review 已完成 + Siri clarification iPhone 全語音 E2E 已驗收通過**
+目前階段：**Local AI initial Phase 0.5 benchmark 未通過；production-aligned guarded shadow benchmark 已完成、仍未 promotion + 第二輪架構/安全 review 已完成 + Siri clarification iPhone 全語音 E2E 已驗收通過**
 
 先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。Phase 0.5 benchmark 已完成但沒有模型通過門檻。2026-09-19 iPhone Shortcut 已實機完成候選回傳、token 保存、第二輪 selection + token 回送與真實 Spotify 播放；最終穩定修正為只在 clarification 分支中，先朗讀候選，再執行「關閉 Siri 並繼續」，最後由第二次聽寫接手選擇，因此已完成 hands-free Siri clarification E2E。
 
@@ -198,7 +198,9 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - Runtime 設定預設為 `LOCAL_AI_ENABLED=false`、`LOCAL_AI_MODE=off`。`shadow` 只記錄 bounded category diagnostics、永不回傳 executable action；`fallback` 需要 `LOCAL_AI_FALLBACK_APPROVED=true` promotion gate，尚未獲 production approval。
 - 新增 unit/API coverage：strict schema authority-field rejection、slot grounding、eligibility rejection、loopback endpoint、transport bounds、shadow fail-closed 與 clarification bypass。
 - 已完成一次受限真實 loopback LM Studio shadow smoke：`127.0.0.1:1234/v1` 的 `qwen2.5-coder-1.5b-instruct` 在 `播放晴天` 上回傳 `shadow_accepted`，且 `execution_allowed=false`；另一個輸入安全落到 `accepted_unknown`。期間確認 LM Studio 此版本拒絕 `json_object`，adapter 已改用已驗證的 strict `json_schema`。
-- 尚未完成：修訂後 benchmark、Windows/Spotify/Siri acceptance，以及任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
+- 修訂後 benchmark 已完成：fixture 共 109 cases；與 production eligibility 對齊後，沒有明確歌名的 unresolved-reference / hallucination cases 在送模型前標為 deterministic-only，仍保留在 corpus 量測 safe-unknown，不把它們混入 supported AI accuracy。
+- `qwen2.5-coder-1.5b-instruct` 的 prompt/schema 兩種模式結果一致：supported semantic `95.24%`（63 cases）、intent `100%`、semantic-retry `100%`、deterministic-only safe-unknown `100%`、false execution `0%`、post-grounding false accept `0%`、P95 `203.8/207.4 ms`。剩餘 3 個 supported failure 都是 `X 專輯的 Y` 的 album/artist role 誤判；一次額外 role-prompt A/B 未帶來穩定淨改善，未寫入 production prompt。
+- 這是 loopback shadow / offline corpus evidence，不是 fallback promotion：AI 仍預設 `off`，尚未完成 Windows/Spotify/Siri acceptance、independent review 或任何 fallback promotion。既有工作樹中的其他 Windows/Spotify review 修正未與本 AI slice 混提交。
 
 ## Local AI Product Decision (2026-09-18)
 

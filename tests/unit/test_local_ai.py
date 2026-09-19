@@ -94,6 +94,8 @@ def test_grounder_accepts_complete_spans_and_discards_optional_hallucinations():
 
 def test_grounder_rejects_partial_or_ungrounded_track_and_authority_values():
     assert grounded_slot("播放晴天", "晴天")
+    assert grounded_slot("幫我放一下晴天", "晴天")
+    assert grounded_slot("播放周杰倫專輯葉惠美裡的晴天", "葉惠美")
     assert not grounded_slot("播放晴天", "天")
     assert not grounded_slot("播放晴天", "晴")
     assert not grounded_slot("播放晴天", "https://evil.example")
@@ -101,6 +103,13 @@ def test_grounder_rejects_partial_or_ungrounded_track_and_authority_values():
     rejected = SemanticGrounder().ground("播放晴天", raw_play(track="不存在"))
     assert rejected.accepted is False
     assert rejected.reason == "track_not_grounded"
+
+
+def test_grounder_rejects_referential_track_hallucination():
+    grounder = SemanticGrounder()
+    result = grounder.ground("播放周杰倫那首", raw_play(track="周杰倫", artist="周杰倫"))
+    assert result.accepted is False
+    assert result.reason == "unresolved_reference"
 
 
 def test_policy_gate_is_the_only_stage_that_creates_a_validated_action():
@@ -121,6 +130,7 @@ def test_eligibility_gate_rejects_clarification_hostile_and_non_spotify_text():
     assert gate.evaluate("第二首", parsed, clarification_token_present=True).reason == "clarification_token_bypasses_ai"
     assert gate.evaluate("cmd /c shutdown /s", parsed).reason == "hostile_input"
     assert gate.evaluate("播放 A; echo unsafe", parsed).reason == "hostile_input"
+    assert gate.evaluate("播放周杰倫那首", parsed).reason == "unresolved_reference"
     assert gate.evaluate("開啟 Discord", parsed).reason == "unsupported_domain"
 
 

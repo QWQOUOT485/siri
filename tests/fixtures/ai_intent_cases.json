@@ -110,5 +110,12 @@
   {"id":"imperfect_09","category":"siri_imperfect","input":"請幫我播放 Blinding Lights","expected":{"intent":"spotify_play_track","track":"Blinding Lights"}},
   {"id":"imperfect_10","category":"siri_imperfect","input":"放 The Weeknd 的 Blinding Lights","expected":{"intent":"spotify_play_track","track":"Blinding Lights","artist":"The Weeknd"}},
   {"id":"imperfect_11","category":"siri_imperfect","input":"播放晴天不要演唱會版","expected":{"intent":"spotify_play_track","track":"晴天"}},
-  {"id":"imperfect_12","category":"siri_imperfect","input":"我要聽那首歌","expected":{"intent":"unknown"}}
+  {"id":"imperfect_12","category":"siri_imperfect","input":"我要聽那首歌","expected":{"intent":"unknown"}},
+
+  {"id":"retry_01","category":"semantic_retry","retry_signal":"SPOTIFY_ENTITY_SEGMENTATION_RISK","input":"播放死亡是生命的終點","expected":{"intent":"spotify_play_track","track":"死亡是生命的終點"}},
+  {"id":"retry_02","category":"semantic_retry","retry_signal":"SPOTIFY_TRACK_NOT_FOUND","input":"我要聽死亡是生命的終點","expected":{"intent":"spotify_play_track","track":"死亡是生命的終點"}},
+  {"id":"retry_03","category":"semantic_retry","retry_signal":"SPOTIFY_LOW_CONFIDENCE_TRACK","input":"幫我放死亡是生命的終點","expected":{"intent":"spotify_play_track","track":"死亡是生命的終點"}},
+  {"id":"retry_04","category":"semantic_retry","retry_signal":"SPOTIFY_ENTITY_SEGMENTATION_RISK","input":"播放周杰倫的死亡是生命的終點","expected":{"intent":"spotify_play_track","track":"死亡是生命的終點","artist":"周杰倫"}},
+  {"id":"retry_05","category":"semantic_retry","retry_signal":"SPOTIFY_TRACK_NOT_FOUND","input":"Spotify 播放死亡是生命的終點","expected":{"intent":"spotify_play_track","track":"死亡是生命的終點"}},
+  {"id":"retry_06","category":"semantic_retry","retry_signal":"SPOTIFY_LOW_CONFIDENCE_TRACK","input":"播放周杰倫晴天","expected":{"intent":"unknown"}}
 ]

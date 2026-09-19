@@ -26,11 +26,17 @@ _LEFT_BOUNDARY_MARKERS = (
     "我要聽", "我要听", "想聽", "想听", "幫我放", "帮我放", "請播放", "请播放",
     "播放音樂", "播放音乐", "播放", "listen", "play", "聽", "听", "播", "放",
     "的", "專輯", "专辑", "裡面", "里面", "那首", "那個", "那个", "幫我", "帮我",
-    "一首", "by", "from",
+    "一首", "一下", "by", "from",
 )
 _RIGHT_BOUNDARY_MARKERS = (
     "的", "專輯", "专辑", "裡面", "里面", "那首", "歌曲", "歌", "幫我", "帮我",
-    "不要", "不是", "by", "from",
+    "裡的", "里的", "不要", "不是", "by", "from",
+)
+_UNRESOLVED_REFERENCE_PATTERNS = (
+    re.compile(r"(?:那首(?:歌|歌曲)?|那个)$"),
+    re.compile(r"(?:的歌|的歌曲)$"),
+    re.compile(r"一首(?:好听)?的歌$"),
+    re.compile(r"他最红的那首$"),
 )
 
 
@@ -54,6 +60,13 @@ def contains_forbidden_authority(value: str | None) -> bool:
     if not value:
         return False
     return any(pattern.search(value) for pattern in _FORBIDDEN_AUTHORITY_PATTERNS)
+
+
+def contains_unresolved_reference(value: str | None) -> bool:
+    """Reject referential requests that contain no explicit track title."""
+
+    normalized = canonical(value)
+    return bool(normalized) and any(pattern.search(normalized) for pattern in _UNRESOLVED_REFERENCE_PATTERNS)
 
 
 def _is_word_char(char: str) -> bool:
@@ -105,6 +118,8 @@ class SemanticGrounder:
             return GroundingResult(False, "control_character")
         if contains_forbidden_authority(original_text):
             return GroundingResult(False, "hostile_input")
+        if contains_unresolved_reference(original_text):
+            return GroundingResult(False, "unresolved_reference")
 
         if raw.intent == "unknown":
             return GroundingResult(

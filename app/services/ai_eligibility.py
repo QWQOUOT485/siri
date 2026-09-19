@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from app.domain.actions import ActionName, ParsedCommand
 from app.domain.local_ai import MAX_AI_SLOT_LENGTH
 from app.domain.matching import normalize_name
-from .semantic_grounder import contains_forbidden_authority
+from .semantic_grounder import contains_forbidden_authority, contains_unresolved_reference
 
 
 _RETRYABLE_RESOLUTION_ERRORS = frozenset(
@@ -51,6 +51,8 @@ class SemanticRetryEligibilityGate:
             return AIEligibility(False, "control_character")
         if contains_forbidden_authority(raw):
             return AIEligibility(False, "hostile_input")
+        if contains_unresolved_reference(raw):
+            return AIEligibility(False, "unresolved_reference")
         if not self._looks_like_spotify_play_request(raw):
             return AIEligibility(False, "unsupported_domain")
 
