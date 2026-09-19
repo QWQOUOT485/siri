@@ -216,7 +216,7 @@ production fallback 仍是 **NO-GO**，直到完成：
 
 ## Local Semantic Recovery / Alias Memory
 
-Phase 1 architecture 已批准，但尚未宣稱 implementation complete。
+Phase 1 source implementation 已完成一個可 review 的 Slice 1–10 vertical implementation，但尚未宣稱 runtime/real-world acceptance complete。
 
 Phase 1 原則：
 
@@ -230,6 +230,10 @@ Phase 1 原則：
 - RapidFuzz / track-first / vector / AI 只可作 candidate/evidence，不能直接升為 execution authority。
 - observation logging 預設關閉。
 - DB corruption/unavailability 必須退回既有 deterministic behavior。
+- 已建立 bounded domain models、schema-versioned SQLite persistence、RAM exact index、candidate-only RapidFuzz evidence、MemoryLearner、EntityRecoveryService、optional runtime config 與 aggregate-only metrics。
+- `Sad overlxrd` 首次 trusted clarification + successful mocked playback 會建立 alias；第二次相同 artist text 走 exact RAM canonicalization；mocked playback failure 不會學習。
+- source/security/concurrency regression 已加入本次 source slice；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 保持 false。
+- 尚未在 installed Windows Agent、真實 Spotify 帳號或 iPhone Siri Shortcut 上做 Semantic Recovery acceptance；因此不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
 
 規格位於 `docs/semantic_recovery/`。
 
@@ -255,13 +259,9 @@ Phase 1 原則：
    - like/unlike current track
    - 都不得擴張 Local AI allowlist。
 
-4. **Local Semantic Recovery Phase 1 implementation**
-   - EntityNormalizer
-   - SQLite persistence
-   - confirmed-alias RAM index
-   - candidate-only fuzzy path
-   - MemoryLearner
-   - poisoning/conflict tests
+4. **Local Semantic Recovery Phase 1 runtime acceptance**
+   - source implementation 與 poisoning/conflict tests 已完成為可 review slice。
+   - 仍需 Windows SQLite create/migration、restart persistence、RAM rebuild、真實 `Sad overlxrd` clarification/playback/second exact-hit、latency 與既有 Siri/Spotify regression。
 
 5. **Local AI promotion evidence**
    - 保持 off/shadow。
@@ -282,7 +282,7 @@ Phase 1 原則：
 2. Top Tracks / Top Artists real-account acceptance after `user-top-read` reauthorization
 3. Recently Played personalization source slice
 4. deterministic Spotify playback-state controls
-5. Local Semantic Recovery Phase 1
+5. Local Semantic Recovery Phase 1 runtime acceptance
 6. Local AI production-loopback shadow acceptance
 7. sanitized promotion evidence
 8. independent Local AI promotion review
