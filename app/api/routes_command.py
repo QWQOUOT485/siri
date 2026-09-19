@@ -30,6 +30,24 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
 
     parsed = runtime.parser.parse(body.text)
     if not parsed.accepted or parsed.action is None:
+        ai_result = runtime.local_ai_service.retry(
+            body.text,
+            parsed,
+            deterministic_error_code=parsed.error_code,
+        )
+        if ai_result.execution_allowed and ai_result.action is not None:
+            result = runtime.command_service.execute(ai_result.action)
+            target = ai_result.action.track or ai_result.action.artist or ai_result.action.album
+            audit_event(
+                runtime.logger,
+                client_ip=request.client.host if request.client else None,
+                action=result.action,
+                target=target,
+                success=result.success,
+                duration_ms=(time.perf_counter() - started) * 1000,
+                error_code=result.error_code,
+            )
+            return response_payload(result)
         audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action="parse_command", target=None, success=False, duration_ms=(time.perf_counter() - started) * 1000, error_code=parsed.error_code)
         return {
             "success": False,
@@ -42,14 +60,24 @@ async def command(request: Request, body: CommandRequest, _=Depends(require_api_
             "data": {},
         }
     result = runtime.command_service.execute(parsed.action)
+    ai_result = runtime.local_ai_service.retry(
+        body.text,
+        parsed,
+        deterministic_success=result.success,
+        deterministic_error_code=result.error_code,
+    )
+    parsed_action = parsed.action
+    if ai_result.execution_allowed and ai_result.action is not None:
+        result = runtime.command_service.execute(ai_result.action)
+        parsed_action = ai_result.action
     target = (
-        parsed.action.app_query
-        or parsed.action.app_id
-        or parsed.action.website_query
-        or parsed.action.website_id
-        or parsed.action.track
-        or parsed.action.artist
-        or parsed.action.album
+        parsed_action.app_query
+        or parsed_action.app_id
+        or parsed_action.website_query
+        or parsed_action.website_id
+        or parsed_action.track
+        or parsed_action.artist
+        or parsed_action.album
     )
     audit_event(runtime.logger, client_ip=request.client.host if request.client else None, action=result.action, target=target, success=result.success, duration_ms=(time.perf_counter() - started) * 1000, error_code=result.error_code)
     return response_payload(result)

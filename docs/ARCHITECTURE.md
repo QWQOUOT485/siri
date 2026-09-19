@@ -191,6 +191,8 @@ V1 Local AI constraints:
 - production LM Studio access is loopback-only; a non-loopback configured endpoint must fail closed rather than silently falling back to LAN
 - no cloud LLM fallback, silent model download, or remote configuration of model/backend/base URL
 - timeout, connection failure, malformed output, or policy rejection preserves the deterministic behavior and never creates an action
+- the current implementation defaults to `LOCAL_AI_ENABLED=false` / `LOCAL_AI_MODE=off`; `shadow` may record bounded diagnostics but never returns an executable action
+- `fallback` remains behind the local `LOCAL_AI_FALLBACK_APPROVED` promotion gate and is not production-approved by the current benchmark result
 - enabling execution requires a new measured benchmark after the revised prompt/grounding design; the Phase 0.5 result is not sufficient
 
 See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md) for
@@ -328,15 +330,13 @@ port 8000. Future rotations should repeat the same coordinated procedure.
 
 ### Priority 5 — Local AI stays gated
 
-The completed Phase 0.5 benchmark did not meet the project's safety/quality acceptance thresholds. Do not wire Local AI into production `/command` execution yet.
+The completed Phase 0.5 benchmark did not meet the project's safety/quality acceptance thresholds. Do not wire Local AI into production `/command` execution yet. The first guarded semantic-retry skeleton now exists, but it remains off by default.
 
 Next AI work should be:
 
 ```text
-improve prompt / grounding
-→ define deterministic semantic-retry triggers
-→ add off / shadow / fallback modes
-→ run shadow mode only, including parser-success/resolver-failure cases
+run the new strict schema / grounding / policy tests
+→ run loopback-only shadow mode, including parser-success/resolver-failure cases
 → collect real Siri failure corpus
 → rerun benchmark
 → enable guarded fallback only if thresholds pass
@@ -364,7 +364,8 @@ windows-siri-agent/
 │   │   ├── actions.py
 │   │   ├── app_models.py
 │   │   ├── matching.py
-│   │   └── chinese.py
+│   │   ├── chinese.py
+│   │   └── local_ai.py
 │   ├── infrastructure/
 │   │   ├── auth.py
 │   │   ├── rate_limit.py
@@ -374,11 +375,16 @@ windows-siri-agent/
 │   ├── services/
 │   │   ├── command_parser.py
 │   │   ├── command_service.py
+│   │   ├── ai_eligibility.py
+│   │   ├── ai_policy.py
+│   │   ├── local_ai_service.py
+│   │   ├── semantic_grounder.py
 │   │   ├── app_service.py
 │   │   ├── shutdown_service.py
 │   │   ├── spotify_service.py
 │   │   └── spotify_clarification.py
 │   └── adapters/
+│       ├── local_ai.py
 │       ├── spotify/
 │       │   ├── base.py
 │       │   ├── client.py

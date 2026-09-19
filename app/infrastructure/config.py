@@ -6,6 +6,7 @@ write any of these files.
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -75,6 +76,13 @@ class AppConfig:
     spotify_redirect_uri: str = "http://127.0.0.1:8000/spotify/callback"
     spotify_device_name: str = ""
     spotify_token_path: Path | None = None
+    local_ai_enabled: bool = False
+    local_ai_mode: str = "off"
+    local_ai_base_url: str = "http://127.0.0.1:1234/v1"
+    local_ai_model: str = ""
+    local_ai_timeout_seconds: float = 2.0
+    local_ai_max_response_bytes: int = 32 * 1024
+    local_ai_fallback_approved: bool = False
 
     @property
     def cache_path(self) -> Path:
@@ -112,6 +120,25 @@ def _parse_int(value: str, default: int, minimum: int, maximum: int) -> int:
     except (TypeError, ValueError):
         return default
     return max(minimum, min(maximum, parsed))
+
+
+def _parse_float(value: str, default: float, minimum: float, maximum: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(parsed):
+        return default
+    return max(minimum, min(maximum, parsed))
+
+
+def _parse_bool(value: str, default: bool = False) -> bool:
+    normalized = str(value).strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
 
 
 def _website_entries(raw: Any) -> tuple[WebsiteEntry, ...]:
@@ -173,6 +200,12 @@ def load_config(*, root_dir: Path | None = None, environ: Mapping[str, str] | No
     if not token_path.is_absolute():
         token_path = root / token_path
 
+    local_ai_enabled = _parse_bool(_env_value(env, dotenv_values, "LOCAL_AI_ENABLED", "false"))
+    requested_ai_mode = _env_value(env, dotenv_values, "LOCAL_AI_MODE", "shadow").strip().casefold()
+    if requested_ai_mode not in {"off", "shadow", "fallback"}:
+        requested_ai_mode = "off"
+    local_ai_mode = requested_ai_mode if local_ai_enabled else "off"
+
     return AppConfig(
         root_dir=root,
         config_dir=config_dir,
@@ -207,4 +240,28 @@ def load_config(*, root_dir: Path | None = None, environ: Mapping[str, str] | No
         ).strip(),
         spotify_device_name=_env_value(env, dotenv_values, "SPOTIFY_DEVICE_NAME", "").strip(),
         spotify_token_path=token_path.resolve(),
+        local_ai_enabled=local_ai_enabled,
+        local_ai_mode=local_ai_mode,
+        local_ai_base_url=_env_value(
+            env,
+            dotenv_values,
+            "LOCAL_AI_BASE_URL",
+            "http://127.0.0.1:1234/v1",
+        ).strip(),
+        local_ai_model=_env_value(env, dotenv_values, "LOCAL_AI_MODEL", "").strip(),
+        local_ai_timeout_seconds=_parse_float(
+            _env_value(env, dotenv_values, "LOCAL_AI_TIMEOUT_SECONDS", "2.0"),
+            2.0,
+            0.1,
+            10.0,
+        ),
+        local_ai_max_response_bytes=_parse_int(
+            _env_value(env, dotenv_values, "LOCAL_AI_MAX_RESPONSE_BYTES", str(32 * 1024)),
+            32 * 1024,
+            1024,
+            32 * 1024,
+        ),
+        local_ai_fallback_approved=_parse_bool(
+            _env_value(env, dotenv_values, "LOCAL_AI_FALLBACK_APPROVED", "false")
+        ),
     )

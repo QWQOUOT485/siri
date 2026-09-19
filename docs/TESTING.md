@@ -53,6 +53,10 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Shell command rejection
 - PowerShell injection rejection
 - CMD injection rejection
+- Local AI strict schema rejects extra authority fields and requires schema version 1
+- Local AI grounding rejects partial/ungrounded track spans and drops ungrounded optional slots
+- Local AI eligibility rejects clarification tokens, hostile input, and non-Spotify domains
+- Local AI loopback adapter enforces bounded transport and shadow mode never returns an executable action
 
 Unit tests MUST mock Windows system calls. Tests must NOT actually: shutdown, lock, close Chrome, open Photoshop, adjust volume, or kill processes.
 

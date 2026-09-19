@@ -36,3 +36,24 @@ def test_website_catalog_never_returns_an_unlisted_url():
     catalog = WebsiteCatalog((WebsiteEntry(website_id="github", display_name="GitHub", aliases=("github",), url="https://github.com/"),))
     assert catalog.find(query="github").entry is not None
     assert catalog.find(query="https://evil.example").entry is None
+
+
+def test_local_ai_is_off_by_default_and_shadow_is_explicit(tmp_path: Path):
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    config = load_config(root_dir=tmp_path, environ={})
+    assert config.local_ai_enabled is False
+    assert config.local_ai_mode == "off"
+
+    shadow = load_config(
+        root_dir=tmp_path,
+        environ={
+            "LOCAL_AI_ENABLED": "true",
+            "LOCAL_AI_MODE": "shadow",
+            "LOCAL_AI_BASE_URL": "http://127.0.0.1:1234/v1",
+            "LOCAL_AI_MODEL": "test-model",
+        },
+    )
+    assert shadow.local_ai_enabled is True
+    assert shadow.local_ai_mode == "shadow"
+    assert shadow.local_ai_fallback_approved is False

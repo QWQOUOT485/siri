@@ -2186,6 +2186,34 @@ Even when semantic retry is eventually enabled:
 
 Until a new benchmark passes, this entire path remains `off` or `shadow`.
 
+## 40. Initial guarded semantic-retry skeleton (2026-09-19)
+
+The first implementation slice now exists without changing the production
+default or the deterministic execution boundary:
+
+- `app/domain/local_ai.py` defines the versioned, closed `RawAIIntent` and
+  separate `GroundedAIIntent` trust states. The initial schema contains only
+  `spotify_play_track` / `unknown` and rejects extra authority fields.
+- `app/services/semantic_grounder.py` performs boundary-aware deterministic
+  grounding against the original utterance. It cannot use Spotify catalog data
+  or world knowledge to justify a slot.
+- `app/services/ai_eligibility.py` admits only safe Spotify play-track parser
+  misses or explicit resolver-failure retry signals; clarification requests and
+  hostile/system input are rejected before transport.
+- `app/services/ai_policy.py` is the only module that can turn a grounded AI
+  intent into the existing `ValidatedAction` shape.
+- `app/adapters/local_ai.py` is a loopback-only, no-redirect, bounded,
+  single-flight LM Studio transport adapter. It returns model JSON content, not
+  an execution target.
+- `app/services/local_ai_service.py` composes the stages and supports `off`,
+  `shadow`, and promotion-gated `fallback` modes. Shadow and unapproved
+  fallback never return an executable action.
+
+The runtime remains `LOCAL_AI_ENABLED=false` / `LOCAL_AI_MODE=off` by default.
+This slice is source/unit-test complete only; loopback LM Studio shadow runs,
+the revised benchmark, Windows acceptance, and any fallback promotion remain
+not yet proven.
+
 ## Review request
 
 Please perform a **second-round** architecture and security review. The first Claude review has been incorporated into Section 33; treat those items as proposed accepted decisions and challenge them if any are unsafe or internally inconsistent. This is still not a finished implementation.

@@ -23,6 +23,7 @@ from app.infrastructure.spotify_auth import SpotifyAuthManager, SpotifyTokenStor
 from app.services.app_service import ApplicationService, WebsiteCatalog
 from app.services.command_parser import CommandParser
 from app.services.command_service import CommandService
+from app.services.local_ai_service import LocalAIService
 from app.services.shutdown_service import ShutdownConfirmationService
 from app.services.spotify_clarification import SpotifyClarificationStore
 from app.services.spotify_service import SpotifyService
@@ -40,6 +41,7 @@ class AgentRuntime:
     spotify_service: SpotifyService
     system: Any
     firewall: Any
+    local_ai_service: LocalAIService
     logger: Any
     started_at: float
     startup_refresh: bool = True
@@ -58,6 +60,7 @@ class AgentRuntime:
             "interactive_session": session,
             "firewall": self.firewall.inspect_firewall_rule(),
             "network_profiles": self.firewall.inspect_network_profile(),
+            "local_ai": self.local_ai_service.status_view(),
             "diagnostics_available": True,
         }
 
@@ -122,6 +125,7 @@ def build_runtime(
             spotify_player,
             clarification_store=SpotifyClarificationStore(),
         )
+    local_ai_service = LocalAIService.from_config(cfg, logger=logger)
     command_service = CommandService(
         application_service,
         media,
@@ -131,19 +135,20 @@ def build_runtime(
         spotify=spotify_service,
     )
     runtime = AgentRuntime(
-        cfg,
-        catalog,
-        website_catalog,
-        parser,
-        application_service,
-        command_service,
-        spotify_auth,
-        spotify_service,
-        system,
-        firewall,
-        logger,
-        time.monotonic(),
-        startup_refresh,
+        config=cfg,
+        catalog=catalog,
+        website_catalog=website_catalog,
+        parser=parser,
+        application_service=application_service,
+        command_service=command_service,
+        spotify_auth=spotify_auth,
+        spotify_service=spotify_service,
+        system=system,
+        firewall=firewall,
+        local_ai_service=local_ai_service,
+        logger=logger,
+        started_at=time.monotonic(),
+        startup_refresh=startup_refresh,
     )
     session = system.session_info()
     if session.get("warning"):

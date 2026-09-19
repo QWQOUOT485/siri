@@ -104,6 +104,7 @@ Local AI is an untrusted semantic parser, never an execution engine. The
 following rules are mandatory for any future implementation:
 
 - `LOCAL_AI_ENABLED=false` remains the default. The current Phase 0.5 result did not authorize production fallback or model selection.
+- The implemented runtime defaults to `LOCAL_AI_MODE=off`. `shadow` may call the loopback adapter and record category-only diagnostics, but it must not return an executable action; `fallback` requires the separate local `LOCAL_AI_FALLBACK_APPROVED` promotion gate.
 - The first AI allowlist contains only `spotify_play_track` and `unknown`. Playback controls, app actions, volume, clarification selection, shutdown, force-close, firewall, and system administration remain deterministic-only.
 - A deterministic eligibility gate runs before the model. Requests containing high-risk/system intent, paths, URLs, shell or command syntax, control characters, or an unsupported domain must not be sent to AI and must fail closed or follow the existing deterministic path.
 - A `/command` request with a server-issued `clarification_token` bypasses AI completely and uses the server-owned deterministic clarification store. Candidate labels, Spotify URIs, track IDs, and clarification tokens are not AI inputs in the first integration.
