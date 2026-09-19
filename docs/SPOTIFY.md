@@ -231,7 +231,7 @@ GET /me/library/contains?uris=spotify:track:...
 - 此訊號只用於排序，不進 AI prompt，不進 Shortcut，不寫入一般 API response。
 - 不使用 Library write scope，也不自動幫使用者按讚或取消按讚。
 
-目前這是 planned optimization，尚未視為已實作或實機驗收。
+saved/liked 的第一個 deterministic source slice 已完成：Agent 只在既有 ambiguity 的最多三個 server-owned candidates 內查詢 membership，並只重排候選，不會改變自動播放或 ambiguity safety。Library lookup 失敗、缺少 scope 或回應格式異常時會退回原本 deterministic ranking。既有 token 需要重新授權取得 `user-library-read`；在此之前尚未完成 saved=true 的真實候選排序驗收。Top Tracks / Top Artists、Recently Played 仍是後續 planned optimization。
 
 真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 

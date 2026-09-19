@@ -24,6 +24,28 @@ def test_search_uses_only_the_fixed_spotify_search_endpoint():
     assert client.search_tracks("access-token", "track:Stay artist:The Kid LAROI") == [{"id": "track-1"}]
 
 
+def test_saved_track_lookup_uses_only_server_owned_track_uris_and_preserves_order():
+    def handler(request: httpx.Request):
+        assert request.method == "GET"
+        assert request.url.path == "/v1/me/library/contains"
+        assert request.url.params["uris"] == "spotify:track:one,spotify:track:two"
+        assert request.headers["Authorization"] == "Bearer access-token"
+        return httpx.Response(200, json=[True, False])
+
+    client = client_for(handler)
+
+    assert client.check_saved_tracks("access-token", ("spotify:track:one", "spotify:track:two")) == [True, False]
+
+
+def test_saved_track_lookup_rejects_arbitrary_uris_and_unbounded_batches():
+    client = client_for(lambda _request: httpx.Response(200, json=[False]))
+
+    with pytest.raises(ValueError):
+        client.check_saved_tracks("access-token", ("https://evil.example/track",))
+    with pytest.raises(ValueError):
+        client.check_saved_tracks("access-token", tuple(f"spotify:track:{index}" for index in range(4)))
+
+
 def test_pkce_code_exchange_uses_form_data_and_does_not_use_a_client_secret():
     def handler(request: httpx.Request):
         assert request.method == "POST"

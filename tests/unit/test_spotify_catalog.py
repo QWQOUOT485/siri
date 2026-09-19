@@ -92,6 +92,50 @@ def test_catalog_uses_popularity_only_to_order_ambiguous_candidates():
     assert [candidate.track_id for candidate in result.candidates] == ["morepopular", "lesspopular"]
 
 
+def test_catalog_uses_saved_status_to_order_ambiguous_candidates_without_auto_selecting():
+    class PersonalizedClient(FakeSpotifySearchClient):
+        def __init__(self, tracks):
+            super().__init__(tracks)
+            self.saved_calls = []
+
+        def check_saved_tracks(self, access_token, track_uris):
+            self.saved_calls.append((access_token, tuple(track_uris)))
+            return [uri.endswith(":saved") for uri in track_uris]
+
+    client = PersonalizedClient(
+        [
+            track("other", "Stay", ["The Kid LAROI"], album="Other Release"),
+            track("saved", "Stay", ["The Kid LAROI"], album="Saved Release"),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["saved", "other"]
+    assert client.saved_calls == [("test-token", ("spotify:track:other", "spotify:track:saved"))]
+
+
+def test_catalog_falls_back_to_deterministic_order_when_saved_lookup_is_unavailable():
+    class UnavailableSavedClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, _track_uris):
+            raise RuntimeError("library scope unavailable")
+
+    client = UnavailableSavedClient(
+        [
+            track("one", "Stay", ["The Kid LAROI"]),
+            track("two", "Stay", ["The Kid LAROI"]),
+        ]
+    )
+    result = SpotifyCatalog(client).find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
 def test_catalog_ignores_out_of_range_popularity_metadata():
     ref = SpotifyCatalog._to_ref(track("trackone", "Stay", ["The Kid LAROI"], popularity=101))
 

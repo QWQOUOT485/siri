@@ -111,7 +111,18 @@ class SpotifyCatalog:
                 if ref.artist_names and self._normalize(ref.artist_names[0])
             }
             if len(artist_groups) > 1:
-                return TrackResolution(track=None, ambiguous=True, candidates=tuple(title_matches[:3]))
+                return TrackResolution(
+                    track=None,
+                    ambiguous=True,
+                    candidates=self._personalized_candidates(
+                        title_matches,
+                        track,
+                        artist,
+                        album,
+                        hint,
+                        access_token,
+                    ),
+                )
         if album:
             exact_album_matches = [
                 ref for ref in exact_track_matches if self._normalize(ref.album_name) == self._normalize(album)
@@ -126,7 +137,18 @@ class SpotifyCatalog:
                 )
                 if self._same_recording_group(album_ranked):
                     return TrackResolution(track=album_ranked[0], ambiguous=False, candidates=tuple(album_ranked[:3]))
-                return TrackResolution(track=None, ambiguous=True, candidates=tuple(album_ranked[:3]))
+                return TrackResolution(
+                    track=None,
+                    ambiguous=True,
+                    candidates=self._personalized_candidates(
+                        album_ranked,
+                        track,
+                        artist,
+                        album,
+                        hint,
+                        access_token,
+                    ),
+                )
         if best_score < 0.70 or (second_score is not None and best_score - second_score < 0.08):
             close_candidates = [
                 ref
@@ -135,8 +157,52 @@ class SpotifyCatalog:
             ]
             if best_score >= 0.70 and close_candidates and self._same_recording_group(close_candidates + [ranked[0]]):
                 return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
-            return TrackResolution(track=None, ambiguous=True, candidates=tuple(ranked[:3]))
+            return TrackResolution(
+                track=None,
+                ambiguous=True,
+                candidates=self._personalized_candidates(
+                    ranked,
+                    track,
+                    artist,
+                    album,
+                    hint,
+                    access_token,
+                ),
+            )
         return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
+
+    def _personalized_candidates(
+        self,
+        refs: list[SpotifyTrackRef] | tuple[SpotifyTrackRef, ...],
+        track: str,
+        artist: str | None,
+        album: str | None,
+        version_hint: str | None,
+        access_token: str,
+    ) -> tuple[SpotifyTrackRef, ...]:
+        """Order the existing top-three ambiguity set with read-only saved status."""
+
+        candidates = tuple(refs[:3])
+        checker = getattr(self.client, "check_saved_tracks", None)
+        if not callable(checker) or not candidates:
+            return candidates
+        try:
+            statuses = checker(access_token, tuple(ref.track_uri for ref in candidates))
+        except Exception:
+            return candidates
+        if len(statuses) != len(candidates) or any(not isinstance(status, bool) for status in statuses):
+            return candidates
+        saved_by_uri = dict(zip((ref.track_uri for ref in candidates), statuses))
+        return tuple(
+            sorted(
+                candidates,
+                key=lambda ref: (
+                    1 if saved_by_uri.get(ref.track_uri, False) else 0,
+                    *self._ranking_key(ref, track, artist, album, version_hint),
+                ),
+                reverse=True,
+            )
+        )
 
     @classmethod
     def _to_ref(cls, item: Any) -> SpotifyTrackRef | None:

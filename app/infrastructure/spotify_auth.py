@@ -17,7 +17,7 @@ from urllib.parse import urlencode, urlparse
 from pydantic import BaseModel, ConfigDict, Field
 
 
-DEFAULT_SPOTIFY_SCOPES = ("user-modify-playback-state", "user-read-playback-state")
+DEFAULT_SPOTIFY_SCOPES = ("user-modify-playback-state", "user-read-playback-state", "user-library-read")
 
 
 class SpotifyAuthError(RuntimeError):

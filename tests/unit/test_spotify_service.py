@@ -116,6 +116,8 @@ def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
 
     def handler(request: httpx.Request):
         calls.append(request)
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False])
         assert request.url.path == "/v1/search"
         return httpx.Response(
             200,
@@ -130,7 +132,7 @@ def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
     assert result.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
     assert result.data["clarification_required"] is True
     assert result.data["clarification_token"]
-    assert len(calls) == 1
+    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/library/contains"]
 
 
 def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
@@ -138,6 +140,8 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
 
     def handler(request: httpx.Request):
         calls.append(request)
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False, False])
         assert request.url.path == "/v1/search"
         return httpx.Response(
             200,
@@ -161,7 +165,39 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
     assert result.data["clarification_type"] == "spotify_track"
     assert len(result.data["options"]) == 3
     assert result.data["clarification_token"]
-    assert len(calls) == 1
+    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/library/contains"]
+
+
+def test_ambiguous_search_uses_saved_status_to_order_options_without_auto_playing(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            return httpx.Response(
+                200,
+                json={
+                    "tracks": {
+                        "items": [
+                            spotify_track("other", "Stay", "Artist One"),
+                            spotify_track("saved", "Stay", "Artist Two"),
+                        ]
+                    }
+                },
+            )
+        if request.url.path == "/v1/me/library/contains":
+            assert request.url.params["uris"] == "spotify:track:other,spotify:track:saved"
+            return httpx.Response(200, json=[False, True])
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+
+    result = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert [option["artist_names"][0] for option in result.data["options"]] == ["Artist Two", "Artist One"]
+    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/library/contains"]
 
 
 def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path):
@@ -181,6 +217,8 @@ def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path
                     }
                 },
             )
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False])
         if request.url.path == "/v1/me/player/devices":
             return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
         if request.url.path == "/v1/me/player/play":
@@ -196,7 +234,7 @@ def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path
 
     assert selected.success is True
     assert selected.data["track_name"] == "Stay"
-    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/player/devices", "/v1/me/player/play"]
+    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/library/contains", "/v1/me/player/devices", "/v1/me/player/play"]
 
 
 def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
@@ -216,6 +254,8 @@ def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
                     }
                 },
             )
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False])
         raise AssertionError(request.url)
 
     spotify, _ = service(tmp_path, handler)
@@ -228,7 +268,7 @@ def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
     assert unclear.error_code == "SPOTIFY_CLARIFICATION_UNCLEAR"
     assert unclear.data["clarification_token"] == token
     assert len(unclear.data["options"]) == 2
-    assert [request.url.path for request in calls] == ["/v1/search"]
+    assert [request.url.path for request in calls] == ["/v1/search", "/v1/me/library/contains"]
 
 
 def test_unclear_clarification_expires_after_bounded_attempts(tmp_path):
@@ -245,6 +285,8 @@ def test_unclear_clarification_expires_after_bounded_attempts(tmp_path):
                     }
                 },
             )
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False])
         raise AssertionError(request.url)
 
     spotify, _ = service(tmp_path, handler)

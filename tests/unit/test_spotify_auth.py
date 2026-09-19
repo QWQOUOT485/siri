@@ -51,7 +51,7 @@ def test_pkce_authorization_contains_state_and_challenge_but_not_verifier(tmp_pa
     assert query["state"] == [state]
     assert query["code_challenge_method"] == ["S256"]
     assert len(query["code_challenge"][0]) >= 40
-    assert query["scope"] == ["user-modify-playback-state user-read-playback-state"]
+    assert query["scope"] == ["user-modify-playback-state user-read-playback-state user-library-read"]
 
 
 def test_callback_requires_the_original_state_and_stores_tokens_locally(tmp_path):

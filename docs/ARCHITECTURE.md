@@ -233,7 +233,7 @@ Planned work:
 
 - evaluate adding `market=TW` to Spotify Search requests for availability/relinking behavior; do not treat it as a Taiwan-popularity ranking signal
 - preserve Spotify's original relevance order as an input signal instead of discarding it completely
-- query whether each trusted track candidate is already saved in the user's Spotify Library and use that as the strongest personalization signal after explicit user intent
+- **Completed source slice:** query whether the existing top-three trusted ambiguity candidates are already saved in the user's Spotify Library and use that as the strongest personalization signal after explicit user intent; scope failure falls back to deterministic order
 - query the user's Top Tracks / Top Artists as a secondary personalization signal
 - query Recently Played as a tertiary personalization signal
 - use Spotify search relevance after explicit intent + saved/top/recent personalization

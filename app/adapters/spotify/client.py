@@ -6,9 +6,14 @@ proxy.  Remote command text never reaches this adapter as a URL or endpoint.
 
 from __future__ import annotations
 
+import re
+from collections.abc import Sequence
 from typing import Any, Mapping
 
 import httpx
+
+
+_TRACK_URI = re.compile(r"^spotify:track:[A-Za-z0-9]+$")
 
 
 class SpotifyApiError(RuntimeError):
@@ -47,6 +52,26 @@ class SpotifyApiClient:
         tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
         items = tracks.get("items", []) if isinstance(tracks, dict) else []
         return [item for item in items if isinstance(item, dict)]
+
+    def check_saved_tracks(self, access_token: str, track_uris: Sequence[str]) -> list[bool]:
+        """Read Library membership for a bounded set of server-owned track URIs."""
+
+        uris = tuple(track_uris)
+        if len(uris) > 3:
+            raise ValueError("saved-track lookup is limited to three candidates")
+        if any(not isinstance(uri, str) or _TRACK_URI.fullmatch(uri) is None for uri in uris):
+            raise ValueError("saved-track lookup accepts Spotify track URIs only")
+        if not uris:
+            return []
+        payload = self._api_value(
+            "GET",
+            "/me/library/contains",
+            access_token=access_token,
+            params={"uris": ",".join(uris)},
+        )
+        if not isinstance(payload, list) or len(payload) != len(uris) or any(not isinstance(value, bool) for value in payload):
+            raise SpotifyApiError(200, "Spotify 回應格式無效。")
+        return list(payload)
 
     def get_devices(self, access_token: str) -> list[dict[str, Any]]:
         payload = self._api_json("GET", "/me/player/devices", access_token=access_token)
@@ -117,6 +142,18 @@ class SpotifyApiClient:
             **kwargs,
         )
 
+    def _api_value(self, method: str, path: str, *, access_token: str, allow_non_json_success: bool = False, **kwargs) -> Any:
+        headers = dict(kwargs.pop("headers", {}) or {})
+        headers["Authorization"] = f"Bearer {access_token}"
+        headers.setdefault("Accept", "application/json")
+        return self._request_value(
+            method,
+            f"{self.api_base_url}{path}",
+            headers=headers,
+            allow_non_json_success=allow_non_json_success,
+            **kwargs,
+        )
+
     def _accounts_json(self, method: str, path: str, *, data: Mapping[str, str]) -> dict[str, Any]:
         return self._request_json(
             method,
@@ -134,6 +171,24 @@ class SpotifyApiClient:
         allow_non_json_success: bool = False,
         **kwargs,
     ) -> dict[str, Any]:
+        payload = self._request_value(
+            method,
+            url,
+            headers=headers,
+            allow_non_json_success=allow_non_json_success,
+            **kwargs,
+        )
+        return payload if isinstance(payload, dict) else {}
+
+    def _request_value(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+        allow_non_json_success: bool = False,
+        **kwargs,
+    ) -> Any:
         try:
             response = self.http_client.request(method, url, headers=headers, **kwargs)
         except httpx.HTTPError as exc:
@@ -155,7 +210,7 @@ class SpotifyApiClient:
             if allow_non_json_success and 200 <= response.status_code < 300:
                 return {}
             raise SpotifyApiError(response.status_code, "Spotify 回應格式無效。") from exc
-        return payload if isinstance(payload, dict) else {}
+        return payload
 
     @staticmethod
     def _retry_after(response: httpx.Response) -> int | None:
