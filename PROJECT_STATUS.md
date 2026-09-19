@@ -205,13 +205,15 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-目前完整 source test run為 **237 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **246 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+
+新增的 `docs/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
 
 2026-09-20 的 loopback benchmark 三個模型、兩種模式的固定 corpus rows 已完成；完整 sanitized evidence 位於 `docs/LOCAL_AI_BENCHMARK_2026-09-20.md`，中斷過程仍保留在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 已完成但為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 Windows/Spotify/Siri acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
-2026-09-20 real Windows Agent 已完成 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；結果與 evidence boundary 記錄在 `docs/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probe 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前以 source/unit evidence 為主，仍不是完整 promotion acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+2026-09-20 real Windows Agent 已完成 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；結果與 evidence boundary 記錄在 `docs/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probe 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前以 source/unit evidence 為主，仍不是完整 promotion acceptance。Installed Agent 的 Local AI 相關 source hash 與 current tree 相同；read-only runtime 設定仍為 `shadow`、loopback、`qwen2.5-coder-1.5b-instruct`、2 秒、32 KiB、`LOCAL_AI_FALLBACK_APPROVED=false`，但 installed `config.py` 尚非 current exact tree，故不能視為 exact promotion commit。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
-新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
+新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
 ### Promotion gate
 

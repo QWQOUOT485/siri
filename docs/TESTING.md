@@ -57,6 +57,7 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Local AI grounding rejects partial/ungrounded track spans and drops ungrounded optional slots
 - Local AI eligibility rejects clarification tokens, hostile input, and non-Spotify domains
 - Local AI loopback adapter enforces bounded transport and shadow mode never returns an executable action
+- Local AI promotion matrix covers malformed output, connection/timeout, busy, oversized response, ungrounded track, invented optional slots, and policy rejection without creating an action; this is source/unit evidence and must not be reported as live transport acceptance
 
 Unit tests MUST mock Windows system calls. Tests must NOT actually: shutdown, lock, close Chrome, open Photoshop, adjust volume, or kill processes.
 
