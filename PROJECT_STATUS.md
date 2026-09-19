@@ -248,7 +248,8 @@ Phase 1 原則：
 - `Sad overlxrd` 首次 trusted clarification + successful mocked playback 會建立 alias；第二次相同 artist text 走 exact RAM canonicalization；mocked playback failure 不會學習。
 - source/security/concurrency regression 已納入完整 pytest suite；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 以 code-level false gate fail closed。
 - current-source Windows harness 已驗證 disabled startup、fresh SQLite schema v1/FK、controlled enabled startup、restart persistence/RAM rebuild、corrupt/unavailable fallback、fuzzy candidate-only、conflict 與 8-way concurrent confirmation；exact lookup 1,000 次的 P50/P95 為 0.0174/0.0231 ms（temporary fixture，非 installed-host benchmark）。
-- installed Windows Agent 仍沒有 Semantic Memory modules/config flags/SQLite artifact，且尚未在真實 Spotify 帳號或 iPhone Siri Shortcut 上做 acceptance；因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。
+- current-source staged runtime 已用真實 Spotify 帳號完成 token refresh、trusted canonical search、server-owned clarification selection、實際 playback、MemoryLearner confirmation、restart persistence 與第二次 exact hit（exact=1、fuzzy=0）；但 candidate 是由 canonical trusted search 控制性 seed，不能代替 ASR alias 的 first-occurrence candidate recovery。
+- 真實 `Sad overlxrd` first-occurrence path（使用帳號實際存在的 `死亡不是生命的終點`）仍回傳 `SPOTIFY_TRACK_NOT_FOUND`、沒有 clarification candidates；installed Windows Agent 仍沒有 Semantic Memory modules/config flags/SQLite artifact，iPhone Siri voice E2E 也尚未執行，因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。詳細 follow-up 見 [`docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md)。
 
 規格位於 `docs/semantic_recovery/`。
 
@@ -276,8 +277,9 @@ Phase 1 原則：
 
 4. **Local Semantic Recovery Phase 1 runtime acceptance**
    - current-source Windows SQLite/create/restart/RAM/fallback harness 已完成；source/unit與mocked Spotify regression已通過。
-   - blocker 是 installed Agent 尚未部署這個 Slice，仍需 installed-host latency/RAM、真實 `Sad overlxrd` clarification/playback/second exact-hit，以及既有 Siri/Spotify real-world regression。
-   - rollout decision 與 evidence boundary 見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md)；memory 保持 disabled。
+   - current-source staged runtime 已完成 partial real Spotify playback/write/restart/exact-hit；但 normal `Sad overlxrd` first-occurrence candidate recovery 仍 blocked，不能宣稱完整 acceptance。
+   - 仍需 updated installed Agent、正常 ASR alias → trusted candidate → clarification path、iPhone/Siri voice E2E 與 installed-host acceptance；memory 保持 disabled。
+   - rollout evidence 見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md) 與 [`docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md)。
 
 5. **Local AI promotion evidence**
    - 保持 off/shadow。
@@ -288,7 +290,7 @@ Phase 1 原則：
 
 - exact Windows volume：尚缺 Siri voice E2E / independent physical-speaker check。
 - clarification store bounded attempts / concurrency hardening：source/unit 已完成，但未因這個內部修正另外重跑完整 Siri E2E。
-- Recently Played 尚缺 real Spotify account acceptance；本次 probe 因 installed token expired / missing scope blocked，未執行 playback 或 Library write。
+- Recently Played 尚缺 real Spotify account acceptance；本次 token refresh 成功但 scope 仍缺 `user-read-recently-played`，未執行該 slice 的 playback 或 Library write。
 - Spotify OAuth callback 曾出現「瀏覽器顯示通用失敗，但 status/token 實際成功保存」的不一致；功能可用，但 UI/root cause 尚未釐清。
 - GitHub hosted CI 尚未建立；目前 source test evidence 主要由本機執行與狀態文件記錄。
 
