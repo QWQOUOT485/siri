@@ -29,7 +29,9 @@ class AliasTrustState(str, Enum):
     DISABLED = "disabled"
 
 
-def _reject_control_characters(value: str) -> str:
+def _reject_control_characters(value: str | None) -> str | None:
+    if value is None:
+        return None
     if any(ord(char) < 32 or ord(char) == 127 for char in value):
         raise ValueError("semantic-memory text must not contain control characters")
     return value
