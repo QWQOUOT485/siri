@@ -36,7 +36,7 @@ Core Siri → Windows → Spotify playback and clarification are already functio
 ### P1 — Spotify candidate quality
 
 1. Complete a genuine-ambiguity real-account acceptance case for saved/liked ranking.
-2. Add Top Tracks / Top Artists signal if it improves ordering without overriding explicit metadata or ambiguity safety.
+2. Validate the implemented Top Tracks / Top Artists signal after `user-top-read` reauthorization; it must improve ordering without overriding explicit metadata or ambiguity safety.
 3. Add Recently Played signal under the same rule.
 4. Keep Spotify Search relevance / popularity as lower-priority evidence only.
 
@@ -95,7 +95,7 @@ Only after all gates pass may `LOCAL_AI_FALLBACK_APPROVED=true` be considered.
 ## Current Acceptance Gaps
 
 - saved=true has been verified against a real Spotify account, but its effect on a genuine ambiguity ordering case is not yet accepted.
-- Top/Recent personalization is not implemented.
+- Top Tracks / Top Artists source ranking is implemented and covered, but real-account acceptance is pending `user-top-read` reauthorization; Recently Played is not implemented.
 - Spotify extended playback controls above are not complete.
 - exact Windows volume has Windows runtime acceptance but not Siri voice / physical-speaker acceptance.
 - Local Semantic Recovery Phase 1 is approved but not complete.
