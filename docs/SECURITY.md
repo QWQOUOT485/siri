@@ -98,6 +98,24 @@ Request only the Spotify scopes required for playback/device control: `user-modi
 
 Outbound HTTPS calls from Windows to Spotify Accounts/Web API are permitted solely for Spotify integration. This does **not** permit exposing the Windows Agent to the public Internet or accepting remote control from outside the LAN.
 
+## Local AI Security
+
+Local AI is an untrusted semantic parser, never an execution engine. The
+following rules are mandatory for any future implementation:
+
+- `LOCAL_AI_ENABLED=false` remains the default. The current Phase 0.5 result did not authorize production fallback or model selection.
+- The first AI allowlist contains only `spotify_play_track` and `unknown`. Playback controls, app actions, volume, clarification selection, shutdown, force-close, firewall, and system administration remain deterministic-only.
+- A deterministic eligibility gate runs before the model. Requests containing high-risk/system intent, paths, URLs, shell or command syntax, control characters, or an unsupported domain must not be sent to AI and must fail closed or follow the existing deterministic path.
+- A `/command` request with a server-issued `clarification_token` bypasses AI completely and uses the server-owned deterministic clarification store. Candidate labels, Spotify URIs, track IDs, and clarification tokens are not AI inputs in the first integration.
+- Production LM Studio access is a hard loopback requirement: only the configured `127.0.0.1` endpoint is accepted. LAN addresses, public addresses, embedded credentials, arbitrary redirects, and remote changes to the backend/base URL/model are rejected. The reported `192.168.0.199:1234` endpoint is development/benchmark-only.
+- AI output must use a strict closed schema (`extra=forbid`, bounded strings, literal schema version if present). Schema-constrained output is not a security boundary; every response still requires server-side validation.
+- `spotify_play_track` requires a `track` deterministically grounded in the original utterance. An ungrounded track invalidates the whole interpretation. Ungrounded optional `artist` and `album` are forced to `null`; Spotify catalog results may not retroactively justify an invented user slot.
+- Raw AI output must pass distinct `RawAIIntent → GroundedAIIntent → AIPolicyGate` stages before an existing `ValidatedAction` can be created. No AI field may carry a path, command, URL, process ID, Spotify URI/track ID, OAuth token, API key, or trusted catalog object.
+- The adapter must enforce bounded input/output size, timeout, and at most one in-flight inference for the initial runtime. Timeout, connection failure, malformed output, policy rejection, and model unavailability must preserve deterministic behavior and never create an action.
+- The Agent must never silently download a model or accept a remotely supplied prompt/configuration. Startup failure of the optional AI path must not prevent the deterministic Agent from starting.
+- If future startup or health-check automation invokes LM Studio, it may use only a preconfigured trusted executable with fixed argument structure; user input must never reach a shell or subprocess, and endpoint/model/path values must not be assembled from request data.
+- Do not log full prompts, raw model output, API keys, OAuth tokens, confirmation tokens, clarification tokens, Spotify URIs, or track IDs. AI diagnostics may record only bounded non-secret status, rejection reason, model identifier, and latency.
+
 ## LAN Security
 - LAN only, absolutely no Internet exposure.
 - Use Private profile firewall rules only.

@@ -52,6 +52,7 @@ See [Security](SECURITY.md#api-response-security)
 - Input: `text` (natural language), plus optional server-issued `clarification_token` for a second-turn Spotify selection
 - Agent parses internally
 - All command parsing on Windows Agent, not Apple Shortcut
+- If `clarification_token` is present, the request is handled directly by the server-owned deterministic Spotify clarification store; it does not invoke Local AI and does not accept a client-provided track ID or URI.
 
 When the response has `clarification_required=true`, the client may send the
 spoken follow-up and the returned opaque token back to this same endpoint:
@@ -65,7 +66,8 @@ spoken follow-up and the returned opaque token back to this same endpoint:
 
 The token is short-lived and one-use. The client cannot use it to submit a
 Spotify URI or track ID; selection is restricted to the server-created
-candidate set.
+candidate set. An unclear follow-up may retain the same token only while its
+bounded attempt/TTL policy permits it.
 
 ## Response Schema
 
@@ -75,10 +77,10 @@ Unified response:
 - `action`
 - `message` (for Siri to speak)
 - `candidates` (for ambiguous app results)
-- `clarification_required` (bool; for safe follow-up questions such as choosing a media provider)
-- `clarification_type` (e.g. `media_provider`)
+- `clarification_required` (bool; currently used for deterministic Spotify track selection)
+- `clarification_type` (currently `spotify_track` when clarification is required)
 - `clarification_token` (opaque, short-lived server token; only present when required)
-- `options` (allowlisted choices only; never executable paths/commands/URLs)
+- `options` (at most three safe display labels; never executable paths/commands/URLs, Spotify URIs, or track IDs)
 - `confirmation_required` (bool)
 - `confirmation_token` (for shutdown flow)
 - `error_code`
@@ -123,7 +125,7 @@ Don't make iPhone parse many different formats.
 ## Error Schema
 
 Defined error types:
-Invalid API key, Missing API key, Invalid command, Unknown app, Ambiguous app, App launch failure, App close failure, Website not found, Media control failure, Volume failure, Shutdown token expired/reused/invalid, Firewall issue, Network issue, Catalog unavailable, Malformed request
+Invalid API key, Missing API key, Invalid command, Unknown app, Ambiguous app, App launch failure, App close failure, Website not found, Media control failure, Volume failure, Shutdown token expired/reused/invalid, Spotify clarification expired/used/unclear/attempts exhausted, Firewall issue, Network issue, Catalog unavailable, Malformed request
 
 ## Shutdown Confirmation Flow
 

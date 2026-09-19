@@ -1,6 +1,6 @@
 # Local AI Integration Architecture Proposal
 
-> **Status: Proposal for review — not an implementation decision**
+> **Status: Second-round reviewed 2026-09-19 — gated future design, not an implementation approval**
 >
 > This document proposes how to add a small local AI model to Windows Siri Agent without weakening the existing closed-action security model.
 >
@@ -2020,6 +2020,57 @@ At minimum, the next evaluation must demonstrate:
 If these conditions are not met, keep AI in `shadow` or `off`; do not weaken grounding or broaden the action allowlist to make the benchmark pass.
 
 ---
+
+## 38. Second-round architecture and security review (2026-09-19)
+
+This section records the second-round review requested below. The authoritative
+runtime rules are now reflected in `docs/ARCHITECTURE.md`, `docs/SECURITY.md`,
+`docs/API.md`, and `docs/NETWORKING.md`. This proposal remains a design
+document; it is not proof that Local AI has been implemented or accepted.
+
+### 38.1 Accepted decisions
+
+1. **Initial AI scope is smaller than the original allowlist.** The first production-facing AI schema may contain only `spotify_play_track` and `unknown`. Pause/resume/next/previous, clarification selection, app control, volume, shutdown, force-close, firewall, and system administration remain deterministic-only.
+2. **Clarification is not an AI path in the first integration.** If `/command` receives a server-issued `clarification_token`, it bypasses AI and uses the existing server-owned deterministic store. Candidate labels, tokens, Spotify URIs, and track IDs are not sent to AI.
+3. **AI eligibility is a deterministic gate.** High-risk/system intent, path/URL/shell syntax, control characters, unsupported domains, explicit version markers not already handled by the rule parser, and requests with a clarification token are not eligible for an AI call. An ineligible request fails closed or follows the existing deterministic path.
+4. **Loopback is a hard production boundary.** Production accepts only the configured `127.0.0.1` LM Studio endpoint. A LAN endpoint is a benchmark-only override and must never be silently selected by runtime fallback. Redirects, embedded credentials, remote model/backend changes, and silent downloads are forbidden.
+5. **Trust states are explicit.** The implementation must keep `RawAIIntent`, `GroundedAIIntent`, and `AIPolicyGate` separate. No raw or merely schema-valid model output can become `ValidatedAction`.
+6. **The initial schema is versioned and minimal.** Require a literal `schema_version: 1`, `intent` in `{spotify_play_track, unknown}`, strict bounded `track`/`artist`/`album` fields, and no `candidate_ordinal` or `version_hint`. Existing deterministic parsing remains authoritative for version hints. `extra=forbid` is mandatory.
+7. **The adapter remains transport-only.** It owns fixed-endpoint HTTP transport, model identifier, timeout, response-size limits, no-redirect behavior, and safe error mapping. Grounding, policy, Spotify matching, clarification, and execution remain outside it.
+8. **AI failure is fail-closed and non-fatal.** Timeout, connection failure, malformed JSON, schema rejection, grounding rejection, policy rejection, or model unavailability must not create an action or prevent deterministic Agent startup. The initial runtime uses a bounded input/output size and at most one in-flight inference.
+9. **Promotion requires a new result.** The Phase 0.5 benchmark did not pass; production fallback remains unapproved. The next gate is shadow mode plus a revised benchmark with zero observed false execution and zero post-grounding false acceptance in the fixed safety corpus, while preserving deterministic behavior and the accepted Siri clarification E2E.
+
+### 38.2 Findings and implementation blockers
+
+- The earlier sections that allow AI to parse playback controls or emit
+  `select_candidate`/`candidate_ordinal` are superseded for the first
+  integration by Section 37 and this section. They must not be implemented as
+  an implicit expansion of the allowlist.
+- `version_hint` is a semantic influence on Spotify resolution. Because the
+  initial grounder contract covers only track/artist/album, it is excluded
+  from the first AI schema. If a later design adds it, it needs its own closed
+  enum and deterministic grounding tests before use.
+- `start.bat`/startup logic must verify the actual LM Studio listener and fail
+  the optional AI path closed if it is not loopback. “Bind loopback if
+  possible” is not sufficient as an acceptance statement.
+- The `SpotifyClarificationStore` now implements the proposed bounded
+  `failed_attempts`/`max_attempts` policy (default maximum: three unclear
+  attempts) and protects both attempt updates and successful selection with
+  one lock. Unit tests cover exhaustion plus concurrent success and failure
+  races. A fresh Windows/Siri regression is still separate from this
+  source/unit security gate.
+- Candidate display labels must be bounded and treated as untrusted data if a
+  future review reintroduces AI clarification. They must never be placed in a
+  system/developer instruction channel or become authority for a track.
+
+### 38.3 Review outcome
+
+The architecture is acceptable as a **gated, future design** after the above
+decisions. It is not approved for production Local AI execution today. The
+clarification bounded-attempt source/unit gate is complete. The next
+implementation order is: improve Spotify candidate quality, then define the
+minimal trust-state models and eligibility gate, implement adapter transport
+only, add `off`/`shadow` modes, and then run a new measured PoC.
 
 ## Review request
 

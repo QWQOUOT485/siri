@@ -231,6 +231,37 @@ def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
     assert [request.url.path for request in calls] == ["/v1/search"]
 
 
+def test_unclear_clarification_expires_after_bounded_attempts(tmp_path):
+    def handler(request: httpx.Request):
+        if request.url.path == "/v1/search":
+            return httpx.Response(
+                200,
+                json={
+                    "tracks": {
+                        "items": [
+                            spotify_track("one", "Stay", "Artist One"),
+                            spotify_track("two", "Stay", "Artist Two"),
+                        ]
+                    }
+                },
+            )
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+    token = initial.data["clarification_token"]
+
+    first = spotify.execute_clarification("不知道", token)
+    second = spotify.execute_clarification("還是不知道", token)
+    exhausted = spotify.execute_clarification("隨便", token)
+
+    assert first.error_code == "SPOTIFY_CLARIFICATION_UNCLEAR"
+    assert second.error_code == "SPOTIFY_CLARIFICATION_UNCLEAR"
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED"
+    assert exhausted.message == "歌曲選擇嘗試次數已用完，請重新說出歌曲。"
+    assert "clarification_token" not in exhausted.data
+
+
 def test_401_refreshes_once_then_retries_the_fixed_operation(tmp_path):
     calls = []
 

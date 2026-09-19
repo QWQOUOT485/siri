@@ -6,7 +6,7 @@ import re
 import secrets
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from app.adapters.spotify.catalog import SpotifyTrackRef
@@ -17,6 +17,7 @@ from app.domain.chinese import normalize_chinese_text
 class ClarificationContext:
     candidates: tuple[SpotifyTrackRef, ...]
     expires_at: float
+    failed_attempts: int = 0
 
 
 @dataclass(frozen=True)
@@ -28,17 +29,25 @@ class ClarificationSelection:
 
 
 class SpotifyClarificationStore:
-    """Bounded in-memory TTL store for trusted candidate references."""
+    """Bounded in-memory TTL store for trusted candidate references.
+
+    A context tolerates a small number of unclear Siri follow-ups, then is
+    invalidated.  All reads and state transitions happen under one lock so a
+    token cannot be selected twice or exceed its failed-attempt bound under
+    concurrent requests.
+    """
 
     def __init__(
         self,
         *,
         ttl_seconds: int = 60,
         max_entries: int = 256,
+        max_attempts: int = 3,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.ttl_seconds = max(15, min(ttl_seconds, 600))
         self.max_entries = max(1, min(max_entries, 4096))
+        self.max_attempts = max(1, min(max_attempts, 3))
         self.clock = clock
         self._contexts: dict[str, ClarificationContext] = {}
         self._used_tokens: dict[str, float] = {}
@@ -80,6 +89,14 @@ class SpotifyClarificationStore:
 
             index = self._selection_index(text, context.candidates)
             if index is None:
+                failed_attempts = context.failed_attempts + 1
+                if failed_attempts >= self.max_attempts:
+                    self._contexts.pop(token, None)
+                    self._used_tokens[token] = now + self.ttl_seconds
+                    return ClarificationSelection(
+                        error_code="SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED"
+                    )
+                self._contexts[token] = replace(context, failed_attempts=failed_attempts)
                 return ClarificationSelection(
                     error_code="SPOTIFY_CLARIFICATION_UNCLEAR",
                     candidates=context.candidates,

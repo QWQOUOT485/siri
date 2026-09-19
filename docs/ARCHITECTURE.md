@@ -132,26 +132,35 @@ For playback, resolve the configured or active Spotify Connect device. If the de
 
 Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes; token handling belongs in infrastructure, not domain. See [SPOTIFY.md](SPOTIFY.md).
 
-## Local AI Semantic Fallback (V1 allowed, gated)
+## Local AI Semantic Fallback (V1 allowed, not currently enabled)
 
-V1 may use a small **local-only LLM** through LM Studio to improve free-form Spotify play-track language understanding. The existing Spotify clarification flow remains deterministic in the initial AI integration.
+The Phase 0.5 benchmark did not produce a model that met the project safety and
+quality thresholds. Therefore `LOCAL_AI_ENABLED=false` remains the default and
+no model is approved for production fallback. The architecture below is the
+smallest future integration shape; it does not authorize implementation or
+execution by itself.
 
-This does not replace the rule parser or the trusted execution pipeline.
+The first AI integration may interpret only free-form Spotify named-track
+requests. It must not interpret playback controls, clarification selection,
+application commands, or system actions.
 
 ```text
 Siri text
   ↓
 Rule-based Parser
   ├─ confident supported command → ValidatedAction
-  └─ unresolved/free-form Spotify language
+  ├─ clarification_token present → deterministic server-owned selection
+  └─ eligible free-form Spotify play request
           ↓
-     Local AI semantic parser
+     RawAIIntent (untrusted)
           ↓
-     strict closed schema
+     strict schema validation
           ↓
-     deterministic slot grounding
+     deterministic SemanticGrounder
           ↓
-     ValidatedAction
+     AIPolicyGate
+          ↓
+     ValidatedAction or unknown
           ↓
      existing deterministic Spotify resolver
           ↓
@@ -162,17 +171,21 @@ Rule-based Parser
 
 V1 Local AI constraints:
 
-- fallback-only; deterministic rules stay first
-- initial AI scope is only free-form Spotify `spotify_play_track` language; pause/resume/next/previous and clarification selection remain deterministic
-- local LM Studio runtime; production same-host deployment should use loopback
-- no cloud LLM fallback
-- AI output is untrusted until strict schema validation and deterministic grounding pass
-- AI cannot create executable paths, shell commands, URLs, process IDs, Spotify URIs/track IDs, or trusted catalog objects
-- shutdown, shutdown confirmation, force-close, firewall, and system-administration actions never use AI parsing
-- if AI is unavailable or times out, existing deterministic behavior continues
-- model capability must be proven by the Phase 0.5 feasibility PoC before production integration
+- rule parser remains first; AI is permitted only after a deterministic eligibility gate
+- initial AI schema allows only `spotify_play_track` and `unknown`
+- `track` is required and must be grounded in the original utterance; ungrounded `track` invalidates the interpretation
+- ungrounded optional `artist` / `album` are forced to `null`
+- the first integration does not send clarification candidates or `clarification_token` to AI; an incoming token always uses the existing deterministic clarification store
+- AI does not parse `spotify_pause`, `spotify_resume`, `spotify_next`, `spotify_previous`, app actions, volume, shutdown, force-close, firewall, or system administration
+- AI output never becomes a `ValidatedAction` until schema validation, grounding, and policy checks complete
+- no executable path, shell command, URL, process ID, Spotify URI/track ID, token, or trusted catalog object may appear in the AI schema
+- production LM Studio access is loopback-only; a non-loopback configured endpoint must fail closed rather than silently falling back to LAN
+- no cloud LLM fallback, silent model download, or remote configuration of model/backend/base URL
+- timeout, connection failure, malformed output, or policy rejection preserves the deterministic behavior and never creates an action
+- enabling execution requires a new measured benchmark after the revised prompt/grounding design; the Phase 0.5 result is not sufficient
 
-See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md).
+See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md) for
+the reviewed design and deferred options.
 
 ## Next Optimization Priorities
 
@@ -343,6 +356,7 @@ windows-siri-agent/
 8. **Windows 內建工具走 `system_apps` mapping**：Task Manager、Settings、Calculator 等視為 Trusted Launch Source 的固定入口，不依賴一般 Discovery，也不算「把所有應用程式寫死」。
 9. **測試分兩類**：`tests/unit/`（mock 化，可在任何環境含本容器完整執行）與 `tests/integration_windows/`（只能在真實 Windows 執行，且明確禁止 shutdown / lock / force kill 等破壞性操作，只做唯讀或安全的探測）。
 10. **V1 音樂來源固定為 Spotify**：`play` 恢復 Spotify；指定歌名使用 `spotify_play_track` 搜尋 Spotify Catalog 並播放可信 track URI。取消 YouTube Music / Apple Music provider 選擇流程。歌名與歌手僅能進 Spotify搜尋，不可形成 executable path、command、argument 或 arbitrary URL。
-11. **V1 允許 Local LLM semantic fallback，但不是 execution engine**：Rule parser 仍優先；第一個 AI integration scope 只處理 free-form `spotify_play_track` 語意抽取，既有歌曲 clarification 與基本播放控制維持 deterministic。AI 輸出必須通過 closed schema + deterministic grounding，且 Phase 0.5 未過門檻，因此正式 execution 前先走 shadow mode；高風險操作永久 deterministic-only，LM Studio/模型不可直接產生 trusted execution target。
+11. **V1 允許 Local LLM semantic fallback，但目前不啟用**：Rule parser 仍優先；第一個 AI integration scope 只處理 free-form `spotify_play_track` / `unknown`，既有歌曲 clarification 與基本播放控制維持 deterministic。AI 輸出必須依序通過 closed schema、deterministic grounding 與 policy gate，且 Phase 0.5 未過門檻，因此正式 execution 前先走 shadow mode；高風險操作永久 deterministic-only，LM Studio/模型不可直接產生 trusted execution target。
+12. **Local AI 的 loopback 是安全閘門而非偏好**：production 只允許同機 `127.0.0.1` endpoint；LAN endpoint 只可用於隔離開發/benchmark，不能被 runtime 自動採用。帶有 `clarification_token` 的 `/command` 請求必須直接進入既有 deterministic clarification store，不得呼叫 AI。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).

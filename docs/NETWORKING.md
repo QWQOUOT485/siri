@@ -74,6 +74,12 @@ Do NOT write 'must be on same 192.168.1.x'.
 - e.g. `0.0.0.0:8000`
 - Combined with Windows Firewall restrictions
 
+### Optional Local AI Runtime
+- The LAN-facing Windows Agent and the optional LM Studio runtime are separate network boundaries.
+- Production LM Studio access must bind to and use `http://127.0.0.1:<port>/v1` only; it must not listen on `0.0.0.0`, the Windows LAN address, or a public interface.
+- A non-loopback LM Studio endpoint such as `192.168.0.199:1234` is permitted only for an explicitly isolated development/benchmark run, never as an automatic production fallback.
+- The Agent must reject a non-loopback AI endpoint in production configuration rather than silently widening the exposure. The iPhone continues to call only the LAN-facing Agent API.
+
 ### Windows Firewall (#25, #26)
 - TCP port (e.g. 8000)
 - Private Profile only

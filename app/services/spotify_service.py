@@ -183,6 +183,7 @@ class SpotifyService:
         return {
             "SPOTIFY_CLARIFICATION_EXPIRED": "歌曲選擇已過期，請重新說出歌曲。",
             "SPOTIFY_CLARIFICATION_USED": "歌曲選擇已使用過，請重新說出歌曲。",
+            "SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED": "歌曲選擇嘗試次數已用完，請重新說出歌曲。",
             "SPOTIFY_CLARIFICATION_UNCLEAR": "我無法判斷你選哪一首，請說第一首、第二首、第三首，或說歌手／專輯。",
         }.get(error_code or "", "找不到這個歌曲選擇，請重新說出歌曲。")
 

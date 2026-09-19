@@ -37,6 +37,7 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Duration alone never resolves two candidates
 - Ambiguous Spotify search results do not auto-play an arbitrary track
 - Ambiguous results expose at most three trusted candidates and a short-lived, one-use clarification context
+- Clarification context invalidates after three unclear attempts, and concurrent selection/attempt updates are atomic
 - Spotify API calls are mocked in unit tests
 - Spotify access/refresh tokens are never returned or logged
 - User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs

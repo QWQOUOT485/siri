@@ -130,6 +130,14 @@ Start/Resume Playback
 
 Agent 只會在原候選集合中解析序號、歌手或專輯；client 不得傳入 Spotify URI 或 track ID。選擇不清楚時會再次列出原候選，不會猜測。
 
+Clarification context 使用 Windows Agent process 內的 bounded in-memory store：
+
+- context 有短 TTL，Agent restart 後全部失效；
+- 每次不清楚的第二輪回覆會增加失敗次數，但最多允許三次嘗試；
+- 第三次仍不清楚時 context 立即失效，不再回傳 token；
+- 成功選擇與失敗次數更新都在同一個 lock 內完成，因此同一 token 的並發請求最多只有一個成功選擇；
+- 失敗次數與剩餘次數不會放入 Siri 回應，避免把內部防護細節變成 client 控制面。
+
 ## Trusted SpotifyTrackRef
 
 Spotify Search API 回傳結果經 validation 後，轉成 server-side trusted object，例如：
@@ -245,7 +253,8 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - bare same-title tracks by different artists remain ambiguous
 - same-ISRC release duplicates may collapse; duration alone must not auto-select
 - ambiguous results 不自動播放
-- ambiguous results 最多三個 trusted candidates，clarification token 短效且只能一次選擇
+- ambiguous results 最多三個 trusted candidates，clarification token 短效、最多三次嘗試且只能一次成功選擇
+- clarification failed-attempt bound 與 concurrent selection 必須由 unit tests 驗證
 - no results
 - token refresh
 - 401 / 403 / 429 handling

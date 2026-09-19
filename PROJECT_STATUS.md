@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過 + Siri clarification iPhone 全語音 E2E 已驗收通過**
+目前階段：**Local AI Phase 0.5 benchmark 已完成但無候選通過、第二輪架構/安全 review 已完成 + Siri clarification iPhone 全語音 E2E 已驗收通過**
 
 先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。Phase 0.5 benchmark 已完成但沒有模型通過門檻。2026-09-19 iPhone Shortcut 已實機完成候選回傳、token 保存、第二輪 selection + token 回送與真實 Spotify 播放；最終穩定修正為只在 clarification 分支中，先朗讀候選，再執行「關閉 Siri 並繼續」，最後由第二次聽寫接手選擇，因此已完成 hands-free Siri clarification E2E。
 
@@ -53,10 +53,10 @@
   - Qwen3 0.6B
   - Qwen2.5 1.5B Instruct
   - Qwen3 4B
-- 以上模型目前只確認「已下載」，**尚未完成 benchmark、尚未選定 production model**。
+- 以上模型在準備階段只確認「已下載」；benchmark 最終結果見下方，沒有選定 production model。
 - Phase 0.5 實測 runbook 已建立：`docs/LOCAL_AI_MODEL_POC_RUNBOOK.md`。
 - Runbook 要求三個模型使用同一份固定測資，分別測 prompt-only JSON 與 structured-output（若支援），並量測 intent/semantic accuracy、hallucination、post-grounding false accept、false execution、clarification accuracy、P50/P95 latency 與資源使用。
-- 實測預計由 Codex 在真實 Windows + LM Studio 環境依 runbook 執行；尚未執行前，不得把任何模型標成通過。
+- 實測由 Codex 在真實 Windows + LM Studio 環境依 runbook 執行；未達門檻前不得把任何模型標成通過。
 - 目前 LM Studio 開發 endpoint 由使用者回報為 `http://192.168.0.199:1234`；production same-host target 仍為 loopback `127.0.0.1:1234`。
 
 ## Local AI Phase 0.5 PoC Execution Attempt (2026-09-19)
@@ -80,16 +80,25 @@
 - Phase 0.5 benchmark execution 已完成，但三個實際模型都未達初始 hard safety（false execution=0、post-grounding false accept=0）與 quality targets（semantic/clarification >=90%、P95 <=2 秒）；summary 明確寫入 **no tested model met all initial PoC thresholds; do not proceed to production integration**。不選 production model、不接入 `/command` 或正式 Agent。
 - 後續若要繼續 Local AI，最小下一步是先針對 failure corpus 改善 prompt / clarification-context / deterministic grounding，另開下一輪可比 PoC；目前不能因 benchmark 完成而宣稱 production readiness。
 
+## Local AI Second-round Architecture/Security Review (2026-09-19)
+
+- 已依 `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` 的 review request 完成第二輪 review；採納的規則已寫回 `docs/ARCHITECTURE.md`、`docs/SECURITY.md`、`docs/API.md` 與 `docs/NETWORKING.md`。
+- 初次 production-facing AI scope 收斂為 `spotify_play_track` / `unknown`；pause/resume/skip、clarification selection、app/volume/system actions 維持 deterministic。帶有 `clarification_token` 的 `/command` 必須繞過 AI。
+- Production LM Studio endpoint 是 `127.0.0.1` hard gate；目前 LAN endpoint 只可作隔離 benchmark，不能由 runtime 自動 fallback。AI 前置 eligibility gate、RawAIIntent → GroundedAIIntent → AIPolicyGate trust states、strict versioned schema 與 off/shadow/fallback promotion gate 已明確化。
+- `SpotifyClarificationStore` 已補上 bounded `failed_attempts` / `max_attempts`（預設最多三次不清楚回覆），並以同一個 lock 保護成功選擇與失敗次數更新；unit tests 已覆蓋 attempt exhaustion、並發成功選擇與並發失敗次數上限。
+- 本次 source regression 完整 pytest 為 `102 passed`，保留 2 個既有 dependency deprecation warnings；compileall、pip check 與 diff check 通過。安裝目錄兩個服務檔 hash 已與 source 一致，並以 runtime venv 完成並發 clarification smoke test；隔離的 `127.0.0.1:8001` runtime `/health` 回傳 200；port 8000 現行進程尚未重啟。
+- Review 結論仍是 gated future design，不是 Local AI production execution approval；clarification abuse-resistance 的 source/unit gate 已完成，下一個實作順序回到 Spotify candidate quality，再考慮 minimal AI trust-state/eligibility/transport 與 shadow mode。
+
 ## Local AI Product Decision (2026-09-18)
 
 - 舊規則「V1 不得加入 LLM integration」已取消。
 - V1 允許 **Local LLM**，目前指定 runtime 方向為 LM Studio；不使用雲端 LLM fallback。
-- AI 採 rule-first / fallback-only；第一版 AI scope 只處理 Spotify free-form semantic parsing 與 clarification selection。
+- AI 採 rule-first / fallback-only；第一版 AI scope 只處理 Spotify free-form `spotify_play_track` / `unknown` semantic parsing，歌曲 clarification selection 維持 deterministic。
 - AI 輸出必須通過 strict closed schema 與 deterministic slot grounding；`track` 未 grounded 時不得建立 `spotify_play_track`。
 - shutdown / shutdown confirmation / force-close / firewall / system-administration 永久不交給 AI 解析。
 - LM Studio 若與 Agent 同機，production acceptance 目標為 loopback (`127.0.0.1:1234`)；目前使用者回報的 `192.168.0.199:1234` 只視為開發/測試 endpoint，尚未視為正式安全配置。
 - 完整架構提案見 `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md`。
-- 下一步是獨立 **Phase 0.5 model feasibility PoC**；此決策不代表 Local AI 已接入正式 Agent。
+- Phase 0.5 model feasibility PoC 已完成但無模型通過；第二輪 architecture/security review 已完成，這仍不代表 Local AI 已接入正式 Agent。
 
 ## New Product Decision / Implementation State (2026-09-18)
 
@@ -229,6 +238,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - LM Studio 已完成 production loopback-only 安全配置。
 - 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
 - Spotify 模糊歌曲候選排序品質已完成 market/popularity 改善；目前仍可能把偏冷門同名歌曲排進前三候選。
+- clarification store 的 bounded attempts 與 concurrent atomic selection 已完成 source/unit 驗證；尚未因這個內部安全修正重新做 Windows Agent 部署後的 Siri 實機回歸。
 
 server 端第二輪選擇播放已由 iPhone Shortcut 實機觸發並成功完成真實 Spotify 播放；全語音 clarification 流程也已驗收通過。
 
