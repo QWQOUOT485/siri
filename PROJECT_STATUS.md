@@ -197,7 +197,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-最近在乾淨的 Phase 1 PR 分支記錄的完整 source test run為 **214 passed**，另有 2 個既有 dependency deprecation warnings；compileall 與 pip check 通過，diff check 在修正檔尾空白後重跑。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+最近在最新 `origin/main` 基線上的 Phase 1 PR 分支記錄的完整 source test run為 **223 passed**，另有 2 個既有 dependency deprecation warnings；compileall、pip check 與 diff check 皆通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 2026-09-20 的 loopback shadow benchmark 已開始但依使用者要求暫停；部分結果與未完成邊界記錄在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式維持 95.24% supported semantic accuracy；`qwen3-4b` 僅完成 prompt mode，schema mode 尚未完成。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
