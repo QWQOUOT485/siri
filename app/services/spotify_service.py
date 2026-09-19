@@ -27,6 +27,7 @@ class SpotifyService:
         *,
         entity_recovery=None,
         memory_learner=None,
+        metrics=None,
     ) -> None:
         self.auth = auth
         self.catalog = catalog
@@ -34,6 +35,7 @@ class SpotifyService:
         self.clarification_store = clarification_store or SpotifyClarificationStore()
         self.entity_recovery = entity_recovery
         self.memory_learner = memory_learner
+        self.metrics = metrics
 
     def execute(self, command: ValidatedAction, *, source_text: str | None = None) -> OperationResult:
         if command.action not in {
@@ -149,6 +151,8 @@ class SpotifyService:
                 if not candidates:
                     return OperationResult(False, f"Spotify 無法判斷歌曲 {command.track}。", "SPOTIFY_AMBIGUOUS_TRACK")
                 token = self.clarification_store.create(candidates, observed_alias=command.artist)
+                if self.metrics is not None:
+                    self.metrics.increment("recovery_clarification")
                 options = self._options(candidates)
                 details = []
                 if command.album:
