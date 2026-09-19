@@ -122,6 +122,7 @@ Start/Resume Playback
 7. 歌名完全匹配 + 歌手高度匹配。
 8. 繁簡正規化後的強匹配。
 9. 其他候選。
+10. Spotify 回傳的 `popularity` 只能作為最後的候選排列 tie-breaker；缺少或超出範圍的值忽略，不得改變 confidence gap、解除真正 ambiguity，或單獨決定播放。
 
 若使用者明確要求 Live／現場版，服務會在搜尋前拒絕播放。未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手。若最高候選與第二名仍無足夠安全分差，不得播放。
 
@@ -241,7 +242,8 @@ SpotifyTrackRef
 ├── artist_names
 ├── album_name
 ├── isrc (optional metadata from Spotify)
-└── duration_ms (optional metadata from Spotify)
+├── duration_ms (optional metadata from Spotify)
+└── popularity (optional metadata from Spotify; ordering tie-breaker only)
 ```
 
 只有由 Spotify API 回傳並通過 validation 的 `SpotifyTrackRef` 才能進入 player adapter。
@@ -386,6 +388,7 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - `播放晴天現場版` / `播放晴天原版` → closed version intent
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
+- popularity 只能改善同等 matching score 的候選排列，不能自動消除 genuine ambiguity；缺少或無效值必須安全忽略
 - saved/liked candidate 可被提升排序，但不能覆蓋 explicit artist/album/version 或 genuine ambiguity
 - Top Tracks / Top Artists 與 Recently Played 可作次級個人化排序訊號
 - ranking precedence 必須維持 saved → top → recent → search relevance → final tie-breaker

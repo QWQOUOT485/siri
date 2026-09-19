@@ -42,8 +42,8 @@
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
-- 消歧修正、播放控制與本輪非 AI 修復的完整 source unit/security tests 已通過（112 passed，2 個既有 dependency deprecation warnings）；這不等同於所有 Windows adapter 的硬體實機驗收。
-- Spotify Search 的 optional `isrc`／`duration_ms` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放。
+- 消歧修正、播放控制與本輪非 AI 修復的完整目前工作樹 source unit/security tests 已通過（129 passed，2 個既有 dependency deprecation warnings）；其中本輪 Spotify catalog regression 為 19 passed。這個總數包含工作樹中尚未提交的 Local AI 測試，不能當作本輪非 AI commit 的檔案清單。
+- Spotify Search 的 optional `isrc`／`duration_ms`／`popularity` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放，popularity 只作為同等 matching score 候選的排列 tie-breaker。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
@@ -70,6 +70,17 @@ Two external AI code-review reports were compared against the current `main` sou
 Source verification for this batch: `pytest -q` reported `112 passed` with the same 2 dependency deprecation warnings; `compileall`, `pip check`, and `git diff --check` passed. The six matching runtime files were deployed to `D:\ai\windows-siri-agent` and their hashes matched source. A controlled Windows runtime started through `scripts/start.bat`, returned healthy/authenticated responses, and successfully played `死亡是生命的終點` / `SASIOVERLXRD` / `納薩力克`.
 
 The remaining acceptance boundary is explicit: no real shutdown or force-close action was executed; native media-key/volume hardware behavior was covered by mocked layout/step tests but not promoted from those tests to a separate physical-device acceptance claim. The runtime remains available on port 8000 for safe user testing.
+
+## Non-AI Spotify Candidate Ranking Slice (2026-09-19)
+
+- `SpotifyTrackRef` 現在保留 Spotify Search 回傳的 bounded `popularity` metadata。
+- `SpotifyCatalog` 只在 matching score 相同時用 popularity 排列 clarification 候選；confidence gap、Live filtering、ISRC identity 與 genuine ambiguity 規則完全不變。
+- 缺少、非整數或不在 0–100 的 popularity 會被忽略，不會成為播放決策依據。
+- 本輪尚未加入 `market=TW`，也尚未實作 saved/liked、Top Tracks/Artists、Recently Played 個人化訊號；這些仍是後續非 AI 工作。
+- source regression tests 已覆蓋「熱門度改善候選順序但不能自動播放」與無效 metadata。
+- 以目前授權帳號對 `track:晴天 artist:周杰倫` 做唯讀 Spotify Search A/B：未加 market 與 `market=TW` 都回傳 3 個結果，順序與歌名／歌手／專輯資料相同；因此本輪沒有盲目把 `market=TW` 加入正式流程。
+- 同一輪對 `track:Stay artist:The Kid LAROI` 的真實 Search 回應中，觀察到的項目沒有可用 popularity 值；tie-breaker 因此安全地保持 dormant，不宣稱已改善真實排序品質。
+- deployed `catalog.py` 已在隔離 port 8001 runtime compile 與唯讀 Search 驗證；目前 port 8000 的既有 Agent 未重啟，待下一次可控重啟後才算正式 runtime reload。
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 

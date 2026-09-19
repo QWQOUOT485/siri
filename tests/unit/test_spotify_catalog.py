@@ -14,7 +14,17 @@ class FakeSpotifySearchClient:
         return self.tracks
 
 
-def track(track_id, name, artists, album="Album", *, isrc=None, duration_ms=None, album_type=None):
+def track(
+    track_id,
+    name,
+    artists,
+    album="Album",
+    *,
+    isrc=None,
+    duration_ms=None,
+    album_type=None,
+    popularity=None,
+):
     payload = {
         "id": track_id,
         "uri": f"spotify:track:{track_id}",
@@ -28,6 +38,8 @@ def track(track_id, name, artists, album="Album", *, isrc=None, duration_ms=None
         payload["duration_ms"] = duration_ms
     if album_type is not None:
         payload["album"]["album_type"] = album_type
+    if popularity is not None:
+        payload["popularity"] = popularity
     return payload
 
 
@@ -62,6 +74,29 @@ def test_catalog_refuses_to_choose_between_close_candidates():
     assert result.track is None
     assert result.ambiguous is True
     assert [candidate.track_id for candidate in result.candidates] == ["one", "two"]
+
+
+def test_catalog_uses_popularity_only_to_order_ambiguous_candidates():
+    client = FakeSpotifySearchClient(
+        [
+            track("lesspopular", "Stay", ["The Kid LAROI"], album="Album One", popularity=20),
+            track("morepopular", "Stay", ["The Kid LAROI"], album="Album Two", popularity=90),
+        ]
+    )
+    catalog = SpotifyCatalog(client)
+
+    result = catalog.find_track("Stay", "The Kid LAROI", access_token="test-token")
+
+    assert result.track is None
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["morepopular", "lesspopular"]
+
+
+def test_catalog_ignores_out_of_range_popularity_metadata():
+    ref = SpotifyCatalog._to_ref(track("trackone", "Stay", ["The Kid LAROI"], popularity=101))
+
+    assert ref is not None
+    assert ref.popularity is None
 
 
 def test_catalog_prefers_canonical_studio_over_live_for_same_artist():

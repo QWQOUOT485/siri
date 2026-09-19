@@ -25,6 +25,7 @@ class SpotifyTrackRef(BaseModel):
     album_type: str = Field(default="", max_length=30)
     isrc: str = Field(default="", max_length=30)
     duration_ms: int | None = Field(default=None, ge=0, le=86_400_000)
+    popularity: int | None = Field(default=None, ge=0, le=100)
 
 
 @dataclass(frozen=True)
@@ -89,7 +90,11 @@ class SpotifyCatalog:
         if not refs:
             return TrackResolution(track=None, ambiguous=False)
 
-        ranked = sorted(refs, key=lambda ref: self._score(ref, track, artist, album, hint), reverse=True)
+        ranked = sorted(
+            refs,
+            key=lambda ref: self._ranking_key(ref, track, artist, album, hint),
+            reverse=True,
+        )
         best_score = self._score(ranked[0], track, artist, album, hint)
         second_score = self._score(ranked[1], track, artist, album, hint) if len(ranked) > 1 else None
         exact_track_matches = [ref for ref in ranked if self._normalize(ref.track_name) == self._normalize(track)]
@@ -116,7 +121,7 @@ class SpotifyCatalog:
             if len(exact_album_matches) > 1:
                 album_ranked = sorted(
                     exact_album_matches,
-                    key=lambda ref: self._score(ref, track, artist, album, hint),
+                    key=lambda ref: self._ranking_key(ref, track, artist, album, hint),
                     reverse=True,
                 )
                 if self._same_recording_group(album_ranked):
@@ -147,6 +152,9 @@ class SpotifyCatalog:
         duration_ms = item.get("duration_ms")
         if isinstance(duration_ms, bool) or not isinstance(duration_ms, int) or duration_ms < 0:
             duration_ms = None
+        popularity = item.get("popularity")
+        if isinstance(popularity, bool) or not isinstance(popularity, int) or not 0 <= popularity <= 100:
+            popularity = None
         names = tuple(
             str(artist.get("name", "")).strip()
             for artist in artists
@@ -162,6 +170,7 @@ class SpotifyCatalog:
                 album_type=str(album.get("album_type", "")).strip(),
                 isrc=str(external_ids.get("isrc", "")).strip(),
                 duration_ms=duration_ms,
+                popularity=popularity,
             )
         except Exception:
             return None
@@ -188,6 +197,22 @@ class SpotifyCatalog:
             else:
                 base_score = track_score * 0.75 + (album_score or 0.0) * 0.25
         return base_score + cls._version_bonus(ref, version_hint)
+
+    @classmethod
+    def _ranking_key(
+        cls,
+        ref: SpotifyTrackRef,
+        track: str,
+        artist: str | None,
+        album: str | None = None,
+        version_hint: str | None = None,
+    ) -> tuple[float, int]:
+        """Order equal relevance candidates without changing ambiguity safety."""
+
+        return (
+            cls._score(ref, track, artist, album, version_hint),
+            ref.popularity if ref.popularity is not None else -1,
+        )
 
     @classmethod
     def _version_bonus(cls, ref: SpotifyTrackRef, version_hint: str | None) -> float:
