@@ -425,7 +425,7 @@ This tree is descriptive, not a permission boundary. Security authority remains 
 8. **Windows 內建工具走 `system_apps` mapping**：Task Manager、Settings、Calculator 等視為 Trusted Launch Source 的固定入口，不依賴一般 Discovery，也不算「把所有應用程式寫死」。
 9. **測試分兩類**：`tests/unit/`（mock 化，可在任何環境含本容器完整執行）與 `tests/integration_windows/`（只能在真實 Windows 執行，且明確禁止 shutdown / lock / force kill 等破壞性操作，只做唯讀或安全的探測）。
 10. **V1 音樂來源固定為 Spotify**：`play` 恢復 Spotify；指定歌名使用 `spotify_play_track` 搜尋 Spotify Catalog 並播放可信 track URI。取消 YouTube Music / Apple Music provider 選擇流程。歌名與歌手僅能進 Spotify搜尋，不可形成 executable path、command、argument 或 arbitrary URL。
-11. **V1 允許 Local LLM semantic fallback，但目前不啟用**：Rule parser 仍優先；第一個 AI integration scope 只處理 free-form `spotify_play_track` / `unknown`，既有歌曲 clarification 與基本播放控制維持 deterministic。AI 輸出必須依序通過 closed schema、deterministic grounding 與 policy gate，且 Phase 0.5 未過門檻，因此正式 execution 前先走 shadow mode；高風險操作永久 deterministic-only，LM Studio/模型不可直接產生 trusted execution target。
+11. **V1 允許 Local LLM semantic fallback / semantic retry，但目前不啟用**：Rule parser 仍優先；第一個 AI integration scope 只處理 free-form `spotify_play_track` / `unknown`，以及 parser 雖產生 `spotify_play_track`、但 deterministic Spotify resolver 顯示 no-result／低信心／疑似 entity-boundary 錯誤的受控 semantic retry。既有歌曲 clarification 與基本播放控制維持 deterministic。AI 輸出必須依序通過 closed schema、deterministic grounding 與 policy gate，且 Phase 0.5 未過門檻，因此正式 execution 前先走 shadow mode；高風險操作永久 deterministic-only，LM Studio/模型不可直接產生 trusted execution target。
 12. **Local AI 的 loopback 是安全閘門而非偏好**：production 只允許同機 `127.0.0.1` endpoint；LAN endpoint 只可用於隔離開發/benchmark，不能被 runtime 自動採用。帶有 `clarification_token` 的 `/command` 請求必須直接進入既有 deterministic clarification store，不得呼叫 AI。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).
