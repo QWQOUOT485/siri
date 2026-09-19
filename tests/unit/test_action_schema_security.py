@@ -52,3 +52,23 @@ def test_spotify_version_hint_is_closed_search_data_only():
 
     with pytest.raises(ValidationError):
         ActionRequest(action=ActionName.SPOTIFY_PAUSE, version_hint="live")
+
+
+def test_spotify_metadata_accepts_long_but_bounded_values():
+    value = "長" * 250
+    action = ActionRequest(
+        action=ActionName.SPOTIFY_PLAY_TRACK,
+        track=value,
+        artist=value,
+        album=value,
+    ).to_validated()
+
+    assert action.track == value
+    assert action.artist == value
+    assert action.album == value
+
+    with pytest.raises(ValidationError):
+        ActionRequest(
+            action=ActionName.SPOTIFY_PLAY_TRACK,
+            track="長" * 301,
+        )
