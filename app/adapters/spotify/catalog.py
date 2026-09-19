@@ -217,7 +217,6 @@ class SpotifyCatalog:
         if len(statuses) != len(candidates) or not all(isinstance(status, bool) for status in statuses):
             return candidates
         saved_by_uri = dict(zip((ref.track_uri for ref in candidates), statuses))
-
         top_track_ids = self._top_track_ids(access_token)
         top_artist_names = self._top_artist_names(access_token)
 

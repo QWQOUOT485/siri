@@ -1,0 +1,600 @@
+# Future Roadmap
+
+> Status: **Vision / Aspirational**
+>
+> 這份文件描述 Windows Siri Agent 未來可能發展的方向。它不是目前實作狀態、不是 release commitment，也不能覆蓋 docs/SECURITY.md、docs/SPEC.md 或 docs/ARCHITECTURE.md。
+>
+> 真正目前做到哪裡，請看 PROJECT_STATUS.md。真正要先做什麼，請看 TASKS.md。
+
+## 1. Long-term vision
+
+這個專案最初的核心是：
+
+~~~text
+Siri
+→ Windows Agent
+→ deterministic action
+~~~
+
+長期可以逐步發展成：
+
+~~~text
+Voice / Text / Phone / Desktop
+        ↓
+Intent understanding
+        ↓
+Personal semantic memory
+        ↓
+Context / policy / trust evaluation
+        ↓
+ValidatedAction
+        ↓
+Trusted capability
+        ↓
+Windows / Spotify / local services / future devices
+~~~
+
+最終方向不是「讓 AI 可以任意操作電腦」，而是建立一個：
+
+**local-first、個人化、可學習、可驗證、權限封閉的 Personal Agent。**
+
+核心原則：
+
+~~~text
+AI may interpret.
+Memory may personalize.
+Policy decides.
+ValidatedAction authorizes.
+Trusted adapters execute.
+~~~
+
+## 2. Three core development tracks
+
+### Track A — Deterministic foundation
+
+負責真正執行動作、Windows / Spotify integration、device/state control、strict validation、security boundary 與 reliability。
+
+它是整個 Agent 的 authority layer。
+
+### Track B — Local semantic memory
+
+負責記住使用者已確認的 ASR 誤認、常用名稱、alias 與個人偏好，降低重複 clarification。
+
+Memory 可以改善理解，但不是 execution authority。
+
+### Track C — Local AI
+
+負責 free-form language interpretation、parser failure recovery、entity-boundary recovery，以及未來可能的 summarization / query rewriting / planning assistance。
+
+AI 可以提出語意，但不是 execution authority。
+
+---
+
+# Horizon 1 — Finish the Agent foundation
+
+## 1. Spotify candidate personalization
+
+讓 ambiguity candidate ordering 更符合使用者實際習慣：
+
+~~~text
+explicit artist / album / version
+→ deterministic identity / Live filtering
+→ saved / liked
+→ Top Tracks / Top Artists
+→ Recently Played
+→ Spotify Search relevance
+→ popularity-like tie-breaker
+~~~
+
+目標不是降低 clarification safety，而是讓真正可能的候選更常排在前面。
+
+## 2. Full deterministic Spotify controls
+
+補齊：
+
+- shuffle on/off
+- repeat track/context/off
+- continue normally
+- seek
+- Spotify Connect volume
+- like current track
+- unlike current track
+
+全部維持 closed actions。
+
+## 3. Windows audio-device switching
+
+例如：
+
+~~~text
+切到耳機
+切到喇叭
+把輸出換成 DAC
+~~~
+
+應使用 trusted device inventory，不接受 client 傳任意 device path。
+
+## 4. Microphone controls
+
+未來可加入 microphone mute/unmute、trusted input-device selection、meeting mode。
+
+## 5. Display controls
+
+例如 brightness、night light、display mode、monitor selection。
+
+## 6. Better window management
+
+例如：
+
+~~~text
+把 Spotify 放右邊
+把 Chrome 最大化
+把 Discord 移到第二螢幕
+~~~
+
+應由 server-side trusted window resolution 處理，不接受 client 提供 HWND/PID。
+
+## 7. App focus instead of duplicate launch
+
+當程式已經執行時，「開 Spotify」可以優先 focus trusted existing window，而不是再開第二份。
+
+## 8. Better Windows state awareness
+
+建立唯讀狀態：
+
+- foreground app
+- current audio device
+- current volume
+- display state
+- Spotify playback state
+- active trusted applications
+
+這些 state 可幫助 deterministic command 做更合理的決策。
+
+---
+
+# Horizon 2 — Personal semantic memory
+
+## 9. Confirmed alias memory
+
+例如：
+
+~~~text
+Sad overlxrd
+→ SASIOVERLXRD
+~~~
+
+只有經過 trusted clarification + successful action 才確認。
+
+## 10. App nickname memory
+
+例如：
+
+~~~text
+小綠
+→ Spotify
+
+工作瀏覽器
+→ Edge
+~~~
+
+alias 最後仍要綁定 trusted AppEntry。
+
+## 11. Device nickname memory
+
+例如：
+
+~~~text
+桌面喇叭
+→ trusted audio device A
+
+耳機
+→ trusted audio device B
+~~~
+
+alias 不能直接變成任意 Windows device identifier。
+
+## 12. Personal vocabulary
+
+建立 local dictionary，支援人名、歌手、遊戲、專案名稱、公司縮寫、品牌與使用者自己的暱稱。
+
+## 13. Conflict-aware learning
+
+如果同一 alias 被可信流程確認到不同 entity，系統應標示 conflict 並重新 clarification，而不是 last-write-wins。
+
+## 14. Memory inspection UI
+
+未來提供：
+
+- 查看 learned aliases
+- 查看 trust state
+- 手動停用 alias
+- 刪除 alias
+- 查看 conflict
+
+讓「系統學了什麼」對使用者透明。
+
+## 15. Memory confidence aging
+
+部分記憶可因久未使用、provider item 消失、app 被卸載、device 不存在而失效或降級。
+
+## 16. Context-scoped aliases
+
+不同 capability 的 alias 可以隔離，避免 Spotify、App、Device 等 entity namespace 互相污染。
+
+---
+
+# Horizon 3 — Safer Local AI
+
+## 17. Production-safe semantic retry
+
+Rule parser / resolver 不確定時：
+
+~~~text
+deterministic failure
+→ Local AI semantic retry
+→ grounding
+→ policy
+→ existing deterministic resolver
+~~~
+
+AI 只負責語意解讀。
+
+## 18. Query rewriting
+
+AI 可以把自然語句轉成 bounded structured search hints，但真正 track selection 仍由 deterministic Spotify resolver 決定。
+
+## 19. Multi-model routing
+
+未來可能採：
+
+~~~text
+small fast model
+→ if uncertain
+larger local model
+~~~
+
+整條 chain 仍要通過 deterministic grounding / policy boundary。
+
+## 20. AI health monitor
+
+Agent 可檢查：
+
+- LM Studio 是否正常
+- expected model 是否載入
+- latency 是否異常
+- malformed-output rate
+- timeout rate
+
+異常時退回 deterministic path。
+
+## 21. Continuous shadow evaluation
+
+Production 中 AI 可以在符合資格的 request 上產生 shadow interpretation，和最後 trusted result 比較並記錄 sanitized metric，但不執行。
+
+## 22. Personal semantic correction corpus
+
+將 ASR text → clarification → confirmed entity 轉成 local evaluation corpus，先用於 benchmark，而不是直接 fine-tune。
+
+## 23. Optional local fine-tuning / LoRA
+
+只有在資料量、品質、安全評估都足夠後，才考慮 LoRA / instruction tuning / entity-extraction tuning。
+
+Fine-tuned model 仍必須通過與 base model 相同或更嚴格的 policy gate。
+
+---
+
+# Horizon 4 — Contextual Agent
+
+## 24. Short-term conversational context
+
+例如：
+
+~~~text
+播放晴天
+→ clarification / playback
+
+換原版
+~~~
+
+第二句可以理解為針對目前 Spotify context。
+
+Context 必須短效、bounded、可失效。
+
+## 25. Current-object references
+
+支援安全代詞：
+
+~~~text
+這首
+這個程式
+剛剛那個
+目前這個
+~~~
+
+只能解析到 server-owned current object。
+
+## 26. Scene / mode system
+
+例如 Work mode、Gaming mode、Movie mode。
+
+Scene 可以包含 trusted apps、preferred audio、volume、display settings 等，但必須是 server-owned configuration，不接受 client arbitrary scripts。
+
+## 27. Conditional automation
+
+例如：
+
+~~~text
+如果我開 Steam
+→ 切到耳機
+→ 開 Discord
+~~~
+
+這需要 closed triggers + closed actions 的 automation policy layer，而不是 AI 生成 script。
+
+## 28. Time-aware routines
+
+例如睡前模式、工作開始模式、固定時間的 local routine。
+
+需要 explicit opt-in、local scheduler、bounded actions 與 visible configuration。
+
+---
+
+# Horizon 5 — Local Personal Agent platform
+
+## 29. Local web dashboard
+
+LAN / localhost dashboard 可查看：
+
+- Agent health
+- trusted apps
+- Spotify state
+- Local AI status
+- semantic memory
+- recent bounded command results
+- latency metrics
+- clarification statistics
+- security status
+- integration health
+
+高風險設定仍應需要本機操作或 explicit confirmation。
+
+## 30. Capability platform
+
+長期可以把功能抽象為 capability：
+
+~~~text
+Windows Apps
+Windows Audio
+Windows Display
+Spotify
+Semantic Memory
+Local AI
+Automation
+Notifications
+Documents
+Future smart-home/device adapters
+~~~
+
+所有 capability 必須遵守：
+
+~~~text
+Untrusted Input
+→ Interpretation
+→ Policy
+→ ValidatedAction
+→ Trusted Capability
+→ Adapter
+~~~
+
+未來增加功能時，不需要讓 AI 或 client 取得底層 unrestricted authority。
+
+---
+
+# Beyond the first 30
+
+## Cross-device agent
+
+未來 iPhone 不只送指令，也可以安全讀取 current track、PC status、current app、Agent health、pending clarification。
+
+## Local document assistant
+
+對明確 allowlisted folder 提供 local search、document summary、question answering、project knowledge retrieval。
+
+AI 只能讀被授權資料來源，不能因此取得任意 filesystem access。
+
+## Notification intelligence
+
+建立 Windows notification adapter，讓系統可以在明確授權下分類、摘要與語音讀出通知。
+
+## Local knowledge graph
+
+將 apps、aliases、devices、Spotify entities、scenes、trusted local resources 形成受控 entity graph，成為未來 Personal Agent 的 semantic layer。
+
+## Plugin / capability SDK
+
+未來 capability 可以宣告：
+
+- closed actions
+- input schema
+- permissions
+- confirmation requirements
+- adapter
+- tests
+
+而不是 plugin 任意取得 Python / shell execution。
+
+## Multi-user profiles
+
+如果同一台 Windows 有多人使用，memory、Spotify auth、aliases、scenes、runtime state 應依使用者隔離。
+
+## Offline-first privacy mode
+
+長期理想：
+
+- core command execution fully local
+- memory local
+- AI local
+- no cloud LLM requirement
+- external traffic only to explicit providers such as Spotify
+
+這可以成為整個專案的重要產品特色。
+
+---
+
+# Possible version themes
+
+這不是正式 release commitment，只是方便思考。
+
+## V1 — Reliable Siri-to-Windows Agent
+
+- trusted Windows actions
+- Spotify
+- Siri Shortcut
+- clarification
+- security boundary
+
+## V1.5 — Personalized Agent
+
+- candidate personalization
+- semantic alias memory
+- richer deterministic controls
+- better Windows state awareness
+
+## V2 — Local Intelligent Agent
+
+- approved Local AI semantic retry
+- short-term context
+- query rewriting
+- memory + AI cooperation
+- dashboard
+
+## V3 — Personal Automation Platform
+
+- scenes
+- routines
+- conditional automation
+- capability framework
+- cross-device state
+
+## V4 — Local Personal Agent
+
+- richer context
+- local knowledge graph
+- documents / notifications
+- multi-device orchestration
+- optional fine-tuned personal model
+
+---
+
+# Architectural north star
+
+~~~text
+                  ┌──────────────────┐
+Voice / Text ────▶│ Interpretation   │
+                  │ Rules / Memory   │
+                  │ Local AI         │
+                  └────────┬─────────┘
+                           │
+                           ▼
+                  ┌──────────────────┐
+                  │ Policy & Trust   │
+                  │ Grounding        │
+                  │ Confirmation     │
+                  └────────┬─────────┘
+                           │
+                           ▼
+                  ┌──────────────────┐
+                  │ ValidatedAction  │
+                  └────────┬─────────┘
+                           │
+                           ▼
+                  ┌──────────────────┐
+                  │ Trusted          │
+                  │ Capabilities     │
+                  └────────┬─────────┘
+                           │
+                           ▼
+              Windows / Spotify / Future
+~~~
+
+長期設計原則：
+
+1. **Understanding is not authority.**
+2. **Memory is not authority.**
+3. **AI confidence is not authority.**
+4. **External IDs are not trusted because the client supplied them.**
+5. **Every executable behavior converges to a closed validated action.**
+6. **High-risk operations remain deterministic and confirmation-gated.**
+7. **The system should degrade safely when AI, memory, provider APIs, or optional components fail.**
+8. **Personalization should improve ranking and understanding before it increases autonomy.**
+9. **Real-world acceptance must remain distinct from source/tests/spec completion.**
+10. **The Agent should become more useful without becoming a remote shell.**
+
+---
+
+# What success could look like
+
+理想中的使用體驗：
+
+~~~text
+使用者：
+「幫我開工作模式，然後放點我最近常聽的輕鬆音樂。」
+
+Agent：
+- resolves 工作模式 from trusted local scene
+- focuses/opens trusted work apps
+- applies bounded audio/display settings
+- uses personal Spotify signals to prepare trusted candidates
+- asks clarification only when genuinely ambiguous
+- executes only validated actions
+~~~
+
+下一次：
+
+~~~text
+使用者：
+「播放 Sad overlxrd 那首。」
+
+Agent：
+- recognizes a previously confirmed local alias
+- resolves it without calling AI
+- uses the normal deterministic Spotify resolver
+- plays the trusted result
+~~~
+
+再遇到真正的新語意：
+
+~~~text
+使用者：
+「放那個歌名裡有死亡是生命什麼的。」
+
+Agent：
+- deterministic parser cannot confidently resolve it
+- memory has no exact trusted alias
+- guarded Local AI proposes bounded semantic slots
+- deterministic grounding verifies them
+- Spotify resolver finds trusted candidates
+- ambiguity still asks the user
+~~~
+
+長期目標是：
+
+**更懂使用者，但不因為更聰明而失去控制。**
+
+---
+
+# Roadmap governance
+
+這份文件可以自由「畫大餅」，但真正進 implementation 前，每一項仍必須：
+
+1. 有明確 user value。
+2. 有 closed action / trusted-data design。
+3. 通過 security review。
+4. 寫 active spec。
+5. 有 unit/security tests。
+6. 必要時有 Windows / Spotify / Siri real acceptance。
+7. 更新 PROJECT_STATUS.md。
+8. 只有驗收完成後才算 implemented。
+
+未進入 active spec 的內容，一律視為 **future idea**，不得因為存在於本文件就自動視為授權實作。
