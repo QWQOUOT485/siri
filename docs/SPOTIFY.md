@@ -16,6 +16,11 @@
 - 「暫停」/「暫停音樂」→ 暫停 Spotify
 - 「下一首歌」→ Spotify 下一首歌曲
 - 「上一首歌」→ Spotify 上一首歌曲
+- 「開啟／關閉隨機播放」→ Spotify shuffle
+- 「單曲循環／循環播放清單／關閉循環」→ Spotify repeat mode
+- 「跳到一分三十秒」→ Spotify seek
+- 「Spotify 音量 50」→ Spotify device volume
+- 「喜歡這首」／「取消喜歡這首」→ 儲存／移除目前播放中的 Spotify track
 
 ## 前提
 
@@ -41,9 +46,12 @@
 遵循 least privilege，只要求目前功能需要的 scopes：
 - `user-modify-playback-state`：播放、暫停、下一首歌、上一首歌、Transfer Playback。
 - `user-read-playback-state`：讀取目前播放狀態與 Spotify Connect 裝置。
-- `user-library-read`：讀取使用者 Spotify Library membership，僅用來判斷搜尋候選是否已被使用者保存／按讚，作為個人化排序訊號。
+- `user-library-read`：讀取使用者 Spotify Library membership，判斷搜尋候選是否已保存／按讚。
+- `user-library-modify`：只用於明確的「喜歡這首／取消喜歡這首」命令，管理使用者 Library。
+- `user-top-read`：讀取使用者 Top Tracks / Top Artists，作為候選個人化排序訊號。
+- `user-read-recently-played`：讀取 Recently Played，作為候選個人化排序訊號。
 
-加入 `user-library-read` 後，既有 Spotify 授權需要重新走一次 OAuth consent，讓新 scope 寫入 token。此 scope 只讀，不允許 Agent 修改使用者的 Library。
+新增以上 scopes 後，既有 Spotify 授權需要重新走一次 OAuth consent，讓新 scopes 寫入 token。不得因為未取得新 scope 而讓既有播放控制全部失效；缺少個人化 scope 時退回既有 deterministic ranking。
 
 若未來新增功能需要更多 scopes，必須先更新本規格與 SECURITY.md，不可預先要求不必要權限。
 
@@ -117,6 +125,22 @@ Start/Resume Playback
 若使用者明確要求 Live／現場版，服務會在搜尋前拒絕播放。未提供歌手且候選屬於不同歌手時，必須要求使用者補充歌手。若最高候選與第二名仍無足夠安全分差，不得播放。
 
 若最高候選信心不足，或前兩個候選太接近，不得隨機播放。
+
+### Personalized Candidate Ranking
+
+在 explicit artist / album / version、title identity、Live filtering 與既有安全 resolver 之後，候選可使用個人化訊號重新排序：
+
+```text
+saved / liked
+→ Top Tracks / Top Artists
+→ Recently Played
+→ Spotify Search relevance
+→ popularity-like signal only as final tie-breaker
+```
+
+這些訊號只能改善候選順序，不能單獨把真正的不同歌手同名歌曲變成「確定答案」。若仍然 genuine ambiguity，照舊回傳最多三個 trusted candidates 讓使用者選。
+
+Top Items 使用 `GET /me/top/{type}`（`user-top-read`）；Recently Played 使用 `GET /me/player/recently-played`（`user-read-recently-played`）。這些結果只在 Windows Agent server-side 使用，不進 Shortcut、不進 AI prompt，也不接受 client 提供偏好權重。
 
 ### Saved / Liked Track Preference
 
@@ -225,6 +249,53 @@ Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語
 
 如果 Spotify 回傳 429：遵循 `Retry-After`，不可 busy-loop 重試。
 
+## Extended Playback Controls
+
+以下功能列入 deterministic closed-action roadmap，不交給 Local AI：
+
+- Shuffle：`PUT /me/player/shuffle`
+- Repeat：`PUT /me/player/repeat`
+- Seek：`PUT /me/player/seek`
+- Spotify device volume：`PUT /me/player/volume`
+
+這些功能沿用 `user-modify-playback-state` scope，且 Spotify Player API 只對 Premium 帳號可用。
+
+安全規則：
+
+- shuffle 只接受 boolean state；
+- repeat 只接受封閉值 `off` / `track` / `context`；
+- seek 只接受 parser 轉換後的非負整數毫秒；
+- Spotify volume 只接受 0–100 整數，與 Windows master volume action 分開；
+- 不接受 client 直接傳 Spotify endpoint、任意 query parameter 或任意 body。
+
+## Like / Unlike Current Track
+
+第一版 Library write 只支援目前正在播放的 trusted Spotify track：
+
+```text
+喜歡這首
+→ 讀取目前播放狀態
+→ 取得 server-side trusted track URI
+→ PUT /me/library
+
+取消喜歡這首
+→ 讀取目前播放狀態
+→ 取得 server-side trusted track URI
+→ DELETE /me/library
+```
+
+需要 `user-library-modify`。
+
+不得讓 iPhone / Shortcut 提供 Spotify URI、track ID 或任意 Library item。若沒有目前歌曲、目前 item 不是可支援的 Spotify track、或 Spotify API 失敗，回傳明確錯誤且不猜。
+
+Library read/write 使用目前 Spotify 推薦的通用 Library endpoints：
+
+- `GET /me/library/contains`：檢查 saved status；
+- `PUT /me/library`：儲存；
+- `DELETE /me/library`：移除。
+
+舊的 track-specific `/me/tracks/contains` / save/remove endpoints 已 deprecated，不作為新實作基線。
+
 ## 安全邊界
 
 使用者的 `track` / `artist` / `album` 是不可信輸入，但允許送進 Spotify Search API。
@@ -274,7 +345,15 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - 英文 `Play Blinding Lights by The Weeknd`
 - exact track + artist ranking
 - saved/liked candidate 可被提升排序，但不能覆蓋 explicit artist/album/version 或 genuine ambiguity
-- Library lookup 失敗時必須安全 fallback 到既有 ranking
+- Top Tracks / Top Artists 與 Recently Played 可作次級個人化排序訊號
+- ranking precedence 必須維持 saved → top → recent → search relevance → final tie-breaker
+- Library / Top / Recently Played lookup 失敗時必須安全 fallback 到既有 ranking
+- shuffle on/off closed action
+- repeat off/track/context closed action
+- seek parser 將自然時間轉成 bounded milliseconds
+- Spotify volume 僅接受 0–100
+- like/unlike current track 只能操作 server-resolved current Spotify track
+- client-provided Library URI / track ID 被拒絕
 - Live 候選直接排除；明確 Live intent 不搜尋、不播放
 - Traditional/Simplified identity normalization
 - bare same-title tracks by different artists remain ambiguous
