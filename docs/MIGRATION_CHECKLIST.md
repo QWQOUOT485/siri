@@ -108,7 +108,7 @@ This document traces every requirement from the original specification ([SOURCE_
 | #91 | .gitignore | [SPEC.md](SPEC.md) §Git | Migrated | — |
 | #92 | requirements.txt | [SPEC.md](SPEC.md) §Dependencies | Migrated | — |
 | #93 | GitHub OSS utilization | [SPEC.md](SPEC.md) §Dependencies, [AGENTS.md](../AGENTS.md) §External Libraries | Migrated | — |
-| #94 | No AI/LLM for v1 | [SPEC.md](SPEC.md) §No LLM | Migrated | — |
+| #94 | No AI/LLM for v1 | [SPEC.md](SPEC.md) §Core Features / Local AI | Superseded | Superseded by the accepted 2026-09-18 product decision: V1 may use guarded Local AI under SECURITY.md constraints |
 | #95 | Future extensibility | [SPEC.md](SPEC.md) §Future Extensibility | Migrated | — |
 | #96 | Most important security baseline | [SECURITY.md](SECURITY.md) §Trusted Execution Flow | Superseded by #104 | #104 concretizes the data flow |
 | #97 | Final user experience | [SPEC.md](SPEC.md) §User Experience, [README.md](../README.md) | Migrated | — |
@@ -160,7 +160,7 @@ This document traces every requirement from the original specification ([SOURCE_
 
 - **Total requirements**: 112 (§0–§111) + Priority section + v2 Architecture appendix
 - **Migrated**: All
-- **Superseded by later revision**: #5→#103, #7→#103, #13→#104, #14→#105, #15→#105, #16→#106, #25→#107, #58→#107, #61→#102, #73→#108, #76→v2, #77→#110, #96→#104 (all later versions migrated)
+- **Superseded by later revision/product decision**: #5→#103, #7→#103, #13→#104, #14→#105, #15→#105, #16→#106, #25→#107, #58→#107, #61→#102, #73→#108, #76→v2, #77→#110, #94→2026-09-18 guarded Local AI product decision, #96→#104 (all active replacements migrated)
 - **Intentionally Duplicated**: #2, #22, #79, #87 (security invariants preserved across relevant files via content or cross-reference)
 - **Omitted**: None
 - **Summarized away**: None
