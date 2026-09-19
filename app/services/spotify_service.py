@@ -7,8 +7,11 @@ from typing import Any
 from app.adapters.spotify.client import SpotifyApiError
 from app.adapters.windows.base import OperationResult
 from app.domain.actions import ActionName, ValidatedAction
+from app.domain.chinese import normalize_chinese_text
+from app.domain.semantic_memory import SemanticEntity
 from app.infrastructure.spotify_auth import SpotifyAuthError
 
+from .memory_learner import MemoryLearningEvent
 from .spotify_clarification import SpotifyClarificationStore
 
 
@@ -88,7 +91,8 @@ class SpotifyService:
             return OperationResult(False, str(exc), exc.error_code)
 
         try:
-            return self._play_candidate(access_token, selection.track)
+            result = self._play_candidate(access_token, selection.track)
+            return self._learn_after_success(result, selection.observed_alias, selection.track)
         except SpotifyApiError as exc:
             if exc.status_code == 401:
                 try:
@@ -96,7 +100,8 @@ class SpotifyService:
                 except SpotifyAuthError as auth_error:
                     return OperationResult(False, str(auth_error), auth_error.error_code)
                 try:
-                    return self._play_candidate(refreshed_token, selection.track)
+                    result = self._play_candidate(refreshed_token, selection.track)
+                    return self._learn_after_success(result, selection.observed_alias, selection.track)
                 except SpotifyApiError as retry_error:
                     return self._api_error(retry_error)
             return self._api_error(exc)
@@ -124,9 +129,15 @@ class SpotifyService:
                 "SPOTIFY_LIVE_UNSUPPORTED",
             )
 
+        artist = command.artist
+        if self.entity_recovery is not None and artist:
+            recovered = self.entity_recovery.recover(artist)
+            if recovered.exact_hit and recovered.canonical_name:
+                artist = recovered.canonical_name
+
         resolution = self.catalog.find_track(
             command.track or "",
-            command.artist,
+            artist,
             command.album,
             version_hint=command.version_hint,
             source_text=source_text,
@@ -137,7 +148,7 @@ class SpotifyService:
                 candidates = tuple(resolution.candidates[:3])
                 if not candidates:
                     return OperationResult(False, f"Spotify 無法判斷歌曲 {command.track}。", "SPOTIFY_AMBIGUOUS_TRACK")
-                token = self.clarification_store.create(candidates)
+                token = self.clarification_store.create(candidates, observed_alias=command.artist)
                 options = self._options(candidates)
                 details = []
                 if command.album:
@@ -165,6 +176,48 @@ class SpotifyService:
             result.data.setdefault("artist_names", list(track.artist_names))
             result.data.setdefault("album_name", track.album_name)
         return result
+
+    def _learn_after_success(self, result: OperationResult, observed_alias: str | None, track) -> OperationResult:
+        if not result.success or not observed_alias or self.memory_learner is None:
+            return result
+        entity = self._artist_entity(track)
+        if entity is None:
+            return result
+        try:
+            self.memory_learner.learn(
+                MemoryLearningEvent(
+                    observed_alias=observed_alias,
+                    trusted_entity=entity,
+                    clarification_selected=True,
+                    playback_succeeded=True,
+                )
+            )
+        except Exception:
+            # Alias learning is optional; a memory failure must never turn a
+            # successful trusted Spotify playback into a command failure.
+            pass
+        return result
+
+    @staticmethod
+    def _artist_entity(track) -> SemanticEntity | None:
+        names = getattr(track, "artist_names", ())
+        ids = getattr(track, "artist_ids", ())
+        if not names or not ids:
+            return None
+        artist_name = str(names[0]).strip()
+        provider_id = ids[0]
+        if not artist_name or not isinstance(provider_id, str) or not provider_id:
+            return None
+        try:
+            return SemanticEntity(
+                entity_type="artist",
+                provider="spotify",
+                provider_entity_id=provider_id,
+                canonical_name=artist_name,
+                normalized_name=normalize_chinese_text(artist_name),
+            )
+        except Exception:
+            return None
 
     @classmethod
     def _clarification_data(cls, token: str, options: list[dict[str, Any]]) -> dict[str, Any]:

@@ -21,6 +21,10 @@ class SpotifyTrackRef(BaseModel):
     track_uri: str = Field(pattern=r"^spotify:track:[A-Za-z0-9]+$", max_length=200)
     track_name: str = Field(min_length=1, max_length=300)
     artist_names: tuple[str, ...] = Field(min_length=1, max_length=10)
+    # Trusted provider identity metadata used only for post-clarification
+    # alias learning.  It is never accepted from the client or passed as a
+    # playback target.
+    artist_ids: tuple[str | None, ...] = Field(default=(), max_length=10)
     album_name: str = Field(default="", max_length=300)
     album_type: str = Field(default="", max_length=30)
     isrc: str = Field(default="", max_length=30)
@@ -268,12 +272,24 @@ class SpotifyCatalog:
             for artist in artists
             if isinstance(artist, dict) and str(artist.get("name", "")).strip()
         )
+        artist_ids = tuple(
+            (
+                artist.get("id", "").strip()
+                if isinstance(artist, dict)
+                and isinstance(artist.get("id"), str)
+                and re.fullmatch(r"[A-Za-z0-9._~-]{1,128}", artist["id"].strip())
+                else None
+            )
+            for artist in artists
+            if isinstance(artist, dict) and str(artist.get("name", "")).strip()
+        )
         try:
             return SpotifyTrackRef(
                 track_id=str(item.get("id", "")).strip(),
                 track_uri=str(item.get("uri", "")).strip(),
                 track_name=str(item.get("name", "")).strip(),
                 artist_names=names,
+                artist_ids=artist_ids,
                 album_name=str(album.get("name", "")).strip(),
                 album_type=str(album.get("album_type", "")).strip(),
                 isrc=str(external_ids.get("isrc", "")).strip(),
