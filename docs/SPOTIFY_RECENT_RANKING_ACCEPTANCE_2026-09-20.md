@@ -8,11 +8,12 @@ Probe: `scripts/spotify_recent_ranking_acceptance.py`
 
 **BLOCKED — Recently Played real-account acceptance is not proven.**
 
-The bounded probe reached the live Spotify read path with the reauthorized
-local token and stopped at its defensive server-owned candidate/membership
-boundary check. The run did not produce a qualifying reorder case. This is a
-probe/runtime-shape blocker, not evidence that Recently Played ranking works
-or fails.
+The probe's candidate/membership boundary check was corrected to compare the
+server-owned URI set rather than its pre-personalization order. The bounded
+probe then completed against the live Spotify read path with the reauthorized
+local token, but no candidate met all recent-only reorder criteria. This is
+not evidence that the source slice is broken; it means the real account did
+not provide an isolating case in this bounded run.
 
 ## Scope and safety boundary
 
@@ -28,18 +29,21 @@ or fails.
 
 - The system Python did not contain the project dependency `pydantic`; the
   source checkout virtual environment was then used successfully.
-- The virtual-environment runs reached the live probe and returned the
-  sanitized `malformed_library_membership` boundary result.
-- A stale-result indexing defect was fixed so each ambiguity case is matched
-  to the membership result created by that same Search call; the same
-  defensive boundary result remained.
+- The virtual-environment run reached the live probe with all required scopes.
+- The probe now binds each ambiguity case to the membership result created by
+  that same Search call and compares candidate membership as an unordered
+  server-owned URI set, because personalization may reorder the final tuple.
+- The completed run observed 20 genuine ambiguities and 20 comparable raw
+  candidate sets. Recently Played matched 6 candidates; saved matched 1,
+  Top Track matched 1, and Top Artist matched 7.
+- Search, Library, Top, and Recently Played errors were all 0.
 - No acceptance case, playback, or Library write was observed.
 - `python -m py_compile scripts/spotify_recent_ranking_acceptance.py` passed.
 
 ## Unknown and smallest next action
 
-The exact shape/order of the live membership batch relative to the catalog's
-current candidate tuple is not yet known. The smallest next evidence-producing
-action is one sanitized, in-memory diagnostic of those lengths and URI-set
-boundaries, followed by one controlled read-only rerun after the probe's
-boundary assertion is corrected. Do not treat the current run as acceptance.
+The bounded account data did not contain a case where Recently Played alone
+changed the first candidate while saved and Top signals were absent. Do not
+treat the current run as acceptance; a future run needs either a new
+bounded corpus or an explicit product decision to accept the source slice
+without a recent-only real-account reorder.

@@ -272,7 +272,8 @@ def main() -> int:
             candidate_uris = tuple(candidate.track_uri for candidate in candidates)
             if (
                 len(saved_batch) > 3
-                or saved_batch != candidate_uris
+                or len(set(saved_batch)) != len(saved_batch)
+                or set(saved_batch) != set(candidate_uris)
                 or len(saved_statuses) != len(saved_batch)
                 or any(not isinstance(value, bool) for value in saved_statuses)
             ):

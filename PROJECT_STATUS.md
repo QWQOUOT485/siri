@@ -121,7 +121,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - 固定呼叫 `GET /me/player/recently-played`，只使用 server-owned track ID / artist name 作為既有最多三個 genuine-ambiguity candidates 的 ranking evidence。
 - 排序順序維持 saved → top track → top artist → recent track → recent artist → deterministic relevance → popularity；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - response limit 固定 bounded；empty/malformed history、timeout、401、403、429、缺少 scope 或 optional method 都安全忽略並退回既有 deterministic ranking。
-- source/unit regression 已完成；新增的 bounded probe 已在 2026-09-20 以重新授權 token 進入真實 Spotify read path，但在 server-owned candidate/membership boundary 的防禦檢查停住，尚未取得 Recently Played reorder acceptance。這是 probe/runtime shape blocker，不是 acceptance pass/fail；沒有播放或 Library write。精確證據見 [`docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md)。
+- source/unit regression 已完成；bounded probe 的 candidate/membership boundary 已修正為比對 server-owned URI set，不受個人化排序改變順序影響。2026-09-20 重新授權 token 的真實只讀 run 完成了 20 個 genuine ambiguity / 20 個 raw candidate set，Recently Played 命中 6 個 candidates，但沒有 saved/top signal 缺席且 recent-only 重排的 qualifying case；Search、Library、Top、Recently Played error 均為 0。Recently Played real-account acceptance 仍未通過，沒有播放或 Library write。精確證據見 [`docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Windows exact volume
 
@@ -290,7 +290,7 @@ Phase 1 原則：
 
 - exact Windows volume：尚缺 Siri voice E2E / independent physical-speaker check。
 - clarification store bounded attempts / concurrency hardening：source/unit 已完成，但未因這個內部修正另外重跑完整 Siri E2E。
-- Recently Played 尚缺 real Spotify account acceptance；重新授權 scope 已取得，但 bounded probe 目前在 candidate/membership boundary assertion 停住，未執行 playback 或 Library write。下一個最小證據行動是對 live batch 做 sanitized in-memory shape diagnostic，再修正 probe 後單次重跑。
+- Recently Played 尚缺 real Spotify account acceptance；boundary assertion 已修正，但本次 bounded real-account run 未找到 recent-only reorder case。沒有 playback 或 Library write；下一步是新的 bounded corpus 或明確接受「source slice 完成、real-account gate 未證明」的產品決策。
 - Spotify OAuth callback 曾出現「瀏覽器顯示通用失敗，但 status/token 實際成功保存」的不一致；功能可用，但 UI/root cause 尚未釐清。
 - GitHub hosted CI 尚未建立；目前 source test evidence 主要由本機執行與狀態文件記錄。
 
