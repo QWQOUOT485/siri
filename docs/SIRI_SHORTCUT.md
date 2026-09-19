@@ -64,7 +64,7 @@ Windows 管家
 
 「關閉 Siri 並繼續」只在 Agent 回傳歌曲 clarification 時使用，位置見下方 Spotify 流程。
 
-### 步驟 C：傳送指令到電腦
+### 步驟 B：傳送指令到電腦
 加入 **取得 URL 內容 (Get Contents of URL)** 動作。
 - **URL**：請輸入您電腦的 API 網址，例如 `http://192.168.x.x:8000/command`（請替換為您電腦實際的區域網路 IP）。
 - **方法 (Method)**：選擇 `POST`
@@ -75,11 +75,11 @@ Windows 管家
   - 鍵 (Key) 填入 `text`
   - 值 (Value) 選擇步驟 A 的第一輪語音輸入結果
 
-### 步驟 D：讀取電腦的回應
+### 步驟 C：讀取電腦的回應
 Windows 電腦處理完畢後，會回傳一段包含結果的 JSON 格式訊息。捷徑會自動解析這些內容。
 - 從「取得 URL 內容」的結果中，取得 `message` 欄位的值。
 
-### 步驟 E：Siri 語音回報
+### 步驟 D：Siri 語音回報
 加入 **朗讀文字 (Speak Text)** 動作。
 - 將要朗讀的文字設定為步驟 C 取得的 `message` 內容。
 
