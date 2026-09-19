@@ -19,11 +19,17 @@ from app.adapters.spotify.player import SpotifyPlayer
 from app.catalog import ApplicationCatalog
 from app.infrastructure.config import AppConfig, load_config
 from app.infrastructure.logging import configure_logging
+from app.infrastructure.semantic_memory_db import SemanticMemoryDatabase
 from app.infrastructure.spotify_auth import SpotifyAuthManager, SpotifyTokenStore
 from app.services.app_service import ApplicationService, WebsiteCatalog
 from app.services.command_parser import CommandParser
 from app.services.command_service import CommandService
+from app.services.alias_memory import AliasMemory
+from app.services.entity_normalizer import EntityNormalizer
+from app.services.entity_recovery import EntityRecoveryService
 from app.services.local_ai_service import LocalAIService
+from app.services.memory_learner import MemoryLearner
+from app.services.semantic_memory_metrics import SemanticMemoryMetrics
 from app.services.shutdown_service import ShutdownConfirmationService
 from app.services.spotify_clarification import SpotifyClarificationStore
 from app.services.spotify_service import SpotifyService
@@ -42,6 +48,11 @@ class AgentRuntime:
     system: Any
     firewall: Any
     local_ai_service: LocalAIService
+    semantic_memory_db: SemanticMemoryDatabase
+    alias_memory: AliasMemory
+    memory_learner: MemoryLearner
+    entity_recovery: EntityRecoveryService
+    metrics: SemanticMemoryMetrics
     logger: Any
     started_at: float
     startup_refresh: bool = True
@@ -61,6 +72,11 @@ class AgentRuntime:
             "firewall": self.firewall.inspect_firewall_rule(),
             "network_profiles": self.firewall.inspect_network_profile(),
             "local_ai": self.local_ai_service.status_view(),
+            "semantic_memory": {
+                "enabled": self.config.semantic_memory_enabled,
+                **self.alias_memory.status_view(),
+            },
+            "semantic_memory_metrics": self.metrics.snapshot(),
             "diagnostics_available": True,
         }
 
@@ -105,6 +121,18 @@ def build_runtime(
     aliases = tuple(value for entry in cfg.websites for value in (entry.display_name, *entry.aliases))
     parser = CommandParser(aliases)
     application_service = ApplicationService(catalog, launcher, process_controller, website_opener, website_catalog)
+    metrics = SemanticMemoryMetrics()
+    entity_normalizer = EntityNormalizer(metrics=metrics)
+    semantic_memory_db = SemanticMemoryDatabase(
+        cfg.semantic_memory_file,
+        enabled=cfg.semantic_memory_enabled,
+        observations_enabled=cfg.semantic_memory_observations_enabled,
+        max_aliases=cfg.semantic_memory_max_aliases,
+        max_observations=cfg.semantic_memory_max_observations,
+    )
+    alias_memory = AliasMemory(semantic_memory_db, entity_normalizer, metrics)
+    memory_learner = MemoryLearner(semantic_memory_db, alias_memory, entity_normalizer, metrics)
+    entity_recovery = EntityRecoveryService(alias_memory, entity_normalizer)
     spotify_client = SpotifyApiClient()
     spotify_auth = SpotifyAuthManager(
         client_id=cfg.spotify_client_id,
@@ -124,6 +152,9 @@ def build_runtime(
             spotify_catalog,
             spotify_player,
             clarification_store=SpotifyClarificationStore(),
+            entity_recovery=entity_recovery,
+            memory_learner=memory_learner,
+            metrics=metrics,
         )
     local_ai_service = LocalAIService.from_config(cfg, logger=logger)
     command_service = CommandService(
@@ -146,6 +177,11 @@ def build_runtime(
         system=system,
         firewall=firewall,
         local_ai_service=local_ai_service,
+        semantic_memory_db=semantic_memory_db,
+        alias_memory=alias_memory,
+        memory_learner=memory_learner,
+        entity_recovery=entity_recovery,
+        metrics=metrics,
         logger=logger,
         started_at=time.monotonic(),
         startup_refresh=startup_refresh,
