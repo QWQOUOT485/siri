@@ -10,6 +10,15 @@
 
 先前的 Spotify studio/Live、繁簡正規化、最多三候選與 server-side clarification source/runtime 驗證已完成。2026-09-18 產品決策新增：V1 不再禁止本地 LLM，可在安全邊界下使用 LM Studio 作 rule-first 的 fallback 語意解析器。Phase 0.5 benchmark 已完成但沒有模型通過門檻。2026-09-19 iPhone Shortcut 已實機完成候選回傳、token 保存、第二輪 selection + token 回送與真實 Spotify 播放；最終穩定修正為只在 clarification 分支中，先朗讀候選，再執行「關閉 Siri 並繼續」，最後由第二次聽寫接手選擇，因此已完成 hands-free Siri clarification E2E。
 
+## Independent Local AI Gate Review (2026-09-19)
+
+- Static architecture/security gate review completed against current GitHub source; review report: `docs/LOCAL_AI_REVIEW_2026-09-19.md`.
+- Verdict: **NO-GO for production/executable Local AI fallback promotion**; **GO for shadow-only hardening, evidence collection, and blocker remediation**.
+- Blocking authority conflict remains: `AGENTS.md` makes `docs/SOURCE_SPEC.md` final arbiter, while SOURCE_SPEC §94/§95 still prohibit V1 Local LLM implementation and newer SPEC/SECURITY/ARCHITECTURE documents allow guarded Local AI.
+- Production AI Windows/Spotify/Siri runtime acceptance has not been completed by this review; no real-world acceptance claim is added.
+- `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` still contains stale broader AI scope (playback controls / candidate selection) and must be reconciled with the current narrow `spotify_play_track` / `unknown` + deterministic clarification contract before further production-facing AI expansion.
+- Production promotion also requires a durable sanitized benchmark evidence summary tied to the exact commit/model/configuration, followed by a separate promotion review.
+
 ## Completed / Decided
 
 - V1 保留 Rule-based Parser 為第一層，並允許 Local LLM 作 fallback semantic parser；AI 不得直接執行或繞過 ValidatedAction / deterministic resolver / trusted-object 邊界。
