@@ -141,8 +141,12 @@ smallest future integration shape; it does not authorize implementation or
 execution by itself.
 
 The first AI integration may interpret only free-form Spotify named-track
-requests. It must not interpret playback controls, clarification selection,
-application commands, or system actions.
+requests. It may also be invoked as a **semantic retry** when the deterministic
+parser produced a plausible `spotify_play_track` action but the deterministic
+Spotify resolver returns no usable result, a low-confidence result, or another
+explicitly defined signal of probable entity segmentation error. It must not
+interpret playback controls, clarification selection, application commands, or
+system actions.
 
 ```text
 Siri text
@@ -150,7 +154,10 @@ Siri text
 Rule-based Parser
   ├─ confident supported command → ValidatedAction
   ├─ clarification_token present → deterministic server-owned selection
-  └─ eligible free-form Spotify play request
+  └─ eligible Spotify semantic-retry case
+       (parser miss OR parser produced spotify_play_track but
+        deterministic Spotify resolution indicates no-result /
+        low-confidence / probable entity split)
           ↓
      RawAIIntent (untrusted)
           ↓
@@ -172,6 +179,8 @@ Rule-based Parser
 V1 Local AI constraints:
 
 - rule parser remains first; AI is permitted only after a deterministic eligibility gate
+- AI eligibility may include a deterministic `spotify_play_track` parse that later fails safe resolution; parser success alone is not proof that artist/track segmentation was semantically correct
+- example: `播放死亡是生命的終點` may be syntactically split as artist=`死亡是生命`, track=`終點`; if deterministic Spotify resolution cannot support that parse, shadow/future fallback may ask AI to reinterpret the original utterance
 - initial AI schema allows only `spotify_play_track` and `unknown`
 - `track` is required and must be grounded in the original utterance; ungrounded `track` invalidates the interpretation
 - ungrounded optional `artist` / `album` are forced to `null`
@@ -280,7 +289,7 @@ Target examples include:
 來個周杰倫的晴天
 ```
 
-Prefer explicit aliases/patterns when they can be implemented clearly and regression-tested. Do not use the LLM merely to replace simple deterministic grammar.
+Prefer explicit aliases/patterns when they can be implemented clearly and regression-tested. Do not use the LLM merely to replace simple deterministic grammar. However, do not keep adding ad-hoc grammar patches for open-ended entity-boundary ambiguity. When deterministic parsing looks valid but Spotify resolution shows no-result/low-confidence evidence, that case belongs in the AI semantic-retry/shadow corpus.
 
 ### Priority 3 — Keep the Siri Shortcut in the accepted stable shape
 
@@ -325,8 +334,9 @@ Next AI work should be:
 
 ```text
 improve prompt / grounding
+→ define deterministic semantic-retry triggers
 → add off / shadow / fallback modes
-→ run shadow mode only
+→ run shadow mode only, including parser-success/resolver-failure cases
 → collect real Siri failure corpus
 → rerun benchmark
 → enable guarded fallback only if thresholds pass
@@ -339,73 +349,69 @@ Initial AI responsibility remains limited to free-form `spotify_play_track` sema
 ```text
 windows-siri-agent/
 ├── app/
-│   ├── main.py                    # FastAPI entrypoint；啟動時檢查 interactive session
-│   ├── infrastructure/
-│   │   ├── auth.py                # API key 驗證，常數時間比對，不 log key
-│   │   ├── rate_limit.py          # 移出 domain，改放 infrastructure（middleware）
-│   │   ├── config.py              # .env、allowed_networks、websites、manual_apps 讀取
-│   │   └── logging.py             # 不記錄 secret / 完整 shutdown token
-│   │
+│   ├── main.py
+│   ├── runtime.py
+│   ├── cli.py
+│   ├── catalog.py
 │   ├── api/
-│   │   ├── routes_health.py       # /health：不需 API Key，內容極簡（ok/version/uptime）
-│   │   ├── routes_apps.py         # /apps, /apps/search, /apps/refresh：需要 auth
-│   │   ├── routes_action.py       # /action：需要 auth
-│   │   └── routes_command.py      # /command：需要 auth
-│   │
-│   ├── domain/                    # 純資料模型與規則，無 Windows import
-│   │   ├── actions.py             # 封閉 Action enum + ValidatedAction model（安全收斂點）
-│   │   ├── app_models.py          # AppEntry / LaunchSpec / ProcessSpec 資料模型
-│   │   └── matching.py            # normalize + alias + token/prefix + fuzzy + confidence 排序
-│   │
-│   ├── services/                  # orchestration，串 domain 與 adapters
-│   │   ├── command_service.py     # Parser → Matcher → AppService → Adapter
-│   │   ├── app_service.py         # catalog 查詢、refresh、AppEntry → LaunchSpec 建立
-│   │   └── shutdown_service.py    # shutdown token 產生 / 驗證 / 過期 / 一次性
-│   │
-│   ├── adapters/
-│   │   └── windows/               # 唯一碰 Windows API 的地方，皆以 interactive session 為目標
-│   │       ├── base.py            # abstract interface，方便注入 Fake 實作做測試
-│   │       ├── discovery.py       # 區分 Trusted Launch Source / Metadata-only Source
-│   │       ├── launcher.py        # 只接受 Catalog 建立的 LaunchSpec，不接受任意字串
-│   │       ├── process.py         # Running Application Resolver：top-level window→graceful close
-│   │       ├── media.py           # media key 模擬，best-effort
-│   │       ├── volume.py          # pycaw wrapper，操作 master volume
-│   │       ├── system.py          # lock / shutdown（session-aware）
-│   │       └── firewall.py        # inspect_* 唯讀；create/remove 規則僅供 setup.ps1 經同意呼叫
-│   │
-│   └── catalog.py                 # in-memory catalog，內部使用穩定 app_id，串 service 與 adapters
-│
+│   │   ├── routes_health.py
+│   │   ├── routes_apps.py
+│   │   ├── routes_action.py
+│   │   ├── routes_command.py
+│   │   ├── routes_spotify.py
+│   │   └── schemas.py
+│   ├── domain/
+│   │   ├── actions.py
+│   │   ├── app_models.py
+│   │   ├── matching.py
+│   │   └── chinese.py
+│   ├── infrastructure/
+│   │   ├── auth.py
+│   │   ├── rate_limit.py
+│   │   ├── config.py
+│   │   ├── logging.py
+│   │   └── spotify_auth.py
+│   ├── services/
+│   │   ├── command_parser.py
+│   │   ├── command_service.py
+│   │   ├── app_service.py
+│   │   ├── shutdown_service.py
+│   │   ├── spotify_service.py
+│   │   └── spotify_clarification.py
+│   └── adapters/
+│       ├── spotify/
+│       │   ├── base.py
+│       │   ├── client.py
+│       │   ├── catalog.py
+│       │   └── player.py
+│       └── windows/
+│           ├── base.py
+│           ├── discovery.py
+│           ├── launcher.py
+│           ├── process.py
+│           ├── media.py
+│           ├── volume.py
+│           ├── system.py
+│           └── firewall.py
 ├── tests/
-│   ├── unit/                      # 全部 mock 化，可在任何環境（含本容器）執行
-│   │   ├── test_command_parser.py
-│   │   ├── test_matching.py
-│   │   ├── test_shutdown_service.py
-│   │   ├── test_action_schema_security.py   # 注入攻擊測試
-│   │   ├── test_api_auth.py
-│   │   ├── test_process_resolver_mocked.py
-│   │   └── test_adapters_mocked.py
-│   └── integration_windows/       # 只能在真實 Windows 執行，禁止破壞性操作
-│       ├── test_discovery_real.py           # 找 Windows built-in app、.lnk 解析
-│       ├── test_app_paths_real.py
-│       ├── test_session_detection_real.py   # interactive session 偵測
-│       └── test_network_profile_real.py
-│
+│   ├── unit/
+│   ├── integration_windows/
+│   └── fixtures/
 ├── scripts/
-│   ├── setup.ps1                  # venv、dependency、.env、詢問是否建立 firewall 規則、
-│   │                               # 詢問是否啟用 Task Scheduler「At log on」自動啟動（唯一方案）
-│   ├── start.bat                  # 以目前使用者手動啟動（測試 / 除錯用）
-│   └── uninstall.ps1              # 移除 firewall 規則、Task Scheduler 項目
-│
+│   ├── setup.ps1
+│   ├── start.bat
+│   ├── install-startup.ps1
+│   ├── uninstall-startup.ps1
+│   ├── uninstall.ps1
+│   └── ai_model_poc.py
 ├── config/
-│   ├── websites.yaml
-│   ├── manual_apps.yaml           # 僅本機可改，遠端 API 不可新增/修改/刪除
-│   └── allowed_networks.yaml
-│
+├── docs/
 ├── .env.example
 ├── .gitignore
-├── requirements.txt
-└── README.md
+└── requirements.txt
 ```
+
+This tree is descriptive, not a permission boundary. Security authority remains in the domain/service contracts and in `docs/SECURITY.md`.
 
 ## Key Design Decisions (v2)
 
