@@ -191,3 +191,28 @@ Observation logging is disabled by default. Database corruption/unavailability d
 The current design must not feed Spotify catalog metadata into AI/embedding models. Future vector memory, if accepted, embeds user-authored/Siri-transcribed utterances only.
 
 See [semantic recovery security](semantic_recovery/SECURITY.md).
+
+
+## Exact Volume and Playback-State Safety
+
+Exact Windows volume and Spotify shuffle/repeat/continue controls are deterministic-only.
+
+Windows `set_volume` accepts only an integer 0–100. Exact requests must use the exact endpoint-volume setter; media-key fallback must not be reported as an exact percentage success.
+
+Windows and Spotify volume are separate authority domains:
+
+```text
+set_volume
+→ Windows master endpoint only
+
+spotify_set_volume
+→ Spotify Connect device only
+```
+
+Spotify shuffle/repeat modes are closed values. The client cannot choose arbitrary Player API endpoint paths, query parameter names, bodies, device IDs, track IDs, or URIs.
+
+`spotify_continue` performs only the bounded composition repeat-off + resume and preserves shuffle. It does not authorize generic command chaining.
+
+These controls do not enter the initial Local AI allowlist. Numeric strings must not be evaluated as expressions or command text.
+
+See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).

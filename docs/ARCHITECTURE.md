@@ -458,3 +458,35 @@ This tree is descriptive, not a permission boundary. Security authority remains 
 12. **Local AI 的 loopback 是安全閘門而非偏好**：production 只允許同機 `127.0.0.1` endpoint；LAN endpoint 只可用於隔離開發/benchmark，不能被 runtime 自動採用。帶有 `clarification_token` 的 `/command` 請求必須直接進入既有 deterministic clarification store，不得呼叫 AI。
 
 See also [SECURITY.md](SECURITY.md) and [WINDOWS.md](WINDOWS.md).
+
+
+## Deterministic Playback-State Controls
+
+Exact Windows volume and Spotify playback-state commands remain outside Local AI.
+
+```text
+Siri text
+→ deterministic CommandParser
+→ bounded ValidatedAction
+→ service
+→ fixed Windows/Spotify adapter operation
+```
+
+Approved closed actions:
+
+```text
+set_volume(volume_percent=0..100)
+
+spotify_shuffle_on/off
+spotify_repeat_track/context/off
+spotify_continue
+spotify_seek
+spotify_set_volume
+spotify_like_current/unlike_current
+```
+
+Windows exact master volume uses the endpoint scalar setter; failure to access an exact setter must return an error instead of approximating with media-key presses. Relative up/down may retain the existing fallback.
+
+`spotify_continue` means repeat off followed by resume while preserving current shuffle state.
+
+No action accepts arbitrary Spotify endpoint URLs, arbitrary HTTP bodies, shell text, executable paths, or client-provided Spotify IDs/URIs. See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).

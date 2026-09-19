@@ -338,6 +338,60 @@ Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語
 - Spotify volume 只接受 0–100 整數，與 Windows master volume action 分開；
 - 不接受 client 直接傳 Spotify endpoint、任意 query parameter 或任意 body。
 
+
+### Shuffle / Repeat / Continue Semantics
+
+Extended playback controls use closed deterministic actions:
+
+```text
+spotify_shuffle_on
+spotify_shuffle_off
+
+spotify_repeat_track
+spotify_repeat_context
+spotify_repeat_off
+
+spotify_continue
+```
+
+Natural-language examples:
+
+```text
+隨機播放           → spotify_shuffle_on
+關閉隨機播放       → spotify_shuffle_off
+單曲循環           → spotify_repeat_track
+循環播放清單       → spotify_repeat_context
+關閉循環           → spotify_repeat_off
+就一直播下去       → spotify_continue
+正常播就好         → spotify_continue
+```
+
+`spotify_continue` has a precise meaning:
+
+```text
+repeat = off
+→ resume playback
+→ preserve current shuffle state
+```
+
+It does not invent a new queue or promise playback beyond the currently available Spotify context. Generic `繼續播放` remains the existing `spotify_resume`; the "normal/keep going" wording is what selects `spotify_continue`.
+
+All of these controls remain deterministic-only and are not added to the initial Local AI allowlist.
+
+### Spotify Device Volume vs Windows Master Volume
+
+```text
+音量 30%
+→ Windows set_volume(30)
+
+Spotify 音量 30%
+→ spotify_set_volume(30)
+```
+
+Spotify device volume accepts only integers 0–100 and uses the fixed Player API endpoint. It never falls back to Windows master volume, and Windows exact-volume control never falls back to Spotify device volume.
+
+See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md) for parser, action-schema, failure and acceptance requirements.
+
 ## Like / Unlike Current Track
 
 第一版 Library write 只支援目前正在播放的 trusted Spotify track：

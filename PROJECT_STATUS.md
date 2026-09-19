@@ -52,6 +52,25 @@
 - 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
 
+
+## Deterministic Exact Volume / Spotify Playback Controls (approved for implementation 2026-09-19)
+
+The next non-AI controls batch is now specified in `docs/PLAYBACK_CONTROLS.md`.
+
+Planned closed actions include:
+
+- Windows exact master volume: `set_volume(volume_percent=0..100)`
+- Spotify shuffle: `spotify_shuffle_on` / `spotify_shuffle_off`
+- Spotify repeat: `spotify_repeat_track` / `spotify_repeat_context` / `spotify_repeat_off`
+- Spotify normal continuous playback: `spotify_continue` = repeat off + resume, while preserving current shuffle state
+- existing planned `spotify_seek`, `spotify_set_volume`, `spotify_like_current`, `spotify_unlike_current`
+
+Windows exact percentage uses the pycaw scalar endpoint. If exact setting is unavailable, the Agent must return an explicit failure rather than approximate the requested percentage with media keys. Existing relative up/down commands may retain their bounded media-key fallback.
+
+Windows master volume and Spotify Connect device volume are separate actions: `音量 30%` targets Windows; `Spotify 音量 30%` targets Spotify. All controls remain deterministic-only and do not expand the Local AI allowlist.
+
+This section records an approved implementation target, **not completed implementation or runtime acceptance**.
+
 ## Local Semantic Recovery / Alias Memory Phase 1 (approved 2026-09-19)
 
 Claude review accepted the architecture with the required Phase 1 scope reduction: only an **exact confirmed non-conflicted alias** may auto-canonicalize. RapidFuzz and track-first recovery are candidate/evidence-only until a fixed adversarial corpus proves zero wrong automatic canonicalizations.

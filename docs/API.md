@@ -150,3 +150,37 @@ See [Security](SECURITY.md#shutdown-two-step-confirmation) for token security re
 - `GET /spotify/callback` — loopback-only OAuth callback; it never returns or logs tokens.
 
 Spotify access and refresh tokens remain in the Windows `runtime` directory. iPhone/Siri only sends natural-language text to `/command` and never receives a token.
+
+
+## Deterministic exact volume and playback-state commands
+
+These commands continue to arrive through the normal authenticated `POST /command` text interface. The client does not receive a generic action-execution API.
+
+Supported target language after implementation:
+
+```text
+音量調到 37%
+Spotify 音量 40%
+隨機播放
+關閉隨機播放
+單曲循環
+循環播放清單
+關閉循環
+正常播就好
+```
+
+Server-side parsed actions are closed/bounded:
+
+```text
+set_volume(volume_percent=0..100)
+spotify_set_volume(spotify_volume_percent=0..100)
+spotify_shuffle_on/off
+spotify_repeat_track/context/off
+spotify_continue
+```
+
+The HTTP client cannot submit arbitrary Spotify URL/URI/track ID, arbitrary repeat state, arbitrary JSON body, Windows audio endpoint object, or shell command through these features.
+
+`spotify_continue` means repeat off + resume and preserves the current shuffle state.
+
+See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md) for the implementation contract.

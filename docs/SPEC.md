@@ -51,6 +51,12 @@
 - Spotify OAuth / token / scopes / device selection 詳見 [Spotify Integration](SPOTIFY.md)。
 - **音量控制**：Windows 主音量仍由既有 volume adapter 控制，單次調整限制步數 (steps 1-10)。支援 `volume_up`, `volume_down`, `mute`, `unmute`, `toggle_mute`。
   - 常用語句：音量大一點、音量增加、聲音大一點、調大音量、音量小一點、音量降低、聲音小一點、調小音量、靜音、取消靜音、解除靜音 / volume up, volume down, mute, unmute。
+- **Windows 精確百分比音量**：新增 deterministic closed action `set_volume`，只接受 `volume_percent=0..100` 整數。支援「音量 30%」、「音量調到 30%」、「把音量降到 25%」、「set volume to 45 percent」。精確設定走 pycaw master-volume scalar；若精確 setter 不可用，不得用媒體鍵近似成假成功。
+- **Windows / Spotify 音量分離**：「音量 30%」表示 Windows master volume；「Spotify 音量 30%」表示 Spotify Connect device volume，兩者不得互相 fallback 或靜默改寫。
+- **Spotify shuffle**：`spotify_shuffle_on/off`，支援「隨機播放」、「關閉隨機播放」。
+- **Spotify repeat**：`spotify_repeat_track/context/off`，支援「單曲循環」、「循環播放清單／專輯」、「關閉循環」。
+- **正常連續播放**：`spotify_continue` 定義為「repeat off + resume」，保留目前 shuffle 狀態；支援「就一直播下去」、「正常播就好」。它不保證 Spotify context/queue 之外的無限播放。
+- 上述新增控制全部 deterministic-only，不擴張 Local AI allowlist。詳細規格見 [Deterministic Volume and Spotify Playback Controls](PLAYBACK_CONTROLS.md)。
 
 ### 2.4 系統控制 (System Control)
 - **鎖定電腦 (LockWorkStation)**：立即執行鎖定。

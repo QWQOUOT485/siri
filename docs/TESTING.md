@@ -91,3 +91,54 @@ Integration Tests MUST NOT actually:
 - Specific `pytest` commands and final operational steps are determined during implementation, not pre-specified in this spec.
 - Security tests MUST NOT be deleted to make CI pass (as per AGENTS.md rules and SECURITY.md).
 - Unit and Windows Integration tests must be clearly separated in the directory structure and CI/verification flow.
+
+
+## Exact Volume / Spotify Playback-State Tests
+
+Required unit/security coverage for the approved deterministic-controls batch:
+
+### Windows exact master volume
+
+- Chinese/English exact-percent parser cases
+- accept 0 and 100
+- reject values outside 0–100
+- `音量降低到 30%` parses as absolute `set_volume(30)`, not relative volume-down
+- action schema rejects `volume_percent` on unrelated actions
+- pycaw scalar conversion for 0/37/100
+- exact setter failure does not fall back to approximate media keys
+- exact scalar operation does not silently toggle mute
+- existing relative up/down fallback behavior remains intact
+
+### Spotify shuffle
+
+- on/off parser mappings
+- fixed boolean state only
+- 401/403/429 behavior
+- no arbitrary endpoint/body control
+
+### Spotify repeat
+
+- track/context/off parser mappings
+- reject free-form repeat modes
+- preserve deterministic closed enum/state
+
+### Spotify continue
+
+- repeat-off operation occurs
+- resume occurs
+- existing shuffle state is preserved
+- no queue/context is invented
+- failures are surfaced rather than partially reported as success
+
+### Volume-domain separation
+
+- `音量 30%` → Windows `set_volume`
+- `Spotify 音量 30%` → `spotify_set_volume`
+- one domain never silently falls back to the other
+
+### AI/security
+
+- Local AI cannot emit these newly added deterministic controls in its initial schema/allowlist
+- numeric fields cannot carry expressions, shell text, URLs, paths, or command chaining
+
+Safe Windows/Spotify runtime acceptance is required before marking the features implemented. See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).
