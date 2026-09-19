@@ -199,13 +199,16 @@ Planned work:
 
 - evaluate adding `market=TW` to Spotify Search requests
 - preserve Spotify's original relevance order as an input signal instead of discarding it completely
+- query whether each trusted track candidate is already saved in the user's Spotify Library and use that as a strong personalization signal
 - evaluate popularity or another availability-safe popularity-like signal only as a **tie-breaker**
 - never let popularity override an explicitly provided artist, album, version intent, or genuine ambiguity
 - same-title tracks from different plausible artists must still enter clarification rather than auto-play
 - add regression fixtures for ambiguous Chinese song titles and common Traditional/Simplified variants
 - verify any ranking change against real Spotify responses before calling it accepted
 
-The goal is better ordering of the 2–3 candidates the user sees, not less-safe automatic guessing.
+The goal is better ordering of the 2–3 candidates the user sees, not less-safe automatic guessing. A saved/liked track may be promoted within an otherwise valid candidate set, but saved status must never override an explicit artist/album/version request or eliminate genuine ambiguity by itself.
+
+Implementation note: Spotify Library preference requires OAuth scope `user-library-read` and a read-only library-membership check (`GET /me/library/contains`) against server-owned Spotify track URIs. This is a local ranking signal only; it must not be exposed as a client-controlled field. Existing users will need to re-authorize Spotify once after the new scope is added.
 
 ### Priority 2 — Improve deterministic spoken-song parsing
 
