@@ -199,18 +199,22 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 最近記錄的完整 source test run為 **160 passed**，另有 2 個既有 dependency deprecation warnings；compileall、pip check、git diff check 也有通過紀錄。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
-2026-09-20 的 loopback shadow benchmark 已開始但依使用者要求暫停；部分結果與未完成邊界記錄在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式維持 95.24% supported semantic accuracy；`qwen3-4b` 僅完成 prompt mode，schema mode 尚未完成。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+2026-09-20 的 loopback benchmark 三個模型、兩種模式 fixed-corpus rows 已完成；sanitized evidence 位於 `docs/LOCAL_AI_BENCHMARK_2026-09-20.md`，先前中斷紀錄仍保留在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。這不是模型推薦：`qwen3.5-0.8b` 兩種模式仍無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 production authorization。`LOCAL_AI_FALLBACK_APPROVED` 維持 `false`。
+
+2026-09-20 real Windows Agent 已完成部分 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；evidence boundary 記錄在 `docs/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probes 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前仍以 source/unit evidence 為主。
+
+新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論仍為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。
 
 ### Promotion gate
 
 production fallback 仍是 **NO-GO**，直到完成：
 
-1. current exact commit / model / config 的 production-loopback shadow acceptance
-2. durable sanitized benchmark evidence summary（含 commit、fixture、model、LM Studio、prompt/schema/config 與 aggregate metrics）
+1. 完整 current exact commit / model / config 的 production-loopback shadow acceptance（safe/hostile probes 已部分完成）
+2. durable sanitized benchmark evidence summary（已完成目前這輪 evidence；後續若 commit/model/config 改變需重做）
 3. 完整 source/security regression
-4. real Windows Agent + Spotify safe cases / fail-closed cases
-5. deterministic commands 與 clarification regression
-6. separate independent promotion review
+4. real Windows Agent + Spotify safe cases / fail-closed cases（live transport fault matrix 仍未完成）
+5. deterministic commands 與 clarification regression（Siri/real-account acceptance 仍另計）
+6. separate independent promotion review（2026-09-20 review 已完成但結論為 NO-GO；清除 blockers 後需重新 review）
 
 不得因 benchmark 變好而直接設定 `LOCAL_AI_FALLBACK_APPROVED=true`。
 
@@ -263,10 +267,10 @@ Phase 1 原則：
    - MemoryLearner
    - poisoning/conflict tests
 
-5. **Local AI promotion evidence**
-   - 保持 off/shadow。
-   - 2026-09-20 partial three-model benchmark 已記錄，但 `qwen3-4b` schema mode 尚未完成；不得據此選定模型或啟用 fallback。
-   - 完成剩餘單一 benchmark mode 後，再做 production-aligned loopback acceptance 與 separate promotion review。
+5. **Local AI promotion blockers**
+   - 保持 off/shadow，`LOCAL_AI_FALLBACK_APPROVED=false`。
+   - three-model/two-mode benchmark 與 sanitized evidence 已完成，但不得據此自動選定模型或啟用 fallback。
+   - 目前 independent promotion review 結論仍為 NO-GO；需補 live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary，再重新 review。
 
 ### Smaller validation gaps
 
@@ -283,10 +287,9 @@ Phase 1 原則：
 3. Recently Played personalization source slice
 4. deterministic Spotify playback-state controls
 5. Local Semantic Recovery Phase 1
-6. Local AI production-loopback shadow acceptance
-7. sanitized promotion evidence
-8. independent Local AI promotion review
-9. only then consider guarded fallback execution
+6. complete Local AI live transport-fault / Siri / real-account acceptance blockers
+7. rerun independent Local AI promotion review against exact commit/model/config
+8. only then consider guarded fallback execution
 ```
 
 ## Installed Runtime
