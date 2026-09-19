@@ -197,18 +197,75 @@ This is the highest-impact current UX issue. Bare or ambiguous song titles can r
 
 Planned work:
 
-- evaluate adding `market=TW` to Spotify Search requests
+- evaluate adding `market=TW` to Spotify Search requests for availability/relinking behavior; do not treat it as a Taiwan-popularity ranking signal
 - preserve Spotify's original relevance order as an input signal instead of discarding it completely
-- query whether each trusted track candidate is already saved in the user's Spotify Library and use that as a strong personalization signal
-- evaluate popularity or another availability-safe popularity-like signal only as a **tie-breaker**
-- never let popularity override an explicitly provided artist, album, version intent, or genuine ambiguity
+- query whether each trusted track candidate is already saved in the user's Spotify Library and use that as the strongest personalization signal after explicit user intent
+- query the user's Top Tracks / Top Artists as a secondary personalization signal
+- query Recently Played as a tertiary personalization signal
+- use Spotify search relevance after explicit intent + saved/top/recent personalization
+- evaluate popularity or another availability-safe popularity-like signal only as a final tie-breaker
+- never let personalization/popularity override an explicitly provided artist, album, version intent, or genuine ambiguity
 - same-title tracks from different plausible artists must still enter clarification rather than auto-play
 - add regression fixtures for ambiguous Chinese song titles and common Traditional/Simplified variants
 - verify any ranking change against real Spotify responses before calling it accepted
 
-The goal is better ordering of the 2–3 candidates the user sees, not less-safe automatic guessing. A saved/liked track may be promoted within an otherwise valid candidate set, but saved status must never override an explicit artist/album/version request or eliminate genuine ambiguity by itself.
+The target ranking signal order is:
 
-Implementation note: Spotify Library preference requires OAuth scope `user-library-read` and a read-only library-membership check (`GET /me/library/contains`) against server-owned Spotify track URIs. This is a local ranking signal only; it must not be exposed as a client-controlled field. Existing users will need to re-authorize Spotify once after the new scope is added.
+```text
+explicit user artist / album / version intent
+→ deterministic title / identity / Live filtering
+→ saved / liked in user's Library
+→ user's Top Tracks / Top Artists
+→ user's Recently Played
+→ Spotify Search relevance
+→ popularity-like tie-breaker only
+```
+
+The goal is better ordering of the 2–3 candidates the user sees, not less-safe automatic guessing. Personalization may promote a candidate within an otherwise valid set, but it must never override explicit intent or eliminate genuine ambiguity by itself.
+
+Implementation note: personalization requires OAuth scopes `user-library-read`, `user-top-read`, and `user-read-recently-played`. Library membership uses the current read-only `GET /me/library/contains` endpoint against server-owned Spotify track URIs; Top Items uses `GET /me/top/{type}`; Recently Played uses `GET /me/player/recently-played`. These are local ranking signals only and must not be exposed as client-controlled fields. Existing users will need to re-authorize Spotify once after the new scopes are added.
+
+### Priority 1B — Expanded Spotify controls and Library actions
+
+Add deterministic closed actions for Spotify features already supported by the Web API:
+
+```text
+spotify_shuffle_on
+spotify_shuffle_off
+spotify_repeat_off
+spotify_repeat_track
+spotify_repeat_context
+spotify_seek
+spotify_set_volume
+spotify_like_current
+spotify_unlike_current
+```
+
+Initial natural-language examples:
+
+```text
+開啟隨機播放
+關閉隨機播放
+單曲循環
+循環播放清單
+關閉循環
+跳到一分三十秒
+Spotify 音量 50
+喜歡這首
+取消喜歡這首
+```
+
+Rules:
+
+- playback-control values must be parsed into closed validated fields; never pass arbitrary query/body values from the client directly to Spotify
+- seek position must be bounded to a validated non-negative millisecond value
+- Spotify volume must be an integer 0–100 and is distinct from Windows master volume
+- like/unlike operates only on the server-resolved currently playing Spotify track in the first implementation
+- Library writes use Spotify's current `PUT /me/library` / `DELETE /me/library` endpoints and require `user-library-modify`
+- these controls remain deterministic; do not route them through Local AI
+- 401/403/429/runtime failure must return a bounded error and must not use shell/media-key fallbacks that change semantics
+
+The existing `user-modify-playback-state` scope already covers shuffle/repeat/seek/Spotify-volume. Like/unlike adds `user-library-modify`.
 
 ### Priority 2 — Improve deterministic spoken-song parsing
 
