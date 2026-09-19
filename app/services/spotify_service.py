@@ -15,11 +15,22 @@ from .spotify_clarification import SpotifyClarificationStore
 class SpotifyService:
     """Resolve safe Spotify actions without exposing tokens or raw API access."""
 
-    def __init__(self, auth, catalog, player, clarification_store=None) -> None:
+    def __init__(
+        self,
+        auth,
+        catalog,
+        player,
+        clarification_store=None,
+        *,
+        entity_recovery=None,
+        memory_learner=None,
+    ) -> None:
         self.auth = auth
         self.catalog = catalog
         self.player = player
         self.clarification_store = clarification_store or SpotifyClarificationStore()
+        self.entity_recovery = entity_recovery
+        self.memory_learner = memory_learner
 
     def execute(self, command: ValidatedAction, *, source_text: str | None = None) -> OperationResult:
         if command.action not in {

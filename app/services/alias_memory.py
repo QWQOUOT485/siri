@@ -37,6 +37,13 @@ class AliasMemory:
     def available(self) -> bool:
         return bool(self.database.available)
 
+    def status_view(self) -> dict[str, int | bool]:
+        with self._lock:
+            return {
+                "available": self.available,
+                "confirmed_aliases": len(self._exact_index),
+            }
+
     def reload(self) -> None:
         entries = self.database.load_entries() if self.database.available else ()
         exact: dict[str, list[AliasCandidate]] = {}
