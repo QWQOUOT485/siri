@@ -37,8 +37,8 @@
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
-- Spotify candidate quality 下一階段新增個人化排序：對 server-owned 搜尋候選以 read-only Spotify Library membership 判斷是否為使用者已保存／按讚歌曲，作為最強個人化 ranking signal；再加入 Top Tracks / Top Artists、Recently Played、Spotify Search relevance，最後才考慮 popularity-like tie-breaker；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。
-- 個人化與 Library 功能需要新增 OAuth scopes `user-library-read`、`user-library-modify`、`user-top-read`、`user-read-recently-played`；實作後既有帳號需重新授權一次；目前尚未實作、尚未重新授權、尚未實機驗收。
+- Spotify candidate quality 個人化排序採 saved/liked → Top Tracks / Top Artists → Recently Played → Spotify Search relevance → popularity-like tie-breaker；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。saved/liked 的第一個非 AI slice 已完成 source/runtime fallback 驗證，其他訊號仍未實作。
+- saved/liked 需要 `user-library-read`；like/unlike 仍另需 `user-library-modify`，Top/Recent 仍需 `user-top-read`、`user-read-recently-played`。既有帳號需重新授權一次才能取得新 scope；目前尚未重新授權、尚未做 saved=true 的真實候選排序驗收。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
@@ -123,11 +123,19 @@ The remaining acceptance boundary is explicit: no real shutdown or force-close a
 - `SpotifyTrackRef` 現在保留 Spotify Search 回傳的 bounded `popularity` metadata。
 - `SpotifyCatalog` 只在 matching score 相同時用 popularity 排列 clarification 候選；confidence gap、Live filtering、ISRC identity 與 genuine ambiguity 規則完全不變。
 - 缺少、非整數或不在 0–100 的 popularity 會被忽略，不會成為播放決策依據。
-- 本輪尚未加入 `market=TW`，也尚未實作 saved/liked、Top Tracks/Artists、Recently Played 個人化訊號；這些仍是後續非 AI 工作。
+- 本輪尚未加入 `market=TW`；Top Tracks/Artists、Recently Played 仍是後續非 AI 工作。saved/liked source slice 已完成，真實帳號仍需新 scope 才能驗證 saved=true 的排序。
 - source regression tests 已覆蓋「熱門度改善候選順序但不能自動播放」與無效 metadata。
 - 以目前授權帳號對 `track:晴天 artist:周杰倫` 做唯讀 Spotify Search A/B：未加 market 與 `market=TW` 都回傳 3 個結果，順序與歌名／歌手／專輯資料相同；因此本輪沒有盲目把 `market=TW` 加入正式流程。
 - 同一輪對 `track:Stay artist:The Kid LAROI` 的真實 Search 回應中，觀察到的項目沒有可用 popularity 值；tie-breaker 因此安全地保持 dormant，不宣稱已改善真實排序品質。
 - deployed `catalog.py` 已在隔離 port 8001 runtime compile 與唯讀 Search 驗證；之後已透過 `scripts/start.bat` 可控重啟 port 8000，`/health` 正常，正式 runtime 已載入新檔案。
+
+## Non-AI Spotify Saved Candidate Slice (2026-09-19)
+
+- `SpotifyApiClient.check_saved_tracks` 只允許最多三個 server-owned `spotify:track:` URI，固定呼叫 `GET /me/library/contains`，不接受 client URI、URL 或 arbitrary endpoint。
+- `SpotifyCatalog` 只在既有 genuine ambiguity 的最多三個候選內，以 read-only saved/liked status 重排；不改變 deterministic confidence、explicit artist/album/version、Live filtering 或自動播放決策。
+- Library timeout、401、403、429、格式錯誤或未提供此能力時，維持原本 deterministic candidate order；saved status 不進 AI、Shortcut 或一般 API response。
+- source `pytest -q` 為 `150 passed`，compileall、pip check、diff check 通過；三個 runtime 檔案已部署且與 source 正規化內容一致。
+- 重啟後 Windows Agent `/health`、認證 `/info`、Spotify status 正常；目前既有 token scope 只有 playback scopes，唯讀 Library endpoint 實測回傳 403，證明缺少 scope 時會安全 fallback。尚未重新授權，因此尚未宣稱 saved=true 的真實候選排序驗收完成。
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 
@@ -249,6 +257,9 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - Targeted Local AI/config tests：`25 passed`，2 個既有 dependency deprecation warnings；compileall 與 pip check 通過，`git diff --check` 只有既有 CRLF warnings。
 - 以 LM Studio loopback `127.0.0.1:1234`、`qwen2.5-coder-1.5b-instruct`、固定 109 cases、runtime-aligned timeout 2 秒重跑：prompt/schema 都是 transport/JSON/schema/intent 100%、semantic 95.24%、semantic-retry 100%、deterministic-only 與 safety-only safe-unknown 100%、post-grounding false accept 0%、false execution 0%；P95 為 201.8/202.1 ms。
 - 完整 pytest 為 `144 passed, 4 failed`；4 個 failure 屬目前未提交的非 AI Spotify personalization/auth 變更（saved-track lookup 與 scope expectation），不是本 slice 的 Local AI tests。故 promotion 仍維持 **NO-GO**，且尚未重新部署或啟用 fallback。
+- 已以可還原 backup `D:\ai\windows-siri-agent\work\local-ai-gate-backup-20260919-214605` 同步三個 gate 檔案到 installed Agent；hash readback 與 source 一致。重啟後 `/health`=200，authenticated `/info` 回報 `mode=shadow`、`adapter_configured=true`、`fallback_approved=false`。
+- Installed shadow regression：`幫我放晴天` 回傳 `INVALID_COMMAND` 且 log 為 `shadow_accepted`、沒有 executable action；`幫我放一下晴天 remix` 回傳 `INVALID_COMMAND` 且 log 為 `version_marker_requires_deterministic_parser`、沒有 model transport 或播放。LM Studio listener 維持 `127.0.0.1:1234`。
+- **本輪 Local AI shadow gate hardening milestone 完成**；這不是 fallback promotion，也不代表 Windows/Spotify/Siri executable fallback acceptance。下一個 blocker 仍是 resolver low-confidence/entity-segmentation signal wiring 與獨立 promotion gate。
 
 ## Local AI Product Decision (2026-09-18)
 
