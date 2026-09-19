@@ -37,6 +37,8 @@
 - Spotify token 必須只保存在 Windows 本機，不進 Siri Shortcut、不進 Git、不進 API response/log。
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
+- Spotify candidate quality 下一階段新增個人化排序：對 server-owned 搜尋候選以 read-only Spotify Library membership 判斷是否為使用者已保存／按讚歌曲，作為強 ranking signal；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。
+- 此功能需要新增 OAuth scope `user-library-read`，實作後既有帳號需重新授權一次；目前尚未實作、尚未重新授權、尚未實機驗收。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
@@ -228,7 +230,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 6. source 與 Windows Agent 已完成新的消歧規則：Live 排除、繁簡 normalization、最多 3 個 trusted candidates、短效 token。
 7. 已跑 unit/security tests 並部署 Windows Agent；clarification token 流程已接到 iPhone Shortcut。
 8. iPhone Siri Shortcut 端到端播放與三選一反問流程已完成全語音實機驗收。
-9. 後續 Spotify 工作重點轉為模糊歌名候選品質改善，而不是 clarification wiring。
+9. 後續 Spotify 工作重點轉為模糊歌名候選品質改善：評估 `market=TW`、保存原始 relevance、加入使用者已按讚／Library membership 排序訊號，再視 API 可用資料評估 popularity tie-breaker；不得因此降低 ambiguity safety。
 
 ## Important: What Is NOT Yet Proven
 
@@ -237,7 +239,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - Local AI 已接入正式 Agent 或已通過模型可行性驗收。
 - LM Studio 已完成 production loopback-only 安全配置。
 - 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
-- Spotify 模糊歌曲候選排序品質已完成 market/popularity 改善；目前仍可能把偏冷門同名歌曲排進前三候選。
+- Spotify 模糊歌曲候選排序品質已完成 market / saved-library / relevance / popularity 改善；目前這些都仍是 planned optimization，尚未實作驗收，偏冷門同名歌曲仍可能排進前三候選。
 - clarification store 的 bounded attempts 與 concurrent atomic selection 已完成 source/unit 驗證；尚未因這個內部安全修正重新做 Windows Agent 部署後的 Siri 實機回歸。
 
 server 端第二輪選擇播放已由 iPhone Shortcut 實機觸發並成功完成真實 Spotify 播放；全語音 clarification 流程也已驗收通過。
