@@ -283,3 +283,27 @@ def test_catalog_retries_bare_chinese_title_when_de_separator_was_misparsed_as_a
         ("test-token", "track:終點 artist:死亡是生命", 10),
         ("test-token", "track:死亡是生命的終點", 10),
     ]
+
+
+def test_catalog_prefers_one_exact_bare_title_over_similar_titles():
+    class StagedClient:
+        def search_tracks(self, access_token, query, *, limit=10):
+            if query == "track:終點 artist:死亡是生命":
+                return []
+            if query == "track:死亡是生命的終點":
+                return [
+                    track("exacttitle", "死亡是生命的終點", ["SASIOVERLXRD"], album="納薩力克"),
+                    track("nearone", "死亡不是生命的終點", ["SASIOVERLXRD"], album="納薩力克"),
+                    track("neartwo", "死亡到底是不是生命的终点", ["BreakuU"], album="无间道"),
+                ]
+            raise AssertionError(query)
+
+    result = SpotifyCatalog(StagedClient()).find_track(
+        "終點",
+        "死亡是生命",
+        access_token="test-token",
+    )
+
+    assert result.track is not None
+    assert result.track.track_id == "exacttitle"
+    assert result.ambiguous is False

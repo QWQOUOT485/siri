@@ -93,6 +93,11 @@ class SpotifyCatalog:
         best_score = self._score(ranked[0], track, artist, album, hint)
         second_score = self._score(ranked[1], track, artist, album, hint) if len(ranked) > 1 else None
         exact_track_matches = [ref for ref in ranked if self._normalize(ref.track_name) == self._normalize(track)]
+        if artist is None and album is None and len(exact_track_matches) == 1:
+            # A bare request with one exact title match should not lose to
+            # near-title results returned by Spotify. Multiple exact matches
+            # still go through the normal ambiguity path.
+            return TrackResolution(track=exact_track_matches[0], ambiguous=False, candidates=tuple(ranked[:3]))
         title_matches = [ref for ref in ranked if self._similarity(ref.track_name, track) >= 0.80]
         if artist is None and len(title_matches) > 1:
             artist_groups = {

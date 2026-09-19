@@ -131,7 +131,7 @@
 - 舊版 `播放晴天現場版` 曾回傳 `SPOTIFY_AMBIGUOUS_TRACK`；最新部署後改為 `SPOTIFY_LIVE_UNSUPPORTED`，在搜尋前拒絕且不播放 Live。
 - 不帶歌手的 `播放葉惠美專輯的晴天` 若 Spotify 回傳不同歌手的同名／同專輯候選，會進入最多三首 clarification，不會猜測歌手；帶歌手的自然專輯句已成功。
 - 最新部署後以 `scripts/start.bat` 啟動的 Agent 已直接驗證：`播放周杰倫的晴天，專輯葉惠美` 成功播放；`播放晴天現場版` 回傳 `SPOTIFY_LIVE_UNSUPPORTED` 且不搜尋；模糊的 `播放Stay` 回傳最多 3 個候選、`clarification_required=true` 與 opaque token；無效 token 回傳 clarification invalid 且不呼叫 Spotify。
-- 上述 controlled run 已正常停止，port 8000 已釋放；目前沒有宣稱 Agent 正在運行。
+- 上述較早的 controlled run 已正常停止；本次修正驗證時另外啟動的 Agent 目前仍在 port 8000，供使用者重新測試 Shortcut。
 - 以過期 clock 觸發真實 Spotify refresh endpoint 後，`暫停` 仍實際回傳成功；token 未輸出到終端或 log。
 - API key 未出現在測試 log 中。
 
@@ -145,7 +145,10 @@
 - 若 primary artist+track search 本來有結果，fallback 不會執行，因此既有 `播放周杰倫的晴天` 等 artist grammar 行為不變。
 - fallback 仍只使用 Spotify Search API，結果仍需通過既有 Live filtering、trusted `SpotifyTrackRef`、ranking / ambiguity safety；不接受 client URI / track ID。
 - 已新增 regression test，固定驗證 primary query `track:終點 artist:死亡是生命` 無結果時會 retry `track:死亡是生命的終點` 並解析為可信 track。
-- 目前只完成 source + regression test 寫入 GitHub；尚未跑完整 pytest、部署 Windows Agent、用真實 Spotify/Siri 重測此歌曲，因此不能標成 real-world acceptance 完成。
+- 若 fallback 後只有一個候選的精確歌名，現在會優先選擇該精確標題，不會被 Spotify 回傳的相似歌名誤導成 clarification；多個精確標題仍維持 ambiguity safety。
+- 先加入「精確歌名 + 相似歌名」的紅色 regression test，再完成 catalog 修正；source 完整 pytest 為 `106 passed`，保留 2 個既有 dependency deprecation warnings。
+- 已部署 `catalog.py`、`schemas.py` 與 `actions.py` 到 `D:\ai\windows-siri-agent`，compileall 與 pip check 通過。
+- 2026-09-19 controlled Windows Agent HTTP 驗證：`播放死亡是生命的終點` 實際回傳 `success=true`，播放 `死亡是生命的終點` / `SASIOVERLXRD` / `納薩力克`；尚未重新做 iPhone Siri Shortcut E2E，因此不把 Shortcut 驗收標成完成。
 
 ## Resolved Source Bug: Long Spotify title rejected by 200-character metadata cap (2026-09-19)
 
