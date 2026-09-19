@@ -47,7 +47,7 @@
 - Spotify OAuth 採 Authorization Code with PKCE。
 - Spotify 整合規格見 `docs/SPOTIFY.md`。
 - Spotify candidate quality 個人化排序採 saved/liked → Top Tracks / Top Artists → Recently Played → Spotify Search relevance → popularity-like tie-breaker；不取代 explicit artist/album/version，也不單獨消除真正 ambiguity。saved/liked 的第一個非 AI slice 已完成 source/runtime fallback 驗證，其他訊號仍未實作。
-- saved/liked 需要 `user-library-read`；like/unlike 仍另需 `user-library-modify`，Top/Recent 仍需 `user-top-read`、`user-read-recently-played`。本次重新授權後已讀回新 scope，並完成 Library endpoint 唯讀驗證；saved=true 的真實候選排序仍待驗收。
+- saved/liked 需要 `user-library-read`；like/unlike 仍另需 `user-library-modify`，Top/Recent 仍需 `user-top-read`、`user-read-recently-played`。本次重新授權後已讀回新 scope，並完成 Library endpoint 唯讀驗證；三首使用者指定歌曲已確認 `saved=true`，但 saved 對 genuine ambiguity 的重排效果仍需隔離驗收。
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
@@ -152,6 +152,7 @@ The remaining acceptance boundary is explicit: no real shutdown or force-close a
 - 本次重新授權流程使用新的 PKCE state/verifier；沒有把 token、authorization code 或 state 寫入狀態文件、API response 或 log。
 - Spotify consent callback 的瀏覽器畫面顯示通用失敗訊息，但 `/spotify/status` 已回報 `authorized=true` 且 scope 包含 `user-library-read`，token 檔案也在本次流程更新。這表示授權資料已保存；callback 顯示不一致仍需後續用一次新的單一 callback 流程釐清。
 - 後續唯讀 Search + Library membership 檢查成功完成，兩個候選皆為未收藏；沒有播放、寫入 Library 或改變使用者播放狀態。
+- 使用者接著收藏 `飛蛾`、`我和我的現金`、`天生牙`；唯讀 Search + Library membership 讀回三首的第一個 exact candidate 均為 `saved=true`。這證明真實帳號的 saved membership path 可用；因 Spotify 原始 Search 順序也已將三首排在第一，尚不能把這次結果宣稱為 Agent 改善了 genuine ambiguity 的候選順序。
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 
@@ -486,7 +487,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - Local AI 已接入正式 Agent 或已通過模型可行性驗收。
 - LM Studio 已完成 production loopback-only 安全配置。
 - 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
-- Spotify 模糊歌曲候選排序的 saved source slice 已完成並取得 `user-library-read`；但 `saved=true` 真實排序改善尚未驗收，Top/Recent 與更完整的 market/relevance 品質仍是後續工作，偏冷門同名歌曲仍可能排進前三候選。
+- Spotify 模糊歌曲候選排序的 saved source slice 已完成並取得 `user-library-read`；真實帳號的 `saved=true` membership 已以三首歌曲驗證，但 saved 對原始順序不同的 genuine ambiguity 是否改善排序仍未驗收。Top/Recent 與更完整的 market/relevance 品質仍是後續工作，偏冷門同名歌曲仍可能排進前三候選。
 - clarification store 的 bounded attempts 與 concurrent atomic selection 已完成 source/unit 驗證；尚未因這個內部安全修正重新做 Windows Agent 部署後的 Siri 實機回歸。
 - Windows exact `set_volume` 的 source/schema/unit/API wiring 與受控 Windows pycaw setter 已驗證；尚未做 Siri 端到端音量口令或獨立實體喇叭聽感驗收。相對音量按鍵 fallback 仍是既有已測行為。
 
