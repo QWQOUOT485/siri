@@ -63,10 +63,11 @@ Confirmed code issues that still need implementation/runtime verification:
 3. **Volume fallback ignores `steps`** — the pycaw fallback currently sends a single volume key regardless of requested bounded steps. Mute/unmute remains one key event; volume up/down should preserve the validated step count.
 4. **Force-close duplicate PID cleanup** — multiple top-level windows from one process can lead to repeated terminate attempts/count distortion. Force-close should operate on unique trusted PIDs.
 5. **Chinese fallback-map duplicate key** — duplicate `"體": "体"` is cleanup, not a proven functional defect. Remove duplication and rely on OpenCC plus tests; do not invent a missing mapping without evidence.
+6. **`start.bat` diagnostic text hardcodes port 8000** — runtime can use configured port, but the startup banner/error hint can become misleading when `SIRI_AGENT_PORT` changes. Treat this as an operational UX fix, not a core runtime failure.
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 
-Document inconsistencies identified by review should be fixed in their source documents rather than creating another issue file: architecture tree, Spotify redirect example, Shortcut step numbering, old config-format wording, and stale Local-AI scope wording.
+Document inconsistencies identified by review were fixed in their source documents rather than creating another issue file: the architecture tree was refreshed, the Spotify redirect example was aligned to the current 8000 callback path, Shortcut step numbering was corrected, SPEC configuration wording was aligned to `.env` + `config/*.yaml`, and stale Spotify/Local-AI scope wording was updated.
 
 ### Product decision: AI semantic retry for misparsed Spotify requests
 
