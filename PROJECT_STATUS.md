@@ -80,7 +80,7 @@ The remaining acceptance boundary is explicit: no real shutdown or force-close a
 - source regression tests 已覆蓋「熱門度改善候選順序但不能自動播放」與無效 metadata。
 - 以目前授權帳號對 `track:晴天 artist:周杰倫` 做唯讀 Spotify Search A/B：未加 market 與 `market=TW` 都回傳 3 個結果，順序與歌名／歌手／專輯資料相同；因此本輪沒有盲目把 `market=TW` 加入正式流程。
 - 同一輪對 `track:Stay artist:The Kid LAROI` 的真實 Search 回應中，觀察到的項目沒有可用 popularity 值；tie-breaker 因此安全地保持 dormant，不宣稱已改善真實排序品質。
-- deployed `catalog.py` 已在隔離 port 8001 runtime compile 與唯讀 Search 驗證；目前 port 8000 的既有 Agent 未重啟，待下一次可控重啟後才算正式 runtime reload。
+- deployed `catalog.py` 已在隔離 port 8001 runtime compile 與唯讀 Search 驗證；之後已透過 `scripts/start.bat` 可控重啟 port 8000，`/health` 正常，正式 runtime 已載入新檔案。
 
 Spotify Search quoting is **not accepted as a bug by review alone**. Do not blindly change all field queries to quoted syntax. If this is revisited, run real Spotify A/B cases (multi-word English title/artist/album plus Chinese cases) and adopt a change only if measured results improve without harming current matching.
 
