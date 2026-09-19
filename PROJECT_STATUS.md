@@ -104,9 +104,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Library timeout / 401 / 403 / 429 / malformed response 會安全退回原 deterministic 順序。
 - saved status 不進 AI、Shortcut 或一般 API response。
 
-**尚未驗證：** saved signal 是否能在 Spotify 原始 Search 排序不同的 genuine ambiguity case 中實際改善候選順序。
-
-2026-09-20 current-source read-only acceptance probe 使用固定 20 個 bare-title queries，得到 15 個 genuine ambiguity 結果、0 個 saved membership、0 個 library error、0 個 API error；沒有執行 playback 或 Library write，因此 Slice A real-account acceptance 仍維持未通過。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py`；它找不到 qualifying case 時會明確回報 blocker。詳細精確結果見 [`docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
+2026-09-20 current-source read-only acceptance probe 使用固定 20 個 bare-title queries，加上最多 50 個只在記憶體中使用的 Recently Played title seed；得到 20 個 genuine ambiguity、1 個 saved membership、0 個 library error、0 個 API error。Accepted case 中 saved candidate 從原始 Search position 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Recently Played seed 只用來擴大搜尋語料，saved probe 的 ranking client 只暴露 Search 與 Library membership，因此這是 saved-only reorder evidence。Slice A 已取得 bounded real-account acceptance，但不代表所有未來搜尋語料都一定有 saved reorder。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py --from-recent`；詳細精確結果見 [`docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Top Tracks / Top Artists source slice
 
@@ -257,9 +255,9 @@ Phase 1 原則：
 
 ### Highest priority
 
-1. **Spotify saved ranking genuine-ambiguity acceptance**
-   - 找一個原始 Spotify Search 順序不理想、且其中一個 trusted candidate 是 saved=true 的 case。
-   - 驗證 saved signal 只改善候選順序、不消除 genuine ambiguity、不自動播放。
+1. **Spotify Top-Artist-only genuine-ambiguity acceptance**
+   - Top Track 已有 1 個 real-account partial acceptance；如要完成 combined Top Tracks / Top Artists gate，需補一個沒有 Top Track / saved / recent 強訊號、由 Top Artist 單獨提升的 case。
+   - 驗證 Top Artist 只改善候選順序、不覆蓋 explicit metadata、不消除 genuine ambiguity、不自動播放。
 
 2. **Spotify personalization real acceptance and next signal**
    - Top Track 的 genuine-ambiguity ordering 已取得 1 個 real-account partial acceptance；仍需決定是否補一個 Top-Artist-only reorder 以完成 combined Top Tracks / Top Artists gate。
@@ -297,15 +295,14 @@ Phase 1 原則：
 ## Current Recommended Order
 
 ```text
-1. genuine-ambiguity saved-ranking acceptance
-2. Top Tracks / Top Artists real-account acceptance after `user-top-read` reauthorization
-3. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
-4. deterministic Spotify playback-state controls
-5. Local Semantic Recovery Phase 1 runtime acceptance
-6. Local AI production-loopback shadow acceptance
-7. sanitized promotion evidence
-8. independent Local AI promotion review
-9. only then consider guarded fallback execution
+1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
+2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
+3. deterministic Spotify playback-state controls
+4. Local Semantic Recovery Phase 1 runtime acceptance
+5. Local AI production-loopback shadow acceptance
+6. sanitized promotion evidence
+7. independent Local AI promotion review
+8. only then consider guarded fallback execution
 ```
 
 ## Installed Runtime

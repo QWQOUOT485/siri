@@ -2,25 +2,34 @@
 
 Date: 2026-09-20
 
-Decision: **NO-GO / not accepted**
+Decision: **ACCEPTED — bounded real-account ordering case obtained**
 
 This report records the current-source read-only probe for the saved/liked
-candidate-ordering slice. It does not authorize production enablement and does
-not replace the deterministic safety rules in `docs/SECURITY.md` and
+candidate-ordering slice. The acceptance is for the bounded case below; it is
+not a claim that every future Search corpus will contain a saved reorder. It
+does not replace the deterministic safety rules in `docs/SECURITY.md` and
 `docs/SPOTIFY.md`.
 
 ## Scope and method
 
-- Source revision: `c8f916cf07cfc8c2fb97a81b2c773c56e73229a0`.
+- Source baseline: `c0611bf` (PR #19 merge); the probe hardening and bounded
+  corpus extension are included in this change.
 - The probe used the existing local Spotify token store from the installed
   Agent. The access token value was not printed or committed.
-- The token was unexpired for the run and included `user-library-read`.
-- The probe used the script's fixed 20 bare-title queries.
+- The token was unexpired for the run and included `user-library-read` and
+  `user-read-recently-played`.
+- The probe used the fixed 20 bare-title queries plus at most 50 Recently
+  Played track titles as a bounded, in-memory search corpus. The Recently
+  Played data was used only to seed search text; the saved probe's ranking
+  client exposed only Search and Library membership, so the acceptance case
+  isolated the saved signal.
 - For each existing genuine ambiguity, it queried membership only for the
   bounded, server-owned candidate set (at most three tracks) through
   `GET /me/library/contains`.
 - It did not enumerate the user's Library, play a track, or call any Library
   write endpoint.
+- Account track and artist names stayed in memory and were not emitted in the
+  result.
 
 ## Observed result
 
@@ -28,15 +37,19 @@ The probe returned:
 
 | Measure | Result |
 | --- | ---: |
-| Genuine ambiguity cases | 15 |
-| Saved memberships among checked candidates | 0 |
+| Bounded Recently Played title seeds | 50 |
+| Genuine ambiguity cases | 20 |
+| Saved memberships among checked candidates | 1 |
+| Saved-only reorder cases | 1 |
+| Accepted original → final position | 1 → 0 |
 | Library lookup errors | 0 |
 | Search/API errors | 0 |
 | Library writes | false |
 | Playback | false |
 
-No case showed a saved candidate moving ahead of the original Spotify Search
-order. Therefore the required real-account acceptance case was not obtained:
+The accepted case preserved genuine ambiguity while a saved candidate moved
+from original Search position 1 to final candidate position 0. The probe did
+not auto-play it. This is the required real-account acceptance shape:
 
 ```text
 raw Spotify Search order differs from the desired candidate order
@@ -45,19 +58,17 @@ raw Spotify Search order differs from the desired candidate order
 → ambiguity remains and no automatic playback occurs
 ```
 
-The read-only boundary behaved as intended, but the absence of a saved
-candidate in this query set is not evidence that the ordering slice is
-accepted.
+The read-only boundary behaved as intended, including the server-owned URI-set
+membership check and the no-account-name output boundary.
 
 ## Gate decision and next action
 
-Keep the saved/liked slice **not accepted** and keep the implementation on its
-existing deterministic fail-safe path. Do not claim real-account ordering
-acceptance from this run.
+The saved/liked slice has **bounded real-account acceptance**. Keep the
+implementation on its existing deterministic fail-safe path: the saved signal
+only reorders an existing trusted ambiguity set and never enables automatic
+playback or removes ambiguity.
 
-The smallest next evidence-producing action is a user-approved known saved
-track title that also has a competing trusted same-title candidate in bare
-Spotify Search results; run the existing `--title` probe for that title. Do
-not enumerate the user's Library to manufacture a case. Until such a case is
-available, keep this item under `Not Yet Proven` in `PROJECT_STATUS.md`.
+The next evidence-producing actions are the Top-Artist-only acceptance probe
+and the separate Recently Played real-account acceptance probe. Neither should
+enumerate the user's Library or manufacture a case with Library writes.
 
