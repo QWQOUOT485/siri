@@ -21,9 +21,9 @@ class ActionRequest(BaseModel):
     app_name: str | None = Field(default=None, min_length=1, max_length=200)
     website_id: str | None = Field(default=None, min_length=1, max_length=100)
     website_name: str | None = Field(default=None, min_length=1, max_length=200)
-    track: str | None = Field(default=None, min_length=1, max_length=200)
-    artist: str | None = Field(default=None, min_length=1, max_length=200)
-    album: str | None = Field(default=None, min_length=1, max_length=200)
+    track: str | None = Field(default=None, min_length=1, max_length=300)
+    artist: str | None = Field(default=None, min_length=1, max_length=300)
+    album: str | None = Field(default=None, min_length=1, max_length=300)
     version_hint: SpotifyVersionHint | None = None
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
