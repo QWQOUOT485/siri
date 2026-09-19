@@ -72,6 +72,8 @@ class CommandService:
             if self.spotify is None:
                 return ServiceResult(False, "error", action.value, "Spotify 整合尚未設定。", error_code="SPOTIFY_NOT_CONFIGURED")
             return self._operation(action, self.spotify.execute(command))
+        if action is ActionName.SET_VOLUME:
+            return self._operation(action, self.volume.set_volume(command.volume_percent))
         if action in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE}:
             return self._operation(action, self.volume.change(action.value, command.steps))
         return ServiceResult(False, "error", action.value, "不支援這個 action。", error_code="INVALID_ACTION")

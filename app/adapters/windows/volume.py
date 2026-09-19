@@ -63,6 +63,34 @@ class WindowsVolumeController:
                 return OperationResult(False, "Windows 音量控制失敗。", "VOLUME_CONTROL_FAILED", {"detail": str(exc)}, best_effort=True)
         return OperationResult(False, "Unsupported volume action", "INVALID_VOLUME_ACTION")
 
+    def set_volume(self, volume_percent: int) -> OperationResult:
+        """Set the Windows master endpoint to an exact scalar percentage.
+
+        This path is intentionally separate from relative media-key fallback:
+        a media key cannot guarantee an arbitrary target percentage.
+        """
+
+        if isinstance(volume_percent, bool) or not isinstance(volume_percent, int) or not 0 <= volume_percent <= 100:
+            return OperationResult(False, "音量百分比必須介於 0 到 100。", "INVALID_VOLUME_PERCENT")
+        if sys.platform != "win32":
+            return OperationResult(False, "Volume control is available only on Windows", "WINDOWS_ONLY")
+        from .system import WindowsSystemController
+
+        if not WindowsSystemController().session_info().get("interactive"):
+            return OperationResult(False, "Agent 不在目前登入的互動式桌面工作階段，拒絕控制音量。", "NON_INTERACTIVE_SESSION")
+        try:
+            endpoint = self._endpoint()
+        except Exception as exc:
+            return OperationResult(False, "Windows 精確音量控制不可用。", "EXACT_VOLUME_UNAVAILABLE", {"detail": str(exc)})
+        if endpoint is None:
+            return OperationResult(False, "Windows 精確音量控制不可用。", "EXACT_VOLUME_UNAVAILABLE")
+        scalar = volume_percent / 100.0
+        try:
+            endpoint.SetMasterVolumeLevelScalar(scalar, None)
+        except Exception as exc:
+            return OperationResult(False, "Windows 精確音量設定失敗。", "EXACT_VOLUME_SET_FAILED", {"detail": str(exc)})
+        return OperationResult(True, "音量已設定。", data={"level": round(scalar, 3), "volume_percent": volume_percent})
+
     @staticmethod
     def _endpoint():
         from pycaw.pycaw import AudioUtilities  # type: ignore

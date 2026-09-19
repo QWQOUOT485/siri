@@ -42,18 +42,19 @@
 - `播放周杰倫的晴天 (葉惠美)` 已支援以專輯/版本提示縮小同名歌曲結果；提示只進 Spotify Search API，不進 shell、path 或 arbitrary URL。
 - 目前程式碼已支援自然語音 `播放周杰倫的晴天，專輯葉惠美`、`播放葉惠美專輯的晴天`、`播放晴天現場版`、`播放晴天原版`；明確 Live 會安全拒絕，不會播放 Live。
 - `SpotifyCatalog` 已有通用版本分類、繁簡正規化、ISRC / duration 與 confidence-based matching；Live / Concert / Tour / 演唱會 / 現場候選會直接排除。
-- 消歧修正、播放控制與本輪非 AI 修復的完整目前工作樹 source unit/security tests 已通過（129 passed，2 個既有 dependency deprecation warnings）；其中本輪 Spotify catalog regression 為 19 passed。這個總數包含工作樹中尚未提交的 Local AI 測試，不能當作本輪非 AI commit 的檔案清單。
+- 消歧修正、播放控制與本輪非 AI 修復的 source unit/security tests 已通過（目前 `pytest -q` 為 139 passed，2 個既有 dependency deprecation warnings）；這個數字是目前工作樹的完整結果，不代表所有項目都已完成 Windows/Spotify/Siri 實機驗收。
 - Spotify Search 的 optional `isrc`／`duration_ms`／`popularity` 已解析到 `SpotifyTrackRef`；同 ISRC 只作為接近候選的同錄音證據，duration 不會單獨觸發自動播放，popularity 只作為同等 matching score 候選的排列 tie-breaker。
 - Spotify 控制 endpoint 的成功非 JSON 回應已視為成功，不會被誤報成回應格式錯誤。
 - 真實帳號 token refresh 已驗證；refresh 後仍可成功執行 Spotify 播放控制。
 - `scripts/start.bat` 啟動失敗時會保留視窗並提示 port/Agent 問題，不再靜默關閉。
 - `暫停`、`暫停音樂`、`pause music` 與簡體 `暂停音乐` 都收斂到封閉的 `spotify_pause` action；不回退到通用系統媒體控制。
+- Windows exact master volume `set_volume` 已加入 closed action、百分比 parser/schema 與 pycaw scalar adapter；0、37、100 與失敗不 fallback 都有 regression coverage。
 - Spotify extended controls 已加入下一階段 scope：shuffle on/off、repeat off/track/context、seek、Spotify device volume，以及「喜歡這首／取消喜歡這首」Library write。這些全部維持 deterministic closed actions，不交給 Local AI。
 - 第一版 like/unlike 只允許操作 server 讀回的目前播放 Spotify track；client 不得提供任意 Spotify URI / track ID。
 
 
 
-## Deterministic Exact Volume / Spotify Playback Controls (approved for implementation 2026-09-19)
+## Deterministic Exact Volume / Spotify Playback Controls (source progress 2026-09-19)
 
 The next non-AI controls batch is now specified in `docs/PLAYBACK_CONTROLS.md`.
 
@@ -69,7 +70,15 @@ Windows exact percentage uses the pycaw scalar endpoint. If exact setting is una
 
 Windows master volume and Spotify Connect device volume are separate actions: `音量 30%` targets Windows; `Spotify 音量 30%` targets Spotify. All controls remain deterministic-only and do not expand the Local AI allowlist.
 
-This section records an approved implementation target, **not completed implementation or runtime acceptance**.
+Windows exact master volume is now source-complete for this slice:
+
+- `set_volume` is a closed action with `volume_percent` restricted to integer `0..100` in both domain and API schemas.
+- Chinese and English absolute phrases parse deterministically; absolute forms such as `把音量降低到 30%` win over relative wording.
+- The Windows adapter calls only `SetMasterVolumeLevelScalar(volume_percent / 100)` for this action. Missing or failing pycaw returns an explicit error and never sends media keys; mute state is not changed.
+- Regression coverage includes parser boundaries, schema ownership, scalar conversion, exact-set failure behavior, mute isolation, relative step fallback, and API wiring.
+- Source verification after this slice: `pytest -q` 139 passed, `compileall` passed, `pip check` passed, and `git diff --check` passed.
+
+The exact-volume slice is deployed to `D:\ai\windows-siri-agent`. Controlled Windows runtime acceptance passed: `/health` and authenticated `/info` were healthy; `音量 101` failed closed with `INVALID_VOLUME_PERCENT`; structured `/action` and Chinese `/command` both returned `set_volume` success and `level=0.95` through the pycaw scalar setter. The pre-test scalar `0.949999988...` was restored afterward. This verifies the Agent/pycaw path, not Siri voice E2E or a separate physical-speaker listening check. Spotify shuffle/repeat/continue/device-volume/seek/like controls remain planned and are not implemented by this slice.
 
 ## Local Semantic Recovery / Alias Memory Phase 1 (approved 2026-09-19)
 
@@ -395,7 +404,8 @@ D:\ai\windows-siri-agent\scripts\start.bat
 6. source 與 Windows Agent 已完成新的消歧規則：Live 排除、繁簡 normalization、最多 3 個 trusted candidates、短效 token。
 7. 已跑 unit/security tests 並部署 Windows Agent；clarification token 流程已接到 iPhone Shortcut。
 8. iPhone Siri Shortcut 端到端播放與三選一反問流程已完成全語音實機驗收。
-9. 後續 Spotify 工作重點：先做候選個人化排序（saved/liked → top tracks/artists → recently played → search relevance → final tie-breaker），再加入 shuffle/repeat/seek/Spotify volume/like/unlike current track；同時評估 `market=TW` 的 availability 行為，不把它誤當熱門度排序；不得降低 ambiguity safety。
+9. Windows exact volume source/unit 與受控 Windows pycaw runtime gate 已完成；Siri 語音與實體喇叭聽感仍不列為已驗收，且不需要為此擴張 Local AI。
+10. 後續 Spotify 工作重點：先做候選個人化排序（saved/liked → top tracks/artists → recently played → search relevance → final tie-breaker），再加入 shuffle/repeat/seek/Spotify volume/like/unlike current track；同時評估 `market=TW` 的 availability 行為，不把它誤當熱門度排序；不得降低 ambiguity safety。
 
 ## Important: What Is NOT Yet Proven
 
@@ -410,6 +420,7 @@ D:\ai\windows-siri-agent\scripts\start.bat
 - 原規劃的 Qwen3 0.6B 與 plain Qwen2.5 1.5B Instruct exact model 尚未測試；本輪測的是實際 indexed 的 `qwen3.5-0.8b` 與 `qwen2.5-coder-1.5b-instruct` replacement IDs，另有 `qwen3-4b`。
 - Spotify 模糊歌曲候選排序品質已完成 market / saved-library / relevance / popularity 改善；目前這些都仍是 planned optimization，尚未實作驗收，偏冷門同名歌曲仍可能排進前三候選。
 - clarification store 的 bounded attempts 與 concurrent atomic selection 已完成 source/unit 驗證；尚未因這個內部安全修正重新做 Windows Agent 部署後的 Siri 實機回歸。
+- Windows exact `set_volume` 的 source/schema/unit/API wiring 與受控 Windows pycaw setter 已驗證；尚未做 Siri 端到端音量口令或獨立實體喇叭聽感驗收。相對音量按鍵 fallback 仍是既有已測行為。
 
 server 端第二輪選擇播放已由 iPhone Shortcut 實機觸發並成功完成真實 Spotify 播放；全語音 clarification 流程也已驗收通過。
 

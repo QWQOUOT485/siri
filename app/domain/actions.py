@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 
 class SpotifyVersionHint(str, Enum):
@@ -28,6 +28,7 @@ class ActionName(str, Enum):
     SPOTIFY_PLAY_TRACK = "spotify_play_track"
     VOLUME_UP = "volume_up"
     VOLUME_DOWN = "volume_down"
+    SET_VOLUME = "set_volume"
     MUTE = "mute"
     UNMUTE = "unmute"
     TOGGLE_MUTE = "toggle_mute"
@@ -46,6 +47,7 @@ WEBSITE_ACTIONS = {ActionName.OPEN_WEBSITE}
 VOLUME_ACTIONS = {
     ActionName.VOLUME_UP,
     ActionName.VOLUME_DOWN,
+    ActionName.SET_VOLUME,
     ActionName.MUTE,
     ActionName.UNMUTE,
     ActionName.TOGGLE_MUTE,
@@ -71,6 +73,7 @@ class ValidatedAction(BaseModel):
     artist: str | None = Field(default=None, min_length=1, max_length=300)
     album: str | None = Field(default=None, min_length=1, max_length=300)
     version_hint: SpotifyVersionHint | None = None
+    volume_percent: StrictInt | None = Field(default=None, ge=0, le=100)
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -86,9 +89,15 @@ class ValidatedAction(BaseModel):
             raise ValueError("track is required for Spotify named-track playback")
         if self.action not in SPOTIFY_TRACK_ACTIONS and (self.track or self.artist or self.album or self.version_hint):
             raise ValueError("track, artist, album, and version_hint are only supported by Spotify named-track playback")
+        if self.action is ActionName.SET_VOLUME and self.volume_percent is None:
+            raise ValueError("volume_percent is required for set_volume")
+        if self.action is not ActionName.SET_VOLUME and self.volume_percent is not None:
+            raise ValueError("volume_percent is only supported by set_volume")
         for value in (self.track, self.artist, self.album):
             if value and any(ord(char) < 32 or ord(char) == 127 for char in value):
                 raise ValueError("track, artist, and album must not contain control characters")
+        if self.action is ActionName.SET_VOLUME and self.steps != 1:
+            raise ValueError("steps is not supported by set_volume")
         if self.action not in VOLUME_ACTIONS and self.steps != 1:
             raise ValueError("steps is only supported by volume actions")
         return self

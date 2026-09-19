@@ -72,3 +72,19 @@ def test_spotify_metadata_accepts_long_but_bounded_values():
             action=ActionName.SPOTIFY_PLAY_TRACK,
             track="長" * 301,
         )
+
+
+def test_exact_volume_schema_accepts_only_bounded_values_and_its_own_field():
+    assert ActionRequest(action="set_volume", volume_percent=0).to_validated().volume_percent == 0
+    assert ActionRequest(action="set_volume", volume_percent=100).to_validated().volume_percent == 100
+
+    for value in (-1, 101):
+        with pytest.raises(ValidationError):
+            ActionRequest(action="set_volume", volume_percent=value)
+
+    for value in (37.5, "37", True):
+        with pytest.raises(ValidationError):
+            ActionRequest(action="set_volume", volume_percent=value)
+
+    with pytest.raises(ValidationError):
+        ActionRequest(action=ActionName.VOLUME_UP, volume_percent=37)

@@ -37,6 +37,23 @@ def test_play_command_uses_spotify_and_never_falls_back_to_system_media_keys(fak
     assert media.actions == []
 
 
+def test_action_exact_volume_is_wired_to_windows_volume_service(fake_runtime):
+    runtime, launcher, process, media, volume, system = fake_runtime
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/action",
+        headers={"X-API-Key": "test-key"},
+        json={"action": "set_volume", "volume_percent": 37},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["action"] == "set_volume"
+    assert response.json()["data"]["level"] == 0.37
+    assert volume.exact_calls == [37]
+
+
 def test_spotify_status_and_auth_start_never_return_a_token(fake_runtime):
     runtime, launcher, process, media, volume, system = fake_runtime
     client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))

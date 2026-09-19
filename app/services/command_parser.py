@@ -90,6 +90,12 @@ class CommandParser:
         if normalized in {"音量小一點", "音量降低", "聲音小一點", "調小音量", "volume down", "decrease volume"}:
             return self._accepted(ActionName.VOLUME_DOWN)
 
+        exact_volume = self._exact_volume(raw.rstrip("。！？!? ."))
+        if exact_volume is not None:
+            if exact_volume < 0 or exact_volume > 100:
+                return ParsedCommand(accepted=False, error_code="INVALID_VOLUME_PERCENT", message="音量百分比必須介於 0 到 100。")
+            return self._accepted(ActionName.SET_VOLUME, volume_percent=exact_volume)
+
         force = re.match(r"^(?:強制關閉|強制結束|強制退出|強制終止|直接砍掉)\s*(.+)$", raw)
         force = force or re.match(r"^force(?:fully)?\s+(?:close|quit|kill)\s+(.+)$", raw, flags=re.IGNORECASE)
         if force:
@@ -122,6 +128,29 @@ class CommandParser:
     @staticmethod
     def _accepted(action: ActionName, **kwargs) -> ParsedCommand:
         return ParsedCommand(accepted=True, action=ValidatedAction(action=action, **kwargs), message="已解析指令。")
+
+    @staticmethod
+    def _exact_volume(raw: str) -> int | None:
+        """Parse a closed absolute Windows-volume phrase without evaluating expressions."""
+
+        patterns = (
+            r"^(?:音量|聲音)\s*(?:調到|調成|降到|降低到|提高到|設成|設為|设成|设为)\s*(?P<value>.+?)\s*(?:[%％]|percent)?$",
+            r"^把\s*(?:音量|聲音)\s*(?:調到|調成|降到|降低到|提高到|設成|設為|设成|设为)\s*(?P<value>.+?)\s*(?:[%％]|percent)?$",
+            r"^(?:音量|聲音)\s+(?P<value>.+?)\s*(?:[%％]|percent)?$",
+            r"^(?:volume|system\s+volume)\s+(?P<value>.+?)\s*(?:[%％]|percent)?$",
+            r"^set\s+(?:system\s+)?volume\s+to\s+(?P<value>.+?)\s*(?:[%％]|percent)?$",
+        )
+        value_text: str | None = None
+        for pattern in patterns:
+            match = re.fullmatch(pattern, raw, flags=re.IGNORECASE)
+            if match:
+                value_text = match.group("value").strip()
+                break
+        if value_text is None:
+            return None
+        if not re.fullmatch(r"\d+", value_text):
+            return -1
+        return int(value_text)
 
     @staticmethod
     def _spotify_track(raw: str) -> tuple[str, str | None, str | None, SpotifyVersionHint | None] | None:

@@ -17,6 +17,31 @@ def test_chinese_and_english_commands():
     assert parser().parse("重新掃描程式").action.action is ActionName.REFRESH_APPS
 
 
+def test_exact_volume_phrases_create_a_bounded_absolute_action():
+    cases = {
+        "音量 0%": 0,
+        "音量調到 37%": 37,
+        "把音量降低到 30%": 30,
+        "聲音設成 50%": 50,
+        "volume 100 percent": 100,
+        "set system volume to 45": 45,
+    }
+
+    for text, expected in cases.items():
+        parsed = parser().parse(text)
+        assert parsed.accepted is True, text
+        assert parsed.action is not None
+        assert parsed.action.action.value == "set_volume"
+        assert parsed.action.volume_percent == expected
+
+
+def test_exact_volume_rejects_out_of_range_and_expression_values():
+    for text in ("音量 -1", "音量 101", "volume 1000", "音量 NaN", "set volume to 30+1"):
+        parsed = parser().parse(text)
+        assert parsed.accepted is False, text
+        assert parsed.error_code == "INVALID_VOLUME_PERCENT", text
+
+
 def test_chinese_skip_commands_require_the_explicit_song_word():
     next_song = parser().parse("下一首歌")
     assert next_song.accepted is True

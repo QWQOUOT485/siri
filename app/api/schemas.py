@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from app.domain.actions import ActionName, SpotifyVersionHint, ValidatedAction
 
@@ -25,6 +25,7 @@ class ActionRequest(BaseModel):
     artist: str | None = Field(default=None, min_length=1, max_length=300)
     album: str | None = Field(default=None, min_length=1, max_length=300)
     version_hint: SpotifyVersionHint | None = None
+    volume_percent: StrictInt | None = Field(default=None, ge=0, le=100)
     steps: int = Field(default=1, ge=1, le=10)
     confirmation_token: str | None = Field(default=None, min_length=1, max_length=512)
 
@@ -46,7 +47,13 @@ class ActionRequest(BaseModel):
             raise ValueError("track is required for Spotify named-track playback")
         if self.action is not ActionName.SPOTIFY_PLAY_TRACK and (self.track or self.artist or self.album or self.version_hint):
             raise ValueError("track, artist, album, and version_hint are only supported by Spotify named-track playback")
-        if self.action not in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE} and self.steps != 1:
+        if self.action is ActionName.SET_VOLUME and self.volume_percent is None:
+            raise ValueError("volume_percent is required for set_volume")
+        if self.action is not ActionName.SET_VOLUME and self.volume_percent is not None:
+            raise ValueError("volume_percent is only supported by set_volume")
+        if self.action is ActionName.SET_VOLUME and self.steps != 1:
+            raise ValueError("steps is not supported by set_volume")
+        if self.action not in {ActionName.VOLUME_UP, ActionName.VOLUME_DOWN, ActionName.SET_VOLUME, ActionName.MUTE, ActionName.UNMUTE, ActionName.TOGGLE_MUTE} and self.steps != 1:
             raise ValueError("steps is only supported by volume actions")
         return self
 
@@ -61,6 +68,7 @@ class ActionRequest(BaseModel):
             artist=self.artist,
             album=self.album,
             version_hint=self.version_hint,
+            volume_percent=self.volume_percent,
             steps=self.steps,
             confirmation_token=self.confirmation_token,
         )

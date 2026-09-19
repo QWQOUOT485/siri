@@ -67,10 +67,15 @@ class FakeMedia:
 class FakeVolume:
     def __init__(self):
         self.actions = []
+        self.exact_calls = []
 
     def change(self, action, steps=1):
         self.actions.append((action, steps))
         return OperationResult(True, "volume")
+
+    def set_volume(self, volume_percent):
+        self.exact_calls.append(volume_percent)
+        return OperationResult(True, "exact volume", data={"level": volume_percent / 100})
 
 
 class FakeSystem:
