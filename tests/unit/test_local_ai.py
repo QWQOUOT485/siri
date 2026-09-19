@@ -267,6 +267,68 @@ def test_lm_studio_adapter_is_loopback_only_and_transport_only():
     assert "clarification_token" not in request.data.decode()
 
 
+@pytest.mark.parametrize("body", (b"not-json", b'{"choices": []}'))
+def test_lm_studio_adapter_rejects_malformed_responses(body):
+    adapter = LMStudioLocalAIAdapter(
+        "http://127.0.0.1:1234/v1",
+        "test-model",
+        opener=FakeOpener(body),
+    )
+
+    with pytest.raises(LocalAITransportError) as exc_info:
+        adapter.infer("播放晴天")
+
+    assert exc_info.value.reason == "invalid_response"
+
+
+def test_lm_studio_adapter_rejects_oversized_responses():
+    adapter = LMStudioLocalAIAdapter(
+        "http://127.0.0.1:1234/v1",
+        "test-model",
+        max_response_bytes=1024,
+        opener=FakeOpener(b"x" * 1025),
+    )
+
+    with pytest.raises(LocalAITransportError) as exc_info:
+        adapter.infer("播放晴天")
+
+    assert exc_info.value.reason == "response_too_large"
+
+
+def test_lm_studio_adapter_maps_timeout_to_category_only_failure():
+    class TimeoutOpener:
+        def open(self, request, timeout):
+            raise TimeoutError("test timeout")
+
+    adapter = LMStudioLocalAIAdapter(
+        "http://127.0.0.1:1234/v1",
+        "test-model",
+        opener=TimeoutOpener(),
+    )
+
+    with pytest.raises(LocalAITransportError) as exc_info:
+        adapter.infer("播放晴天")
+
+    assert exc_info.value.reason == "connection_or_timeout"
+
+
+def test_local_ai_service_rejects_malformed_model_json_without_action():
+    class MalformedAdapter:
+        model_id = "test-model"
+
+        def infer(self, original_text):
+            return LocalAIResponse(content="not-json", model_id=self.model_id, latency_ms=1.0)
+
+    result = LocalAIService(mode="shadow", adapter=MalformedAdapter()).retry(
+        "播放晴天",
+        parser_miss("播放晴天"),
+    )
+
+    assert result.status == "schema_rejected"
+    assert result.action is None
+    assert result.execution_allowed is False
+
+
 def test_lm_studio_adapter_allows_only_one_inflight_request():
     content = json.dumps(
         {"schema_version": 1, "intent": "unknown", "track": None, "artist": None, "album": None}
