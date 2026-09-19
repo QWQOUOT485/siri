@@ -210,6 +210,13 @@ Because Phase 0.5 did not pass the safety/quality gates, this semantic-retry pat
 - 已新增 `docs/LOCAL_AI_BENCHMARK_2026-09-19.md`，固定 source commit、fixture hash、prompt/schema hash、LM Studio/model/config 與 sanitized metrics；不提交 raw prompts、model output、tokens 或 credentials。
 - GitHub PR #5 的 independent gate review 判定 production fallback **NO-GO**、shadow-only remediation **GO**。目前仍須先解除 SOURCE_SPEC authority conflict、完成 production-aligned Windows/Spotify/Siri shadow acceptance，才可另開 promotion review。
 
+## Local AI Production-Aligned Shadow Acceptance Check (2026-09-19)
+
+- 以 source `893b115` 在隔離 `127.0.0.1:8001` runtime 做 guarded shadow check：`/health` 回傳 200；authenticated `/info` 回報 `mode=shadow`、adapter 已設定、`fallback_approved=false`；parser-miss 的 `幫我放晴天` 只產生 bounded `local_ai status=shadow_accepted`，沒有 executable action、Spotify playback 或 fallback；unsupported-domain 輸入被 eligibility gate 拒絕。
+- 部署前的 readback 確認 `D:\ai\windows-siri-agent` 是 pre-AI；完成 loopback gate 後，已先備份 `runtime.py`、`config.py`、`routes_command.py` 到 `D:\ai\windows-siri-agent\work\local-ai-shadow-backup-20260919-203734`，再以可還原方式同步六個 Local AI modules、runtime/config/route wiring，並加入 `LOCAL_AI_MODE=shadow`、`LOCAL_AI_FALLBACK_APPROVED=false`。
+- 已在實際 port 8000 installed runtime 完成 shadow-only acceptance：`/health` 回傳 200；authenticated `/info` 回報 `mode=shadow`、adapter 已設定、`fallback_approved=false`；parser-miss 的 `幫我放晴天` log 為 `shadow_accepted`，unsupported-domain 的 `幫我播放一首歌曲` log 為 `ineligible`，兩者都沒有 executable action 或 Spotify playback。
+- LM Studio listener 已重新讀回為 `127.0.0.1:1234`，不再是 `0.0.0.0`。這只完成 installed shadow acceptance，不是 fallback promotion；port 8000 目前仍是 shadow、fallback 關閉，後續仍受 SOURCE_SPEC authority conflict 與獨立 promotion review gate 約束。
+
 ## Local AI Product Decision (2026-09-18)
 
 - 舊規則「V1 不得加入 LLM integration」已取消。
