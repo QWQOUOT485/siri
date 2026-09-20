@@ -101,6 +101,23 @@ devices at probe time. Because there was no active target, the probe sent no
 resume request and did not transfer playback. It also observed no 429 or
 `QUOTA_EXCEEDED` response.
 
+## Follow-up after observability merge and deployment
+
+PR #26 was reviewed and merged to `main` as `874a944`. The reviewed
+non-secret source was staged to the installed Agent after a reversible local
+backup; `.env`, local configuration, runtime data, logs, outputs, work data,
+token storage, and the virtual environment were excluded from the staging
+set. Installed verification passed with targeted Spotify/security tests at
+169 passed, the full suite at 306 passed, compileall passed, pip check passed,
+and loopback `/health` returned 200. Runtime settings remained Local AI
+shadow with fallback approval false and semantic memory disabled.
+
+A single bounded read-only live preflight through the installed token
+lifecycle then found 1 usable non-restricted device and 0 active devices; the
+server-selected device was inactive. No `spotify_continue`, transfer, retry,
+or playback command was sent, so this follow-up captured no new provider 403
+reason and does not change the NO-GO decision.
+
 ## Hypothesis result
 
 - **External playback state / device / account condition — remains most
@@ -124,11 +141,10 @@ resume request and did not transfer playback. It also observed no 429 or
 
 ## Stop line and next evidence
 
-`spotify_continue` is still **NOT ACCEPTED**. The next implementation step is
-a separate source PR for safe, bounded, sanitized provider-reason
-observability; that change is not part of this diagnostic evidence PR. After
-the observability source change is reviewed and deployed to the installed
-Agent, restore or identify a known active, non-restricted Spotify Desktop
+`spotify_continue` is still **NOT ACCEPTED**. The bounded provider-reason
+observability change is now reviewed, merged, and deployed to the installed
+Agent, but the active-device precondition was absent, so no live 403 reason was
+captured. Restore or identify a known active, non-restricted Spotify Desktop
 device, then permit one bounded real resume acceptance. Stop immediately on
 429 or `QUOTA_EXCEEDED`; do not retry or sleep.
 
