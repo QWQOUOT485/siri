@@ -44,6 +44,28 @@ items 的唯一整理見 [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FR
 - The installed Agent was not running on `127.0.0.1:8000` during this inspection, so the current result is connection refused. PR #26's earlier installed-host `/health` HTTP 200 remains historical evidence and is not relabeled as a current live check.
 - No live Spotify request or Siri voice E2E was run during this release-cut inspection; `spotify_continue`, semantic memory, and Local AI promotion boundaries remain unchanged.
 
+## Final Release-cut Runtime Gate (2026-09-20)
+
+The final installed runtime gate passed against reviewed `main`
+`fbea4ba753fab6b672a6e4d24488381128df69bb` after PR #30 merged. The sanitized
+evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md).
+
+- Installed Agent startup completed without a startup traceback.
+- Current loopback `GET /health` returned HTTP 200 with only `ok`, `status`,
+  `version`, and `uptime_seconds` fields.
+- Effective installed settings were `semantic_memory_enabled=false`, Local AI
+  `shadow`, and `local_ai_fallback_approved=false`.
+- Release-relevant runtime/source parity was confirmed for `app/`, `scripts/`,
+  `tests/`, `VERSION`, `requirements.txt`, and `.env.example`. Local `.env`,
+  config, Spotify token, runtime data, logs, outputs/work, and `.venv` were
+  preserved; no copy, delete, or overwrite was performed on them.
+- No live Spotify request, Siri voice E2E, or `spotify_continue` retry was run.
+  `spotify_continue` remains **NOT ACCEPTED**; Semantic Memory remains
+  disabled; Local AI executable fallback remains unapproved; hosted CI remains
+  absent.
+- **v1.0 release-cut verdict: READY for the reviewed deterministic scope, with
+  the documented known limitations and deferred items unchanged.**
+
 ## Security Invariants
 
 下列界線不可因功能或 AI 擴充而放寬：
