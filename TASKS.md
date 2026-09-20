@@ -5,8 +5,9 @@
 **v1.0.0 released / post-release handoff**
 
 The v1.0.0 runtime release-cut gate and installed identity acceptance passed for
-the reviewed deterministic scope. The latest `main` is
-`f1c201ddc2e9866ae46befd279c04c61921ad586`, after evidence-only PR #33 merged.
+the reviewed deterministic scope. The v1.0.0 release commit and annotated tag
+target is `f1c201ddc2e9866ae46befd279c04c61921ad586`, after evidence-only PR
+#33 merged.
 The annotated `v1.0.0` tag targets that commit, and the GitHub Release
 `Windows Siri Agent v1.0.0` is published. Source and installed identity report
 `1.0.0`; the release evidence records source/installed full pytest at 307
