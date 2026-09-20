@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff; the installed Windows Agent remains outside this merge and runtime acceptance is a separate gate.
+**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
 head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
@@ -53,10 +53,17 @@ Semantic Memory production enablement and Local AI promotion remain disabled.
   still requires server-owned candidate selection followed by successful
   playback.
 - Current source/unit verification is complete: full pytest **336 passed**,
-  compileall, pip check, and git diff check passed. Installed Windows Agent,
-  real Spotify, and Siri voice acceptance have not been run for this phase. The
-  installed runtime remains outside this branch and Semantic Memory remains
-  disabled.
+  compileall, pip check, and git diff check passed. The installed target was
+  deployed with a reversible backup and 158/158 source-controlled non-protected
+  files matched by SHA-256. Installed focused regressions (49 + 125 + 3 + 16)
+  and full pytest **336 passed**; `/health` and OpenAPI both reported version
+  `1.0.0`. The initial trusted candidate clarification and explicit playback
+  passed, but the bounded `都不是` continuation returned
+  `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without a new token rotation, so
+  live continuation acceptance remains blocked/unproven. Siri voice acceptance
+  was not performed; Semantic Memory remains disabled and Local AI promotion
+  remains unapproved. Evidence is recorded in
+  [`docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
 
 ## Source of Truth
 
