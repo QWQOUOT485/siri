@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.adapters.spotify.client import SpotifyApiError
@@ -13,6 +14,9 @@ from app.infrastructure.spotify_auth import SpotifyAuthError
 
 from .memory_learner import MemoryLearningEvent
 from .spotify_clarification import SpotifyClarificationStore
+
+
+_PROVIDER_REASON = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
 
 
 class SpotifyService:
@@ -289,7 +293,13 @@ class SpotifyService:
     @staticmethod
     def _api_error(error: SpotifyApiError) -> OperationResult:
         if error.status_code == 403:
-            return OperationResult(False, str(error), "SPOTIFY_FORBIDDEN")
+            reason = (
+                error.reason
+                if isinstance(error.reason, str) and _PROVIDER_REASON.fullmatch(error.reason) is not None
+                else None
+            )
+            data = {"provider_reason": reason} if reason is not None else {}
+            return OperationResult(False, str(error), "SPOTIFY_FORBIDDEN", data)
         if error.status_code == 429:
             data = {"retry_after_seconds": error.retry_after_seconds} if error.retry_after_seconds is not None else {}
             return OperationResult(False, str(error), "SPOTIFY_RATE_LIMITED", data)

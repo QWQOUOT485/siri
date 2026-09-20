@@ -1,6 +1,7 @@
 import json
 
 import httpx
+import pytest
 
 from app.adapters.spotify.catalog import SpotifyCatalog
 from app.adapters.spotify.client import SpotifyApiClient
@@ -474,20 +475,56 @@ def test_401_refreshes_once_then_retries_the_fixed_operation(tmp_path):
     assert device_headers == ["Bearer access-token", "Bearer refreshed-access"]
 
 
-def test_forbidden_and_rate_limited_responses_are_safe_and_bounded(tmp_path):
-    def forbidden_handler(request: httpx.Request):
-        return httpx.Response(403, json={"error": {"status": 403}})
+@pytest.mark.parametrize(
+    ("reason", "expected_provider_reason"),
+    [
+        ("PREMIUM_REQUIRED", "PREMIUM_REQUIRED"),
+        (None, None),
+        ("Premium required", None),
+        ("x" * 65, None),
+    ],
+)
+def test_forbidden_provider_reason_is_bounded_and_non_sensitive(tmp_path, reason, expected_provider_reason):
+    payload = {
+        "error": {
+            "status": 403,
+            "message": "raw-provider-secret access-token=secret-token",
+        },
+        "track_id": "private-track-id",
+        "uri": "spotify:track:private-uri",
+    }
+    if reason is not None:
+        payload["error"]["reason"] = reason
 
-    forbidden, _ = service(tmp_path / "forbidden", forbidden_handler)
+    def forbidden_handler(request: httpx.Request):
+        return httpx.Response(403, json=payload)
+
+    forbidden, _ = service(tmp_path / f"forbidden-{expected_provider_reason or 'none'}", forbidden_handler)
     forbidden_result = forbidden.execute(ValidatedAction(action=ActionName.SPOTIFY_PAUSE))
+
+    assert forbidden_result.success is False
     assert forbidden_result.error_code == "SPOTIFY_FORBIDDEN"
+    assert forbidden_result.message == "Spotify 拒絕這項播放操作，請確認 Premium 與帳戶狀態。"
+    expected_data = {"provider_reason": expected_provider_reason} if expected_provider_reason else {}
+    assert forbidden_result.data == expected_data
+    rendered = repr(forbidden_result)
+    assert "raw-provider-secret" not in rendered
+    assert "secret-token" not in rendered
+    assert "private-track-id" not in rendered
+    assert "spotify:track:private-uri" not in rendered
 
     def limited_handler(request: httpx.Request):
-        return httpx.Response(429, headers={"Retry-After": "9"}, json={"error": {"status": 429}})
+        return httpx.Response(
+            429,
+            headers={"Retry-After": "9"},
+            json={"error": {"status": 429, "reason": "RATE_LIMITED"}},
+        )
 
     limited, _ = service(tmp_path / "limited", limited_handler)
     limited_result = limited.execute(ValidatedAction(action=ActionName.SPOTIFY_PAUSE))
+    assert limited_result.success is False
     assert limited_result.error_code == "SPOTIFY_RATE_LIMITED"
+    assert limited_result.message == "Spotify 目前請求過多，請稍後再試。"
     assert limited_result.data == {"retry_after_seconds": 9}
 
 
