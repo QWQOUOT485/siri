@@ -132,7 +132,9 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 
 - current source 已加入 closed actions：`spotify_shuffle_on/off`、`spotify_repeat_off/track/context`、`spotify_continue`；parser、`SpotifyService`、`SpotifyPlayer` 與 fixed Spotify endpoints `/me/player/shuffle`、`/me/player/repeat` 已接通。
 - `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
-- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；本次完整 source suite 為 **303 passed**，另有 2 個既有 dependency deprecation warnings。未呼叫真實 Spotify，未做 Windows/Siri voice acceptance，也未把這批 source patch 視為 installed runtime acceptance。
+- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；source 與 installed-host 完整 suite 都是 **303 passed**，各有 2 個既有 dependency deprecation warnings。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
+- 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
+- Installed alignment 保留 `.env`、local config、runtime data、Spotify token、logs、work/outputs；live token lifecycle 的正常 refresh 可能更新 token JSON，但沒有將 token 值寫入報告。Local AI controls requests 維持 `unsupported_domain`、未進 executable AI path。
 - `spotify_seek`、`spotify_set_volume`、`spotify_like_current`、`spotify_unlike_current` 尚未在本批實作；Local AI allowlist 維持不擴張。
 
 ### Windows exact volume
@@ -279,13 +281,13 @@ Phase 1 原則：
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
-   - shuffle on/off、repeat off/track/context、continue：current source/unit 已完成，仍未做安全 real Spotify/Windows/Siri acceptance。
+   - shuffle on/off、repeat off/track/context：installed real Spotify bounded acceptance 已通過；continue 只有 repeat-off / shuffle-preservation partial evidence，因 real `SPOTIFY_FORBIDDEN` 尚未接受，需先釐清 resume blocker。Siri voice E2E 仍未執行。
    - seek、Spotify device volume、like/unlike current track：尚未實作。
    - 都不得擴張 Local AI allowlist。
 
 4. **Local Semantic Recovery Phase 1 runtime acceptance**
    - current-source Windows SQLite/create/restart/RAM/fallback harness 已完成；source/unit與mocked Spotify regression已通過。
-   - current Phase 1 source 已 staged 到 installed Agent；installed-host full regression 為 268 passed，disabled loopback `/health` smoke 通過，且未建立 production semantic-memory SQLite artifact。
+   - current Phase 1 source 已 staged 到 installed Agent；本次 installed-host full regression 為 303 passed，disabled loopback `/health` smoke 通過，且未建立 production semantic-memory SQLite artifact。
    - 仍需正常 ASR alias → trusted candidate → clarification path、real Spotify playback/write/restart、iPhone/Siri voice E2E 與 installed-host latency/RAM review；memory 保持 disabled。
    - rollout evidence 見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md)、[`docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md) 與 [`docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
 
@@ -308,7 +310,7 @@ Phase 1 原則：
 ```text
 1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
 2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
-3. safe Windows/Spotify/Siri acceptance for shuffle/repeat/continue, then implement the remaining deterministic playback controls
+3. diagnose the installed real Spotify `spotify_continue` resume `SPOTIFY_FORBIDDEN` blocker, then run a new bounded retry only with evidence; keep Siri voice acceptance separate
 4. Local Semantic Recovery Phase 1 runtime acceptance
 5. Local AI production-loopback shadow acceptance
 6. sanitized promotion evidence

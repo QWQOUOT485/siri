@@ -96,7 +96,7 @@ Only after all gates pass may `LOCAL_AI_FALLBACK_APPROVED=true` be considered.
 
 - saved=true has been verified against a real Spotify account, but its effect on a genuine ambiguity ordering case is not yet accepted.
 - Top Tracks / Top Artists source ranking is implemented and covered, but real-account acceptance is pending `user-top-read` reauthorization; Recently Played source ranking is implemented and real-account acceptance is pending `user-read-recently-played` reauthorization.
-- Shuffle/repeat/continue source slice is implemented and covered by source/unit tests, but safe real Spotify/Windows/Siri acceptance is still pending; seek, Spotify device volume, and like/unlike remain incomplete.
+- Shuffle/repeat/continue source slice is implemented and covered by source/unit tests. Installed bounded real Spotify acceptance passed shuffle on/off and repeat track/context/off; `spotify_continue` remains partial/NO-GO because the real resume portion returned `SPOTIFY_FORBIDDEN`; Siri voice acceptance is still pending. Seek, Spotify device volume, and like/unlike remain incomplete.
 - exact Windows volume has Windows runtime acceptance but not Siri voice / physical-speaker acceptance.
 - Local Semantic Recovery Phase 1 is approved but not complete.
 - Local AI production fallback remains unapproved.
