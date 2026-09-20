@@ -4,15 +4,16 @@
 
 ## Current Phase
 
-**v1.0.0 installed identity acceptance PASSED / evidence-only review pending.**
-PR #32 is merged into `main` as
-`71eb1bb74365cf69a88ae84239b4fa7d14f06f33` from reviewed head
-`7e25596980552bdfd81549ed58772304694a380c`. The source product version and
-installed deployment now report `1.0.0`; the formal tag/release has not been
-created. The final acceptance evidence is recorded in
+**v1.0.0 released / post-release handoff.**
+PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
+PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
+head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
+and installed deployment now report `1.0.0`. The annotated `v1.0.0` tag points
+to the release merge commit and the formal GitHub Release is published. The final
+acceptance evidence is recorded in
 [`docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md`](docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md)
-and is awaiting review/merge of [evidence-only PR #33](https://github.com/QWQOUOT485/siri/pull/33).
-The final v1.0.0 release is not complete. The accepted core
+and the release notes preserve the remaining limitations and deferrals. The
+accepted core
 remains the priority; optional Spotify controls, semantic memory, and broader
 Local AI authority are either explicit known limitations or deferred as
 recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
@@ -83,10 +84,10 @@ evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/
 - Runtime release-cut gate: **PASSED** for the reviewed deterministic scope.
 - Source product identity is now `1.0.0` in `VERSION`, `app.__version__`, the
   FastAPI metadata, and the runtime fallback.
-- The formal v1.0.0 tag/release has **not** been created.
+- The annotated `v1.0.0` tag and GitHub Release are published at the reviewed
+  merge commit `f1c201ddc2e9866ae46befd279c04c61921ad586`.
 - Installed `1.0.0` deployment, source/runtime parity, `/health`, and OpenAPI
-  identity acceptance **PASSED**; the evidence-only review/merge is still
-  pending, so do not claim final v1.0.0 release completion yet.
+  identity acceptance **PASSED**.
 - `spotify_continue` remains **NOT ACCEPTED**.
 - `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
   `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
@@ -110,8 +111,8 @@ evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/
   execution-authority promotion.
 - No live Spotify calls, `spotify_continue` retry, Siri voice E2E, Candidate
   Recovery, Semantic Memory enablement, or Local AI promotion was performed.
-- The formal tag/release remains intentionally uncreated until the evidence
-  PR is reviewed and merged.
+- No implementation source or additional commit was created as part of the
+  tag/release step.
 
 ## Security Invariants
 
