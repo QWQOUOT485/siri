@@ -75,25 +75,39 @@ suite passed 246 tests. This includes the source regression coverage for
 These are source and mocked-provider results. They do not prove a real Spotify
 account, active device, real playback, or Siri voice behavior.
 
-## Installed Windows Agent evidence
+## Installed Windows Agent evidence — pre-alignment snapshot
 
-The installed copy at `D:\ai\windows-siri-agent` was reachable through its
-local health endpoint during the check. Read-only inspection found:
+The following is a historical snapshot taken before the installed-agent
+alignment recorded in
+[`SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md).
+It is not a statement of the current installed tree. At the time of this
+check, the installed copy at `D:\ai\windows-siri-agent` was reachable through
+its local health endpoint and read-only inspection found:
 
-- no Semantic Memory modules in the installed `app` tree;
-- installed `app\runtime.py` and `app\infrastructure\config.py` hashes differ
-  from the current repository versions;
-- installed `.env` has no `LOCAL_SEMANTIC_MEMORY_*` keys;
-- `runtime\semantic_memory` and its SQLite database are absent.
+- pre-alignment check: no Semantic Memory modules were present in the installed
+  `app` tree;
+- pre-alignment check: installed `app\runtime.py` and
+  `app\infrastructure\config.py` hashes differed from the repository versions
+  that were current at that time;
+- pre-alignment check: installed `.env` had no
+  `LOCAL_SEMANTIC_MEMORY_*` keys;
+- pre-alignment check: `runtime\semantic_memory` and its SQLite database were
+  absent.
 
-Therefore the installed Agent cannot execute the current Phase 1 runtime
-acceptance sequence. No installed configuration or database was modified to
-force an artificial pass.
+Therefore, at the time of this pre-alignment check, the installed Agent could
+not execute the current Phase 1 runtime acceptance sequence. No installed
+configuration or database was modified to force an artificial pass. The later
+alignment is documented separately and confirms that the current `app` tree,
+including `app\infrastructure\config.py`, now matches the reviewed source;
+semantic memory remains disabled and no production SQLite artifact was
+created.
 
 ## Open gates and smallest next action
 
-1. Stage/deploy the exact reviewed Phase 1 source to an isolated Windows Agent
-   runtime without copying secrets or enabling production memory.
+1. **Completed after this snapshot:** stage/deploy the exact reviewed Phase 1
+   source to an isolated Windows Agent runtime without copying secrets or
+   enabling production memory. See
+   [`SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md).
 2. Run the first real Spotify clarification and successful playback for the
    `Sad overlxrd` case, then restart and verify the second exact hit.
 3. Re-run the existing `播放死亡是生命的終點` regression and the established
