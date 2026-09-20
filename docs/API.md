@@ -65,11 +65,17 @@ spoken follow-up and the returned opaque token back to this same endpoint:
 ```
 
 The token is a short-lived, server-owned clarification context. An explicit
-candidate selection consumes it. A reviewed continuation such as `都不是`,
-`不是這些`, `換一批`, or `none of these` may retain the same token while the
-bounded TTL and recovery-round policy permits it. The client cannot submit a
-Spotify URI, track ID, paging cursor, or memory-trust value; the server chooses
-the next candidate page and removes provider IDs already shown.
+candidate selection consumes it. A reviewed exact continuation such as
+`都不是`, `不是這些`, `換一批`, `再一批`, `none of these`,
+`not these`, `another batch`, `next batch`, or `different ones` advances
+the context at most two user-visible recovery rounds. Every successful
+continuation atomically consumes the old token and returns a new opaque token;
+the old token is permanently `USED` and cannot select or advance another
+branch. A provider/auth failure releases the in-flight marker so the old
+context can be retried, without creating a second client-visible state.
+The client cannot submit a Spotify URI, track ID, paging cursor, or
+memory-trust value; the server chooses the next candidate page and removes
+provider IDs already shown.
 
 ## Response Schema
 
@@ -114,7 +120,7 @@ Server flow:
 2. Search Spotify for a track.
 3. Rank exact title + artist matches above weaker matches.
 4. Exclude Live/Concert/Tour/演唱會/現場 candidates. If confidence is insufficient or several plausible tracks remain, return at most three trusted candidates and a short-lived clarification token instead of guessing.
-5. If the user asks for another batch, use only server-owned recovery state: the implementation may use the bounded internal pool or a bounded title-first Spotify page (10 results per fetch, at most 20 internal candidates and two recovery rounds). Remove already-shown IDs, preserve album/version constraints, and continue to require explicit clarification.
+5. If the user asks for another batch, use only server-owned recovery state: the implementation may use the bounded internal pool or a bounded title-first Spotify page (10 results per fetch, at most 20 internal candidates and two successful user-visible recovery rounds total). Each successful local or provider page rotates the clarification token; remove already-shown IDs, preserve album/version constraints, and continue to require explicit clarification.
 6. Resolve a trusted Spotify track URI/ID from the server-owned candidate context only after explicit selection.
 7. Resolve the configured/active Spotify Connect device.
 8. Start playback using the trusted Spotify URI.

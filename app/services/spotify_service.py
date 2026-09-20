@@ -183,7 +183,8 @@ class SpotifyService:
                     source_text,
                     recovered[:3],
                     recovery_candidates=recovered,
-                    recovery_fetches=1,
+                    recovery_rounds=1,
+                    provider_fetches=1,
                     recovery_offset=self._recovery_offset(artist, after_fetch=True),
                 )
             if resolution.ambiguous:
@@ -203,7 +204,8 @@ class SpotifyService:
         candidates,
         *,
         recovery_candidates=(),
-        recovery_fetches: int = 0,
+        recovery_rounds: int = 0,
+        provider_fetches: int = 0,
         recovery_offset: int = 0,
     ) -> OperationResult:
         trusted = tuple(candidates[:3])
@@ -228,7 +230,8 @@ class SpotifyService:
             observed_alias=command.artist,
             recovery_candidates=tuple(recovery_candidates),
             recovery_request=recovery_request,
-            recovery_fetches=recovery_fetches,
+            recovery_rounds=recovery_rounds,
+            provider_fetches=provider_fetches,
         )
         if self.metrics is not None:
             self.metrics.increment("recovery_clarification")

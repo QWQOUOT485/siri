@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**v1.1 Candidate Recovery Phase 1B source implementation in progress on the dedicated branch `feat/spotify-candidate-recovery-phase1b-ee2cb26`.** The base `main` remains the released v1.0.0 line described below.
+**v1.1 Candidate Recovery Phase 1B source implementation is updated on the dedicated branch `feat/spotify-candidate-recovery-phase1b-ee2cb26`; PR #35 is ready for re-review and remains unmerged.** The base `main` remains the released v1.0.0 line described below.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
 head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
@@ -29,8 +29,13 @@ server-owned clarification continuation for `都不是` / `不是這些` / `換�
 
 - Public clarification remains at most three candidates; the internal recovery
   pool is capped at 20 candidates, each Spotify fetch is capped at 10 results,
-  and the clarification store allows only a small fixed number of recovery
-  rounds.
+  and the clarification store allows at most two successful user-visible
+  recovery rounds shared by local and provider pages.
+- Every successful recovery page atomically rotates the opaque clarification
+  token and retires the old token as USED. Provider recovery has one in-flight
+  authority branch per token; provider/auth failure leaves the usable context
+  retryable without creating a second client-visible state. Recovery phrases
+  are reviewed exact matches after normalization, not broad prefixes.
 - Recovery excludes Live/Concert variants, removes already-shown provider
   identities, preserves explicit album/version constraints, and never accepts a
   client URI, track ID, paging offset, or recovery cursor.
@@ -38,7 +43,7 @@ server-owned clarification continuation for `都不是` / `不是這些` / `換�
   auto-plays and recovery alone never confirms Semantic Memory. Alias learning
   still requires server-owned candidate selection followed by successful
   playback.
-- Current source/unit verification is complete: full pytest **316 passed**,
+- Current source/unit verification is complete: full pytest **334 passed**,
   compileall, pip check, and git diff check passed. Installed Windows Agent,
   real Spotify, and Siri voice acceptance have not been run for this phase. The
   installed runtime remains outside this branch and Semantic Memory remains

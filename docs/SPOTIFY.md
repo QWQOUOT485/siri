@@ -261,11 +261,14 @@ Top Tracks、Top Artists、Recently Played 的 server-side ranking evidence 使�
 ```
 
 Agent 只會在 server-owned 候選 context 中解析序號、歌手或專輯；client
-不得傳入 Spotify URI、track ID、paging offset 或 recovery cursor。使用者說
-`都不是`、`不是這些`、`換一批` 或 `none of these` 時，Agent 可從已建立的
-bounded pool 或一次 bounded title-first recovery search 取得下一批候選，但仍
-最多公開三首、移除已展示的 provider IDs、排除 Live/Concert 版本，而且不會
-自動播放。
+不得傳入 Spotify URI、track ID、paging offset 或 recovery cursor。使用者只可
+用 reviewed normalized exact phrases `都不是`、`不是這些`、`換一批`、`再一批`、
+`none of these`、`not these`、`another batch`、`next batch` 或 `different ones`
+要求下一批；額外文字不會因為 prefix matching 被默認接受。Agent 可從已建立的
+bounded pool 或 bounded title-first recovery search 取得下一批候選，但仍最多
+公開三首、移除已展示的 provider IDs、排除 Live/Concert 版本，而且不會自動
+播放。每次成功換頁都會輪換 clarification token，舊 token 不能再 select 或
+advance。
 
 Clarification context 使用 Windows Agent process 內的 bounded in-memory store：
 
@@ -273,8 +276,9 @@ Clarification context 使用 Windows Agent process 內的 bounded in-memory stor
 - 每次不清楚的第二輪回覆會增加失敗次數，但最多允許三次嘗試；
 - 第三次仍不清楚時 context 立即失效，不再回傳 token；
 - 成功選擇與失敗次數更新都在同一個 lock 內完成，因此同一 token 的並發請求最多只有一個成功選擇；
-- candidate recovery 的每次 Spotify fetch 最多 10 筆，internal pool 最多 20 筆，recovery rounds 是固定的小上限；
-- explicit selection 才會 consume token；bounded recovery continuation 可在 TTL / round limit 內保留同一 token；
+- candidate recovery 的每次 Spotify fetch 最多 10 筆，internal pool 最多 20 筆，且最多兩次成功的 user-visible recovery continuation rounds；local pool page 與 provider page 共用同一 budget；
+- explicit selection 會 consume token；每次成功的 local/provider recovery page 都在 lock 內 consume 舊 token 並建立新的 opaque token，舊 token 只回傳 USED，不得再 select 或 advance；
+- provider/auth failure 不會不必要地 consume 尚可使用的 context；同一 token 的 in-flight recovery 只允許一個 provider authority branch，其他並發請求 fail closed 或收到 in-progress；
 - 失敗次數與剩餘次數不會放入 Siri 回應，避免把內部防護細節變成 client 控制面。
 
 Candidate recovery 仍然只是 trusted candidate evidence，不是 execution authority，

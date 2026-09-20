@@ -150,8 +150,10 @@ def test_store_pages_server_owned_recovery_candidates_without_client_cursor():
 
     assert next_page.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"
     assert [track.track_id for track in next_page.candidates] == ["four", "five"]
-    assert next_page.clarification_token == token
-    assert store.select(token, "第一首").track.track_id == "four"
+    assert next_page.clarification_token
+    assert next_page.clarification_token != token
+    assert store.select(token, "第一首").error_code == "SPOTIFY_CLARIFICATION_USED"
+    assert store.select(next_page.clarification_token, "第一首").track.track_id == "four"
 
 
 def test_store_requests_bounded_server_recovery_when_local_pool_is_exhausted():
@@ -174,4 +176,81 @@ def test_store_requests_bounded_server_recovery_when_local_pool_is_exhausted():
 
     assert page.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"
     assert [track.track_id for track in page.candidates] == ["two"]
-    assert store.select(token, "都不是").error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert page.clarification_token
+    assert page.clarification_token != token
+    assert store.select(token, "都不是").error_code == "SPOTIFY_CLARIFICATION_USED"
+    exhausted = store.select(page.clarification_token, "都不是")
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert exhausted.clarification_token == page.clarification_token
+
+
+def test_store_concurrent_local_recovery_rotates_once_and_consumes_old_token():
+    first_page = [candidate(str(index), f"Artist {index}", f"Album {index}") for index in range(1, 4)]
+    recovery_pool = [candidate(str(index), f"Artist {index}", f"Album {index}") for index in range(4, 10)]
+    store = SpotifyClarificationStore()
+    token = store.create(first_page, recovery_candidates=recovery_pool)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: store.select(token, "都不是"), range(2)))
+
+    pages = [result for result in results if result.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"]
+    used = [result for result in results if result.error_code == "SPOTIFY_CLARIFICATION_USED"]
+
+    assert len(pages) == 1
+    assert len(used) == 1
+    next_page = pages[0]
+    assert next_page.clarification_token
+    assert next_page.clarification_token != token
+    assert [track.track_id for track in next_page.candidates] == ["4", "5", "6"]
+    assert store.select(token, "第一首").error_code == "SPOTIFY_CLARIFICATION_USED"
+    assert store.select(next_page.clarification_token, "第一首").track.track_id == "4"
+
+
+def test_store_recovery_round_limit_applies_to_local_pages():
+    first_page = [candidate(str(index), f"Artist {index}", f"Album {index}") for index in range(1, 4)]
+    recovery_pool = [candidate(str(index), f"Artist {index}", f"Album {index}") for index in range(4, 11)]
+    store = SpotifyClarificationStore(max_recovery_rounds=2)
+    token = store.create(
+        first_page,
+        recovery_candidates=recovery_pool,
+        recovery_request=ClarificationRecoveryRequest(track="Stay"),
+    )
+
+    page_one = store.select(token, "換一批")
+    page_two = store.select(page_one.clarification_token, "換一批")
+    exhausted = store.select(page_two.clarification_token, "換一批")
+
+    assert [track.track_id for track in page_one.candidates] == ["4", "5", "6"]
+    assert [track.track_id for track in page_two.candidates] == ["7", "8", "9"]
+    assert page_one.clarification_token not in {token, page_two.clarification_token}
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert exhausted.clarification_token == page_two.clarification_token
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    ["都不是", "不是這些", "換一批", "再一批", "none of these", "not these", "another batch", "next batch", "different ones"],
+)
+def test_store_accepts_only_reviewed_exact_recovery_phrases(phrase):
+    store = SpotifyClarificationStore()
+    token = store.create(
+        [candidate("one", "Artist One", "Album One")],
+        recovery_candidates=[candidate("two", "Artist Two", "Album Two")],
+    )
+
+    result = store.select(token, phrase)
+
+    assert result.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"
+
+
+@pytest.mark.parametrize("phrase", ["都不是第一首", "none of these please play first", "another batch please"])
+def test_store_rejects_unreviewed_recovery_phrase_prefixes(phrase):
+    store = SpotifyClarificationStore()
+    token = store.create(
+        [candidate("one", "Artist One", "Album One")],
+        recovery_candidates=[candidate("two", "Artist Two", "Album Two")],
+    )
+
+    result = store.select(token, phrase)
+
+    assert result.error_code == "SPOTIFY_CLARIFICATION_UNCLEAR"
