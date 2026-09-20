@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**v1.1 Candidate Recovery Phase 1B source implementation is updated on the dedicated branch `feat/spotify-candidate-recovery-phase1b-ee2cb26`; PR #35 is ready for re-review and remains unmerged.** The base `main` remains the released v1.0.0 line described below.
+**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now match at that merge commit; the installed Windows Agent remains outside this merge and runtime acceptance is a separate gate.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
 head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
@@ -26,6 +26,11 @@ This phase was explicitly scheduled after the v1.0 release handoff. The source
 implementation now has a bounded, title-first Spotify recovery path and a
 server-owned clarification continuation for `都不是` / `不是這些` / `換一批` /
 `none of these`.
+
+PR #35 final review passed and the reviewed source was merged to `main` with
+merge commit `dde5e07130517dcaa67d9136ad222f748930545f`. No live Spotify,
+Siri voice, or installed deployment acceptance was run as part of the merge;
+Semantic Memory production enablement and Local AI promotion remain disabled.
 
 - Public clarification remains at most three candidates; the internal recovery
   pool is capped at 20 candidates, each Spotify fetch is capped at 10 results,
