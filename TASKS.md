@@ -2,31 +2,40 @@
 
 ## Current Milestone
 
-**v1.0.0 release identity cut / final installed verification pending**
+**v1.0.0 released / post-release handoff**
 
-The runtime release-cut gate has PASSED for the reviewed deterministic scope.
-The source product version is now `1.0.0`, but the formal tag/release has not
-been created. Installed `1.0.0` deployment, parity, and health are not yet
-verified, so final v1.0.0 release completion must not be claimed.
+The v1.0.0 runtime release-cut gate and installed identity acceptance passed for
+the reviewed deterministic scope. The v1.0.0 release commit and annotated tag
+target is `f1c201ddc2e9866ae46befd279c04c61921ad586`, after evidence-only PR
+#33 merged.
+The annotated `v1.0.0` tag targets that commit, and the GitHub Release
+`Windows Siri Agent v1.0.0` is published. Source and installed identity report
+`1.0.0`; the release evidence records source/installed full pytest at 307
+passed, 161 release-controlled files with zero missing or SHA-256 mismatches,
+and installed `/health` plus OpenAPI version `1.0.0`.
 
 Core Siri → Windows → Spotify playback and clarification are functional. The
 v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
 scope, `spotify_continue` known limitation, proposed blockers, and v1.1
-deferrals are recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is
-release identity cut and final installed verification; do not add a source
-workaround or a new live Spotify retry.
+deferrals remain recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. This is a
+post-release handoff; do not add a source workaround, retry live Spotify, or
+start v1.1 implementation in this documentation sync.
 
 ## v1.0.0 Release Identity Cut
 
 - Runtime release-cut gate: **PASSED** for the reviewed deterministic scope.
 - Source product version is now `1.0.0`.
-- The formal v1.0.0 tag/release is still not created.
-- Installed `1.0.0` deployment, parity, and `/health` remain unverified; final
-  v1.0.0 release completion must not be claimed.
+- Installed `1.0.0` deployment, source/runtime parity, `/health`, and OpenAPI
+  identity acceptance **PASSED**.
+- The annotated `v1.0.0` tag targets
+  `f1c201ddc2e9866ae46befd279c04c61921ad586`, and the formal GitHub Release
+  `Windows Siri Agent v1.0.0` is published.
+- Evidence-only PR #33 is merged as
+  `f1c201ddc2e9866ae46befd279c04c61921ad586`.
 - `spotify_continue` remains **NOT ACCEPTED**.
 - `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
   `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
-- Hosted CI remains absent and is not being added in this PR.
+- Hosted CI remains absent and is not being added in this docs-only change.
 
 ## v1.0 Scope Freeze Decision
 
@@ -82,7 +91,8 @@ workaround or a new live Spotify retry.
 - preference memory
 - broader Local AI authority or executable fallback
 
-These are not to be implemented as part of the v1.0 scope-freeze PR.
+These require a separately scoped v1.1 decision and branch; they are not part
+of this post-release documentation sync.
 
 ### P2 — Optional evidence, not a v1.0 blocker
 
