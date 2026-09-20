@@ -7,7 +7,8 @@
 **v1.0.0 release identity cut / final installed verification pending.** The
 runtime release-cut gate has PASSED for the reviewed deterministic scope. The
 source product version is now `1.0.0`; the formal tag/release has not been
-created. Installed `1.0.0` deployment, parity, and health have not been
+created. The identity cut is open for review as [PR #32](https://github.com/QWQOUOT485/siri/pull/32)
+from `release/v1.0.0-identity-20260920`; it is not merged. Installed `1.0.0` deployment, parity, and health have not been
 verified, so the final v1.0.0 release is not complete. The accepted core
 remains the priority; optional Spotify controls, semantic memory, and broader
 Local AI authority are either explicit known limitations or deferred as
