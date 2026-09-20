@@ -138,14 +138,14 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - source 已加入 bounded `SpotifyApiError.reason` parsing：只保留有限長度、固定字元形狀的 provider reason，不保存任意 provider message，也不把 token 放入 exception text、cache key 或 log。
 - `SpotifyApiClient` 對明確 `QUOTA_EXCEEDED` 建立 provider-wide Web API cooldown；普通 429 只進入 bounded operation scope（Search、personalization、playback 分開），遵循 capped `Retry-After`（最多 3600 秒），missing / malformed / negative header 使用短 fallback cooldown，不 sleep、不 busy-loop、不自動重試。OAuth Accounts token endpoint 不受 Web API cooldown 阻擋，避免 401 refresh path 誤清除有效 refresh token。
 - Top Tracks、Top Artists、Recently Played 使用 process-local bounded cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 signal entries；authorization context 以 process-local HMAC scope 隔離，raw token 不持久化，saved membership 不進這個 cache。cache 或 refresh 失敗時維持 deterministic ranking。
-- 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
+- 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 與其他 provider conditions 仍限制 real-provider evidence，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；mock/cache evidence 不等於 real Spotify acceptance，installed Agent alignment 仍是獨立 gate。
 - 2026-09-20 PR #26 (`fix/spotify-403-provider-reason-20260920`) merged to `main` as `874a944`; bounded 403 observability exposes only the already-validated provider reason as `OperationResult.data.provider_reason`, omitting missing, malformed, or overlong values. User-visible 403 code/message, 429 retry data, and 401 refresh behavior remain unchanged. The reviewed non-secret source was staged to the installed Agent with a reversible backup; installed targeted Spotify/security tests passed (169), full pytest passed (306), compileall and pip check passed, and loopback `/health` returned 200. The first post-deployment read-only preflight found 1 usable non-restricted device but 0 active devices, so no command was sent; that earlier precondition gap is now superseded by the active-device acceptance recorded below.
 
 ### Deterministic Spotify shuffle / repeat / continue
 
 - current source 已加入 closed actions：`spotify_shuffle_on/off`、`spotify_repeat_off/track/context`、`spotify_continue`；parser、`SpotifyService`、`SpotifyPlayer` 與 fixed Spotify endpoints `/me/player/shuffle`、`/me/player/repeat` 已接通。
 - `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
-- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；current source full suite 是 **306 passed**，先前 installed-host full suite 是 **303 passed**，各有 2 個既有 dependency deprecation warnings。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
+- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；current-source full suite 是 **306 passed**。PR #26 post-deployment installed-host verification 另有 targeted Spotify/security **169 passed**、installed full pytest **306 passed**、compileall passed、pip check passed 與 loopback `/health` HTTP 200。先前 installed-host full suite 的 **303 passed** 僅為 earlier installed regression，不是 latest installed full suite；各 run 的既有 dependency deprecation warnings 仍分開看待。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
 - 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
 - 2026-09-20 bounded diagnosis：targeted source/mock differential 顯示 active device、無 transfer/queue/readback 時，empty-body `PUT /me/player/play` 已足以重現 fail-closed 403；同 endpoint 的 trusted named-track body 在 mock 與 installed historical log 均成功。官方契約允許 empty body，因此目前沒有足夠證據宣稱 source request bug。PR #26 的 safe/bounded observability 已 review、merge、部署；其後在使用者手動開啟 Spotify Desktop 後，installed Agent 的一次 read-only preflight 確認 1 個 usable non-restricted、1 個 active、selected active，且 repeat=off、shuffle=false、正在播放並有 item。唯一一次 `就一直播下去` command 仍回傳 `SPOTIFY_FORBIDDEN`，sanitized `provider_reason=UNKNOWN`；因 403 沒有 post-command readback、retry 或 transfer，沒有 429/`QUOTA_EXCEEDED`。這排除了「本次沒有 active device」作為充分解釋，但仍未證明 source bug 或 provider root cause；精確診斷見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
 - Installed alignment 保留 `.env`、local config、runtime data、Spotify token、logs、work/outputs；live token lifecycle 的正常 refresh 可能更新 token JSON，但沒有將 token 值寫入報告。Local AI controls requests 維持 `unsupported_domain`、未進 executable AI path。
@@ -307,6 +307,20 @@ Phase 1 原則：
 3. **Exact Windows volume presentation**
    - Installed exact scalar behavior is verified; Siri voice E2E and an
      independent physical-speaker check remain unproven.
+
+### Non-blocking known evidence / UX gaps
+
+These remain valid evidence boundaries but are **not v1.0 release blockers**:
+
+- Spotify OAuth callback behavior once showed a generic browser failure even
+  though status and token storage succeeded; functionality works, but the UI
+  and root cause remain unclarified.
+- Clarification-store bounded-attempt and concurrency hardening is covered by
+  source/unit tests, but a full Siri E2E was not rerun specifically because of
+  that hardening.
+- Spotify quota hardening and personalization cache have source/unit evidence,
+  while real-provider evidence remains constrained by Development Mode quota
+  and provider conditions. Mock/cache evidence is not real Spotify acceptance.
 
 ### Deferred / guarded work
 

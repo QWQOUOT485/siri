@@ -38,7 +38,7 @@ enable Local AI fallback.
 | Spotify basic playback, resume, pause, and named-track playback | Implemented; source coverage, installed runtime alignment, and real playback evidence exist | Release blocker: keep trusted Spotify resolution and fail-closed provider errors. |
 | Spotify clarification | Implemented; server-owned candidates/token flow and real Siri voice E2E previously passed | Release blocker: keep candidate selection server-owned and bounded. |
 | Spotify shuffle on/off and repeat off/track/context | Implemented; source/unit coverage and installed bounded real-device acceptance passed | Release blocker: retain deterministic fixed endpoints and no client-supplied provider IDs. |
-| Installed deployment and regression | Reviewed non-secret source alignment, installed targeted Spotify/security tests (169), installed full suite (303), loopback health 200, and current-source full suite (306) are recorded evidence | Release blocker: preserve the reviewed installation boundary and rerun the appropriate regression at release cut. |
+| Installed deployment and regression | PR #26 post-deployment installed-host verification recorded targeted Spotify/security tests (169 passed), installed full pytest (306 passed), compileall passed, pip check passed, and loopback `/health` HTTP 200. An earlier installed regression recorded 303 passed; that is historical evidence, not the latest installed full suite. | Release blocker: preserve the reviewed installation boundary and rerun the appropriate regression at release cut. |
 | `spotify_continue` deterministic action | Implemented and source-tested, but real-device result is a known limitation below | Keep the action and its fail-closed semantics in v1.0; do not represent it as accepted playback. |
 
 ## v1.0 known limitations
@@ -56,7 +56,7 @@ proven. `spotify_continue` therefore remains **NOT ACCEPTED**, while the rest
 of the accepted shuffle/repeat controls remain in scope. Do not bypass the
 provider behavior for the release.
 
-### Evidence that is intentionally not a v1.0 blocker
+### Non-blocking known evidence / UX gaps
 
 - Top-Artist-only genuine-ambiguity reordering has not been independently
   accepted.
@@ -64,9 +64,19 @@ provider behavior for the release.
   real-account reorder case.
 - Exact Windows volume still lacks Siri voice and independent speaker
   acceptance.
+- Spotify OAuth callback behavior once showed a generic browser failure even
+  though status and token storage succeeded; functionality works, but the UI
+  and root cause remain unclarified.
+- Clarification-store bounded-attempt and concurrency hardening is covered by
+  source/unit tests, but a full Siri E2E was not rerun specifically because of
+  that hardening.
+- Spotify quota hardening and personalization cache have source/unit evidence,
+  while real-provider evidence remains constrained by Development Mode quota
+  and provider conditions. Mock/cache evidence is not real Spotify acceptance.
 
-These boundaries must remain visible in status/reporting. They must not be
-upgraded into v1.0 blockers merely to make the scope appear more complete.
+These boundaries remain active but are **not v1.0 release blockers**. They must
+remain visible in status/reporting and must not be upgraded into blockers merely
+to make the scope appear more complete.
 
 ## Deferred to v1.1
 
