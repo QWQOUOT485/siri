@@ -40,6 +40,10 @@ class TrackResolution:
     ambiguous: bool
     candidates: tuple[SpotifyTrackRef, ...] = ()
     retry_signal: str | None = None
+    # The first public page is still bounded to three candidates.  This
+    # server-owned pool lets the clarification store offer a later page
+    # without exposing provider IDs or accepting a client-controlled offset.
+    recovery_candidates: tuple[SpotifyTrackRef, ...] = ()
 
 
 _PersonalizationValue = TypeVar("_PersonalizationValue")
@@ -49,6 +53,9 @@ class SpotifyCatalog:
     """Expose one deep search interface over the external Spotify catalog."""
 
     _MIN_SAFE_TRACK_SCORE = 0.70
+    _INITIAL_SEARCH_LIMIT = 10
+    _RECOVERY_SEARCH_LIMIT = 10
+    _MAX_RECOVERY_POOL = 20
 
     def __init__(self, client, *, personalization_cache: SpotifyPersonalizationCache | None = None) -> None:
         self.client = client
@@ -73,12 +80,8 @@ class SpotifyCatalog:
         if hint == "live":
             return TrackResolution(track=None, ambiguous=False)
         retry_signal: str | None = None
-        payloads = self.client.search_tracks(access_token, query, limit=10)
-        refs = tuple(
-            ref
-            for item in payloads
-            if (ref := self._to_ref(item)) is not None and self._classify_version(ref) != "live"
-        )
+        payloads = self.client.search_tracks(access_token, query, limit=self._INITIAL_SEARCH_LIMIT)
+        refs = self._refs_from_payloads(payloads)
 
         # Chinese song titles can legitimately contain 「的」. The rule parser also
         # uses 「X的Y」 for artist + track, so a bare title such as
@@ -90,13 +93,9 @@ class SpotifyCatalog:
             fallback_payloads = self.client.search_tracks(
                 access_token,
                 f"track:{reconstructed_track}",
-                limit=10,
+                limit=self._INITIAL_SEARCH_LIMIT,
             )
-            fallback_refs = tuple(
-                ref
-                for item in fallback_payloads
-                if (ref := self._to_ref(item)) is not None and self._classify_version(ref) != "live"
-            )
+            fallback_refs = self._refs_from_payloads(fallback_payloads)
             if fallback_refs:
                 refs = fallback_refs
                 track = reconstructed_track
@@ -128,17 +127,19 @@ class SpotifyCatalog:
                 if ref.artist_names and self._normalize(ref.artist_names[0])
             }
             if len(artist_groups) > 1:
+                candidates = self._personalized_candidates(
+                    title_matches,
+                    track,
+                    artist,
+                    album,
+                    hint,
+                    access_token,
+                )
                 return TrackResolution(
                     track=None,
                     ambiguous=True,
-                    candidates=self._personalized_candidates(
-                        title_matches,
-                        track,
-                        artist,
-                        album,
-                        hint,
-                        access_token,
-                    ),
+                    candidates=candidates,
+                    recovery_candidates=self._recovery_pool(ranked, candidates),
                 )
         if album:
             exact_album_matches = [
@@ -154,17 +155,19 @@ class SpotifyCatalog:
                 )
                 if self._same_recording_group(album_ranked):
                     return TrackResolution(track=album_ranked[0], ambiguous=False, candidates=tuple(album_ranked[:3]))
+                candidates = self._personalized_candidates(
+                    album_ranked,
+                    track,
+                    artist,
+                    album,
+                    hint,
+                    access_token,
+                )
                 return TrackResolution(
                     track=None,
                     ambiguous=True,
-                    candidates=self._personalized_candidates(
-                        album_ranked,
-                        track,
-                        artist,
-                        album,
-                        hint,
-                        access_token,
-                    ),
+                    candidates=candidates,
+                    recovery_candidates=self._recovery_pool(album_ranked, candidates),
                 )
         if best_score < self._MIN_SAFE_TRACK_SCORE or (
             second_score is not None and best_score - second_score < 0.08
@@ -186,19 +189,170 @@ class SpotifyCatalog:
                     ambiguous=False,
                     retry_signal="SPOTIFY_LOW_CONFIDENCE_TRACK",
                 )
+            candidates = self._personalized_candidates(
+                ranked,
+                track,
+                artist,
+                album,
+                hint,
+                access_token,
+            )
             return TrackResolution(
                 track=None,
                 ambiguous=True,
-                candidates=self._personalized_candidates(
-                    ranked,
-                    track,
-                    artist,
-                    album,
-                    hint,
-                    access_token,
-                ),
+                candidates=candidates,
+                recovery_candidates=self._recovery_pool(ranked, candidates),
             )
         return TrackResolution(track=ranked[0], ambiguous=False, candidates=tuple(ranked[:3]))
+
+    def recover_candidates(
+        self,
+        track: str,
+        artist: str | None,
+        album: str | None = None,
+        *,
+        version_hint: str | None = None,
+        source_text: str | None = None,
+        access_token: str,
+        exclude_track_ids: tuple[str, ...] = (),
+        offset: int = 0,
+    ) -> tuple[SpotifyTrackRef, ...]:
+        """Fetch bounded, server-owned evidence for a later clarification page.
+
+        Recovery deliberately never returns an automatically selected track.
+        It may relax the failed artist segmentation into title-first Spotify
+        evidence, but the result remains a clarification-only candidate set.
+        The offset is computed by the server from the live clarification
+        context; it is never accepted from the HTTP client.
+        """
+
+        if not isinstance(track, str) or not 1 <= len(track.strip()) <= 300:
+            return ()
+        if self._hint_value(version_hint) == "live":
+            return ()
+        offset = max(0, min(int(offset), 50))
+        excluded = {
+            value.strip()
+            for value in exclude_track_ids
+            if isinstance(value, str) and 1 <= len(value.strip()) <= 100
+        }
+        refs_by_id: dict[str, SpotifyTrackRef] = {}
+        for query in self._recovery_queries(track, artist, album, source_text):
+            payloads = self._search_tracks(
+                access_token,
+                query,
+                limit=self._RECOVERY_SEARCH_LIMIT,
+                offset=offset,
+            )
+            for ref in self._refs_from_payloads(payloads):
+                if ref.track_id not in refs_by_id:
+                    refs_by_id[ref.track_id] = ref
+                if len(refs_by_id) >= self._MAX_RECOVERY_POOL:
+                    break
+            if len(refs_by_id) >= self._MAX_RECOVERY_POOL:
+                break
+
+        refs = [ref for ref in refs_by_id.values() if ref.track_id not in excluded]
+        if not refs:
+            return ()
+
+        # Recovery is still title-grounded evidence.  A weakly related result
+        # must not become a new clarification candidate merely because the
+        # first constrained search failed.
+        title_matches = [
+            ref
+            for ref in refs
+            if self._similarity(ref.track_name, track) >= 0.80
+        ]
+        if not title_matches:
+            return ()
+        refs = title_matches
+
+        # An explicit album is a hard search constraint.  Artist text may be
+        # ASR-corrupted, so title-first recovery can surface other artists,
+        # but never auto-selects them; the existing clarification boundary
+        # remains mandatory.
+        if album:
+            album_matches = [
+                ref for ref in refs if self._normalize(ref.album_name) == self._normalize(album)
+            ]
+            if album_matches:
+                refs = album_matches
+            else:
+                return ()
+
+        hint = self._hint_value(version_hint)
+        ranked = sorted(
+            refs,
+            key=lambda ref: self._ranking_key(ref, track, artist, album, hint),
+            reverse=True,
+        )
+        personalized = self._personalized_candidates(
+            ranked,
+            track,
+            artist,
+            album,
+            hint,
+            access_token,
+        )
+        return self._recovery_pool(ranked, personalized)
+
+    @classmethod
+    def _recovery_queries(
+        cls,
+        track: str,
+        artist: str | None,
+        album: str | None,
+        source_text: str | None,
+    ) -> tuple[str, ...]:
+        title_query = f"track:{track}"
+        if album:
+            title_query += f" album:{album}"
+        return (title_query,)
+
+    def _search_tracks(self, access_token: str, query: str, *, limit: int, offset: int) -> list[dict[str, Any]]:
+        """Call the fixed search adapter with a server-owned bounded offset."""
+
+        try:
+            return self.client.search_tracks(access_token, query, limit=limit, offset=offset)
+        except TypeError as exc:
+            # Small test doubles and older local adapters may not expose the
+            # optional offset yet.  Only offset zero may safely fall back;
+            # silently repeating a later page would weaken bounded recovery.
+            if offset != 0 or "offset" not in str(exc):
+                raise
+            return self.client.search_tracks(access_token, query, limit=limit)
+
+    @classmethod
+    def _refs_from_payloads(cls, payloads: list[dict[str, Any]]) -> tuple[SpotifyTrackRef, ...]:
+        refs: list[SpotifyTrackRef] = []
+        seen: set[str] = set()
+        for item in payloads:
+            ref = cls._to_ref(item)
+            if ref is None or cls._classify_version(ref) == "live" or ref.track_id in seen:
+                continue
+            seen.add(ref.track_id)
+            refs.append(ref)
+        return tuple(refs)
+
+    @classmethod
+    def _recovery_pool(
+        cls,
+        ranked: list[SpotifyTrackRef] | tuple[SpotifyTrackRef, ...],
+        first_page: tuple[SpotifyTrackRef, ...],
+    ) -> tuple[SpotifyTrackRef, ...]:
+        """Keep the personalized public page first, then deterministic tail."""
+
+        result: list[SpotifyTrackRef] = []
+        seen: set[str] = set()
+        for ref in (*first_page, *ranked):
+            if ref.track_id in seen:
+                continue
+            seen.add(ref.track_id)
+            result.append(ref)
+            if len(result) >= cls._MAX_RECOVERY_POOL:
+                break
+        return tuple(result)
 
     def _personalized_candidates(
         self,

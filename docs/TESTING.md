@@ -36,8 +36,11 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Same-ISRC release duplicates may collapse safely
 - Duration alone never resolves two candidates
 - Ambiguous Spotify search results do not auto-play an arbitrary track
-- Ambiguous results expose at most three trusted candidates and a short-lived, one-use clarification context
+- Ambiguous results expose at most three trusted candidates and a short-lived server-owned clarification context; explicit selection is one-use while bounded recovery may retain the token
 - Clarification context invalidates after three unclear attempts, and concurrent selection/attempt updates are atomic
+- Candidate recovery keeps an internal pool bounded, exposes at most three public options, filters Live/Concert results, suppresses already-shown provider IDs, and never auto-plays a recovered result
+- `都不是` / `不是這些` / `換一批` / `none of these` uses only the server-owned clarification token; client-supplied track IDs, URIs, offsets, and recovery cursors are rejected
+- Candidate recovery exhaustion is fail-closed; the Sad overlxrd first-occurrence path requires explicit selection and successful playback before alias learning
 - Spotify API calls are mocked in unit tests
 - Spotify 429 with bounded `reason` parsing (`QUOTA_EXCEEDED`), capped/malformed `Retry-After`, no token leakage, and no transport call during fake-clock cooldown
 - Explicit `QUOTA_EXCEEDED` may block all Web API scopes, while ordinary Search, personalization, and playback 429s remain operation-scoped

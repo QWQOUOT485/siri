@@ -515,6 +515,55 @@ def test_catalog_rejects_explicit_live_without_search_even_if_multiple_versions_
     assert client.queries == []
 
 
+def test_catalog_recovery_excludes_live_versions_and_enforces_album_constraint():
+    class RecoveryClient:
+        def __init__(self):
+            self.calls = []
+
+        def search_tracks(self, access_token, query, *, limit=10, offset=0):
+            self.calls.append((access_token, query, limit, offset))
+            return [
+                track("live", "Stay (Live)", ["Artist"], album="Requested Album Live"),
+                track("otheralbum", "Stay", ["Artist"], album="Other Album"),
+                track("desired", "Stay", ["Artist"], album="Requested Album"),
+            ]
+
+    client = RecoveryClient()
+    catalog = SpotifyCatalog(client)
+
+    recovered = catalog.recover_candidates(
+        "Stay",
+        "ASR Artist",
+        "Requested Album",
+        version_hint="original",
+        access_token="test-token",
+        offset=10,
+    )
+
+    assert [candidate.track_id for candidate in recovered] == ["desired"]
+    assert client.calls == [("test-token", "track:Stay album:Requested Album", 10, 10)]
+
+
+def test_catalog_recovery_suppresses_already_shown_provider_ids():
+    class RecoveryClient:
+        def search_tracks(self, _access_token, _query, *, limit=10, offset=0):
+            assert limit == 10
+            assert offset == 0
+            return [
+                track("shown", "Stay", ["Artist One"]),
+                track("new", "Stay", ["Artist Two"]),
+            ]
+
+    recovered = SpotifyCatalog(RecoveryClient()).recover_candidates(
+        "Stay",
+        None,
+        access_token="test-token",
+        exclude_track_ids=("shown",),
+    )
+
+    assert [candidate.track_id for candidate in recovered] == ["new"]
+
+
 def test_catalog_does_not_choose_between_different_artists_for_bare_title():
     client = FakeSpotifySearchClient(
         [

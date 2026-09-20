@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from app.adapters.spotify.catalog import SpotifyTrackRef
-from app.services.spotify_clarification import SpotifyClarificationStore
+from app.services.spotify_clarification import ClarificationRecoveryRequest, SpotifyClarificationStore
 
 
 def candidate(track_id: str, artist: str, album: str) -> SpotifyTrackRef:
@@ -127,3 +127,51 @@ def test_store_bounds_concurrent_unclear_attempts_atomically():
     assert error_codes.count("SPOTIFY_CLARIFICATION_UNCLEAR") == 2
     assert error_codes.count("SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED") == 1
     assert error_codes.count("SPOTIFY_CLARIFICATION_USED") == 5
+
+
+def test_store_pages_server_owned_recovery_candidates_without_client_cursor():
+    first_page = [
+        candidate("one", "Artist One", "Album One"),
+        candidate("two", "Artist Two", "Album Two"),
+        candidate("three", "Artist Three", "Album Three"),
+    ]
+    second_page = [
+        candidate("four", "Artist Four", "Album Four"),
+        candidate("five", "Artist Five", "Album Five"),
+    ]
+    store = SpotifyClarificationStore()
+    token = store.create(
+        first_page,
+        recovery_candidates=[*first_page, *second_page],
+        recovery_request=ClarificationRecoveryRequest(track="Stay"),
+    )
+
+    next_page = store.select(token, "都不是")
+
+    assert next_page.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"
+    assert [track.track_id for track in next_page.candidates] == ["four", "five"]
+    assert next_page.clarification_token == token
+    assert store.select(token, "第一首").track.track_id == "four"
+
+
+def test_store_requests_bounded_server_recovery_when_local_pool_is_exhausted():
+    first_page = [candidate("one", "Artist One", "Album One")]
+    fetched = [candidate("two", "Artist Two", "Album Two")]
+    store = SpotifyClarificationStore(max_recovery_rounds=1)
+    token = store.create(
+        first_page,
+        recovery_request=ClarificationRecoveryRequest(track="Stay"),
+    )
+
+    request = store.select(token, "none of these")
+
+    assert request.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_REQUESTED"
+    assert request.recovery_request is not None
+    assert request.recovery_fetch_index == 1
+    assert request.shown_track_ids == ("one",)
+
+    page = store.complete_recovery(token, request.recovery_fetch_index, fetched)
+
+    assert page.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE"
+    assert [track.track_id for track in page.candidates] == ["two"]
+    assert store.select(token, "都不是").error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"

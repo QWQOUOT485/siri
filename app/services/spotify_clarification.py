@@ -14,11 +14,44 @@ from app.domain.chinese import normalize_chinese_text
 
 
 @dataclass(frozen=True)
+class ClarificationRecoveryRequest:
+    """Server-created search inputs for one bounded next-candidate fetch."""
+
+    track: str
+    artist: str | None = None
+    album: str | None = None
+    version_hint: str | None = None
+    source_text: str | None = None
+    offset: int = 0
+
+    def __post_init__(self) -> None:
+        for name in ("track", "artist", "album", "source_text"):
+            value = getattr(self, name)
+            if value is None:
+                continue
+            if not isinstance(value, str) or len(value) > 300 or any(ord(char) < 32 or ord(char) == 127 for char in value):
+                raise ValueError("clarification recovery text is invalid")
+        if not isinstance(self.track, str) or not self.track.strip():
+            raise ValueError("clarification recovery requires a track")
+        if self.version_hint is not None and (
+            not isinstance(self.version_hint, str) or len(self.version_hint) > 16
+        ):
+            raise ValueError("clarification recovery version is invalid")
+        if isinstance(self.offset, bool) or not isinstance(self.offset, int) or not 0 <= self.offset <= 50:
+            raise ValueError("clarification recovery offset is invalid")
+
+
+@dataclass(frozen=True)
 class ClarificationContext:
     candidates: tuple[SpotifyTrackRef, ...]
     expires_at: float
     failed_attempts: int = 0
     observed_alias: str | None = None
+    recovery_candidates: tuple[SpotifyTrackRef, ...] = ()
+    recovery_request: ClarificationRecoveryRequest | None = None
+    recovery_fetches: int = 0
+    recovery_pending: bool = False
+    shown_track_ids: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -28,6 +61,9 @@ class ClarificationSelection:
     candidates: tuple[SpotifyTrackRef, ...] = ()
     clarification_token: str | None = None
     observed_alias: str | None = None
+    recovery_request: ClarificationRecoveryRequest | None = None
+    recovery_fetch_index: int | None = None
+    shown_track_ids: tuple[str, ...] = ()
 
 
 class SpotifyClarificationStore:
@@ -45,11 +81,13 @@ class SpotifyClarificationStore:
         ttl_seconds: int = 60,
         max_entries: int = 256,
         max_attempts: int = 3,
+        max_recovery_rounds: int = 2,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.ttl_seconds = max(15, min(ttl_seconds, 600))
         self.max_entries = max(1, min(max_entries, 4096))
         self.max_attempts = max(1, min(max_attempts, 3))
+        self.max_recovery_rounds = max(1, min(max_recovery_rounds, 3))
         self.clock = clock
         self._contexts: dict[str, ClarificationContext] = {}
         self._used_tokens: dict[str, float] = {}
@@ -60,10 +98,24 @@ class SpotifyClarificationStore:
         candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef],
         *,
         observed_alias: str | None = None,
+        recovery_candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef] = (),
+        recovery_request: ClarificationRecoveryRequest | None = None,
+        recovery_fetches: int = 0,
     ) -> str:
-        trusted = tuple(candidates)
+        trusted = self._dedupe(candidates)
         if not trusted or len(trusted) > 3:
             raise ValueError("clarification requires one to three trusted candidates")
+        if recovery_request is not None and not isinstance(recovery_request, ClarificationRecoveryRequest):
+            raise ValueError("clarification recovery request is invalid")
+        if isinstance(recovery_fetches, bool) or not isinstance(recovery_fetches, int):
+            raise ValueError("clarification recovery fetch count is invalid")
+        recovery_fetches = max(0, min(recovery_fetches, self.max_recovery_rounds))
+        shown_track_ids = frozenset(track.track_id for track in trusted)
+        recovery_pool = tuple(
+            track
+            for track in self._dedupe(recovery_candidates)
+            if track.track_id not in shown_track_ids
+        )[: max(0, 20 - len(shown_track_ids))]
         now = self.clock()
         expires_at = now + self.ttl_seconds
         with self._lock:
@@ -76,6 +128,10 @@ class SpotifyClarificationStore:
                 trusted,
                 expires_at,
                 observed_alias=observed_alias,
+                recovery_candidates=recovery_pool,
+                recovery_request=recovery_request,
+                recovery_fetches=recovery_fetches,
+                shown_track_ids=shown_track_ids,
             )
             return token
 
@@ -97,6 +153,9 @@ class SpotifyClarificationStore:
             context = self._contexts.get(token)
             if context is None:
                 return ClarificationSelection(error_code="SPOTIFY_CLARIFICATION_INVALID")
+
+            if self._is_recovery_request(text):
+                return self._request_recovery_page(token, context)
 
             index = self._selection_index(text, context.candidates)
             if index is None:
@@ -122,6 +181,147 @@ class SpotifyClarificationStore:
                 track=context.candidates[index],
                 observed_alias=context.observed_alias,
             )
+
+    def complete_recovery(
+        self,
+        token: str,
+        recovery_fetch_index: int,
+        candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef],
+    ) -> ClarificationSelection:
+        """Commit one server-fetched page into the existing context."""
+
+        now = self.clock()
+        with self._lock:
+            self._purge(now)
+            context = self._contexts.get(token)
+            if context is None:
+                if token in self._used_tokens:
+                    return ClarificationSelection(error_code="SPOTIFY_CLARIFICATION_USED")
+                return ClarificationSelection(error_code="SPOTIFY_CLARIFICATION_INVALID")
+            if not context.recovery_pending or context.recovery_fetches != recovery_fetch_index:
+                return ClarificationSelection(
+                    error_code="SPOTIFY_CLARIFICATION_RECOVERY_INVALID",
+                    candidates=context.candidates,
+                    clarification_token=token,
+                    observed_alias=context.observed_alias,
+                )
+
+            available = max(0, 20 - len(context.shown_track_ids))
+            trusted = tuple(
+                track
+                for track in self._dedupe(candidates)
+                if track.track_id not in context.shown_track_ids
+            )[:available]
+            page = trusted[:3]
+            remaining = trusted[3:]
+            if not page:
+                self._contexts[token] = replace(
+                    context,
+                    recovery_candidates=(),
+                    recovery_pending=False,
+                )
+                return ClarificationSelection(
+                    error_code="SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED",
+                    candidates=context.candidates,
+                    clarification_token=token,
+                    observed_alias=context.observed_alias,
+                )
+
+            shown = frozenset((*context.shown_track_ids, *(track.track_id for track in page)))
+            self._contexts[token] = replace(
+                context,
+                candidates=page,
+                recovery_candidates=remaining,
+                recovery_pending=False,
+                shown_track_ids=shown,
+            )
+            return ClarificationSelection(
+                error_code="SPOTIFY_CLARIFICATION_NEXT_PAGE",
+                candidates=page,
+                clarification_token=token,
+                observed_alias=context.observed_alias,
+            )
+
+    def cancel_recovery(self, token: str, recovery_fetch_index: int) -> None:
+        """Release an in-flight recovery marker after a provider/auth failure."""
+
+        now = self.clock()
+        with self._lock:
+            self._purge(now)
+            context = self._contexts.get(token)
+            if context is None or not context.recovery_pending or context.recovery_fetches != recovery_fetch_index:
+                return
+            self._contexts[token] = replace(
+                context,
+                recovery_fetches=max(0, context.recovery_fetches - 1),
+                recovery_pending=False,
+            )
+
+    def _request_recovery_page(self, token: str, context: ClarificationContext) -> ClarificationSelection:
+        if context.recovery_pending:
+            return ClarificationSelection(
+                error_code="SPOTIFY_CLARIFICATION_RECOVERY_IN_PROGRESS",
+                candidates=context.candidates,
+                clarification_token=token,
+                observed_alias=context.observed_alias,
+            )
+
+        page = self._next_page(context)
+        if page:
+            shown = frozenset((*context.shown_track_ids, *(track.track_id for track in page)))
+            remaining = tuple(
+                track for track in context.recovery_candidates if track.track_id not in shown
+            )
+            self._contexts[token] = replace(
+                context,
+                candidates=page,
+                recovery_candidates=remaining,
+                shown_track_ids=shown,
+            )
+            return ClarificationSelection(
+                error_code="SPOTIFY_CLARIFICATION_NEXT_PAGE",
+                candidates=page,
+                clarification_token=token,
+                observed_alias=context.observed_alias,
+            )
+
+        if context.recovery_request is None or context.recovery_fetches >= self.max_recovery_rounds:
+            return ClarificationSelection(
+                error_code="SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED",
+                candidates=context.candidates,
+                clarification_token=token,
+                observed_alias=context.observed_alias,
+            )
+
+        fetch_index = context.recovery_fetches + 1
+        self._contexts[token] = replace(context, recovery_fetches=fetch_index, recovery_pending=True)
+        return ClarificationSelection(
+            error_code="SPOTIFY_CLARIFICATION_RECOVERY_REQUESTED",
+            clarification_token=token,
+            observed_alias=context.observed_alias,
+            recovery_request=context.recovery_request,
+            recovery_fetch_index=fetch_index,
+            shown_track_ids=tuple(context.shown_track_ids),
+        )
+
+    @staticmethod
+    def _next_page(context: ClarificationContext) -> tuple[SpotifyTrackRef, ...]:
+        available = max(0, 20 - len(context.shown_track_ids))
+        if available <= 0:
+            return ()
+        seen = set(context.shown_track_ids)
+        return tuple(track for track in context.recovery_candidates if track.track_id not in seen)[: min(3, available)]
+
+    @staticmethod
+    def _dedupe(candidates: tuple[SpotifyTrackRef, ...] | list[SpotifyTrackRef]) -> tuple[SpotifyTrackRef, ...]:
+        result: list[SpotifyTrackRef] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            if not isinstance(candidate, SpotifyTrackRef) or candidate.track_id in seen:
+                continue
+            seen.add(candidate.track_id)
+            result.append(candidate)
+        return tuple(result)
 
     def _purge(self, now: float) -> None:
         expired = [token for token, context in self._contexts.items() if now >= context.expires_at]
@@ -159,3 +359,20 @@ class SpotifyClarificationStore:
             if any(label and len(label) >= 2 and label in query for label in labels):
                 matches.append(index)
         return matches[0] if len(matches) == 1 else None
+
+    @staticmethod
+    def _is_recovery_request(text: str) -> bool:
+        normalized = normalize_chinese_text(text or "")
+        compact = re.sub(r"[\s,，。.!！?？:：]", "", normalized)
+        forms = {
+            "都不是",
+            "不是这些",
+            "换一批",
+            "再一批",
+            "noneofthese",
+            "notthese",
+            "anotherbatch",
+            "nextbatch",
+            "differentones",
+        }
+        return compact in forms or any(compact.startswith(form) for form in forms if len(form) >= 3)

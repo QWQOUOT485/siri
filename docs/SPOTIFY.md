@@ -260,7 +260,12 @@ Top Tracks、Top Artists、Recently Played 的 server-side ranking evidence 使�
 }
 ```
 
-Agent 只會在原候選集合中解析序號、歌手或專輯；client 不得傳入 Spotify URI 或 track ID。選擇不清楚時會再次列出原候選，不會猜測。
+Agent 只會在 server-owned 候選 context 中解析序號、歌手或專輯；client
+不得傳入 Spotify URI、track ID、paging offset 或 recovery cursor。使用者說
+`都不是`、`不是這些`、`換一批` 或 `none of these` 時，Agent 可從已建立的
+bounded pool 或一次 bounded title-first recovery search 取得下一批候選，但仍
+最多公開三首、移除已展示的 provider IDs、排除 Live/Concert 版本，而且不會
+自動播放。
 
 Clarification context 使用 Windows Agent process 內的 bounded in-memory store：
 
@@ -268,7 +273,19 @@ Clarification context 使用 Windows Agent process 內的 bounded in-memory stor
 - 每次不清楚的第二輪回覆會增加失敗次數，但最多允許三次嘗試；
 - 第三次仍不清楚時 context 立即失效，不再回傳 token；
 - 成功選擇與失敗次數更新都在同一個 lock 內完成，因此同一 token 的並發請求最多只有一個成功選擇；
+- candidate recovery 的每次 Spotify fetch 最多 10 筆，internal pool 最多 20 筆，recovery rounds 是固定的小上限；
+- explicit selection 才會 consume token；bounded recovery continuation 可在 TTL / round limit 內保留同一 token；
 - 失敗次數與剩餘次數不會放入 Siri 回應，避免把內部防護細節變成 client 控制面。
+
+Candidate recovery 仍然只是 trusted candidate evidence，不是 execution authority，
+也不會單獨確認 Semantic Memory。Semantic Memory 仍只接受既有的 authority chain：
+
+```text
+server-owned recovered candidate
+→ explicit clarification selection
+→ successful playback
+→ MemoryLearner
+```
 
 ## Trusted SpotifyTrackRef
 
@@ -500,7 +517,8 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - bare same-title tracks by different artists remain ambiguous
 - same-ISRC release duplicates may collapse; duration alone must not auto-select
 - ambiguous results 不自動播放
-- ambiguous results 最多三個 trusted candidates，clarification token 短效、最多三次嘗試且只能一次成功選擇
+- ambiguous results 最多三個 trusted candidates，clarification token 短效、最多三次不清楚嘗試且只能一次成功選擇；bounded recovery continuation 不得改變這個 authority boundary
+- candidate recovery 會 bounded title-first search、排除已展示 IDs 與 Live/Concert、耗盡時 fail closed，且不自動播放
 - clarification failed-attempt bound 與 concurrent selection 必須由 unit tests 驗證
 - no results
 - token refresh

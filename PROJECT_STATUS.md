@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**v1.0.0 released / post-release handoff.**
+**v1.1 Candidate Recovery Phase 1B source implementation in progress on the dedicated branch `feat/spotify-candidate-recovery-phase1b-ee2cb26`.** The base `main` remains the released v1.0.0 line described below.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
 head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
@@ -19,6 +19,30 @@ Local AI authority are either explicit known limitations or deferred as
 recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
 
 目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
+
+## v1.1 Candidate Recovery Phase 1B
+
+This phase was explicitly scheduled after the v1.0 release handoff. The source
+implementation now has a bounded, title-first Spotify recovery path and a
+server-owned clarification continuation for `都不是` / `不是這些` / `換一批` /
+`none of these`.
+
+- Public clarification remains at most three candidates; the internal recovery
+  pool is capped at 20 candidates, each Spotify fetch is capped at 10 results,
+  and the clarification store allows only a small fixed number of recovery
+  rounds.
+- Recovery excludes Live/Concert variants, removes already-shown provider
+  identities, preserves explicit album/version constraints, and never accepts a
+  client URI, track ID, paging offset, or recovery cursor.
+- Recovered candidates remain clarification-only evidence. No recovery result
+  auto-plays and recovery alone never confirms Semantic Memory. Alias learning
+  still requires server-owned candidate selection followed by successful
+  playback.
+- Current source/unit verification is complete: full pytest **316 passed**,
+  compileall, pip check, and git diff check passed. Installed Windows Agent,
+  real Spotify, and Siri voice acceptance have not been run for this phase. The
+  installed runtime remains outside this branch and Semantic Memory remains
+  disabled.
 
 ## Source of Truth
 
@@ -410,7 +434,8 @@ These remain valid evidence boundaries but are **not v1.0 release blockers**:
 5. **Semantic memory and Local AI**
    - Phase 1 source and harness evidence remain guarded, but real runtime
      acceptance is incomplete. Keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false`.
-   - Candidate Recovery Phase 1B and preference memory remain deferred.
+   - Preference memory remains deferred. Candidate Recovery Phase 1B is tracked
+     above as the active, separately scoped source slice.
    - Local AI remains off/shadow; the independent promotion review is NO-GO and
      `LOCAL_AI_FALLBACK_APPROVED=false` must remain unchanged.
 

@@ -129,7 +129,9 @@ def test_parser_split_reconstruction_failure_exposes_entity_retry_signal(tmp_pat
 
     assert result.success is False
     assert result.error_code == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
-    assert len(calls) == 2
+    # The failed deterministic lookup now makes one bounded title-first
+    # recovery attempt before preserving the parser retry signal.
+    assert len(calls) == 3
 
 
 def test_single_weak_candidate_exposes_low_confidence_retry_signal(tmp_path):
@@ -229,6 +231,100 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
         "/v1/me/top/artists",
         "/v1/me/player/recently-played",
     ]
+
+
+def test_none_of_these_recovers_a_server_owned_page_without_auto_play(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            assert request.url.params["q"] == "track:Stay"
+            if request.url.params["offset"] == "0":
+                items = [
+                    spotify_track("wrongone", "Stay", "Artist One"),
+                    spotify_track("wrongtwo", "Stay", "Artist Two"),
+                    spotify_track("wrongthree", "Stay", "Artist Three"),
+                ]
+            else:
+                assert request.url.params["offset"] == "10"
+                items = [
+                    spotify_track("wrongone", "Stay", "Artist One"),
+                    spotify_track("desired", "Stay", "The Kid LAROI"),
+                ]
+            return httpx.Response(200, json={"tracks": {"items": items}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/play":
+            assert json.loads(request.content) == {"uris": ["spotify:track:desired"]}
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+
+    assert initial.success is False
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    token = initial.data["clarification_token"]
+    assert "desired" not in repr(initial.data)
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
+
+    recovered = spotify.execute_clarification("都不是", token)
+
+    assert recovered.success is False
+    assert recovered.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert recovered.data["clarification_token"] == token
+    assert [option["artist_names"][0] for option in recovered.data["options"]] == ["The Kid LAROI"]
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
+
+    selected = spotify.execute_clarification("第一首", token)
+
+    assert selected.success is True
+    assert selected.data["track_name"] == "Stay"
+    assert len([request for request in calls if request.url.path == "/v1/me/player/play"]) == 1
+
+
+def test_none_of_these_exhaustion_excludes_duplicates_and_live_tracks(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            assert request.url.params["q"] == "track:Stay"
+            if request.url.params["offset"] == "0":
+                items = [
+                    spotify_track("one", "Stay", "Artist One"),
+                    spotify_track("two", "Stay", "Artist Two"),
+                    spotify_track("three", "Stay", "Artist Three"),
+                ]
+            else:
+                items = [
+                    spotify_track("one", "Stay", "Artist One"),
+                    spotify_track("live", "Stay (Live)", "Artist Four"),
+                ]
+            return httpx.Response(200, json={"tracks": {"items": items}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+    exhausted = spotify.execute_clarification("none of these", initial.data["clarification_token"])
+
+    assert exhausted.success is False
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert exhausted.data["clarification_token"] == initial.data["clarification_token"]
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
 
 
 def test_ambiguous_search_uses_saved_status_to_order_options_without_auto_playing(tmp_path):

@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-**v1.0.0 released / post-release handoff**
+**v1.1 Candidate Recovery Phase 1B source implementation**
 
 The v1.0.0 runtime release-cut gate and installed identity acceptance passed for
 the reviewed deterministic scope. The v1.0.0 release commit and annotated tag
@@ -17,9 +17,10 @@ and installed `/health` plus OpenAPI version `1.0.0`.
 Core Siri → Windows → Spotify playback and clarification are functional. The
 v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
 scope, `spotify_continue` known limitation, proposed blockers, and v1.1
-deferrals remain recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. This is a
-post-release handoff; do not add a source workaround, retry live Spotify, or
-start v1.1 implementation in this documentation sync.
+deferrals remain recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. Candidate
+Recovery Phase 1B is now separately scheduled on the dedicated branch
+`feat/spotify-candidate-recovery-phase1b-ee2cb26`; this branch adds only bounded
+Spotify candidate recovery and server-owned clarification continuation.
 
 ## v1.0.0 Release Identity Cut
 
@@ -47,9 +48,9 @@ start v1.1 implementation in this documentation sync.
   `SPOTIFY_FORBIDDEN` with sanitized `provider_reason=UNKNOWN`.
 - Treat Top-Artist-only and Recently-Played-only acceptance gaps as optional
   evidence, not v1.0 blockers.
-- Defer seek, Spotify device volume, like/unlike, Candidate Recovery Phase 1B,
-  preference memory, and broader Local AI authority to v1.1 or a separately
-  approved scope.
+- Defer seek, Spotify device volume, like/unlike, preference memory, and broader
+  Local AI authority to a separately approved scope. Candidate Recovery Phase
+  1B is the currently scheduled v1.1 slice on the dedicated branch.
 - Keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
   `LOCAL_AI_FALLBACK_APPROVED=false`.
 
@@ -82,17 +83,18 @@ start v1.1 implementation in this documentation sync.
 - Do not delete security regressions to make tests pass.
 - Keep source/unit, installed, and real-device evidence explicitly separate.
 
-### P1 — v1.1 candidates, only with a separate decision
+### P1 — v1.1 candidates and current Phase 1B slice
 
 - `spotify_seek`
 - Spotify device volume
 - `spotify_like_current` / `spotify_unlike_current`
-- Candidate Recovery Phase 1B
+- Candidate Recovery Phase 1B — **current source implementation**
 - preference memory
 - broader Local AI authority or executable fallback
 
-These require a separately scoped v1.1 decision and branch; they are not part
-of this post-release documentation sync.
+The other listed items require a separately scoped v1.1 decision and branch.
+Phase 1B source/unit work is current, but installed Windows, real Spotify, and
+Siri voice acceptance remain separate gates.
 
 ### P2 — Optional evidence, not a v1.0 blocker
 
