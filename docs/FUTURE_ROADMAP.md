@@ -282,6 +282,154 @@ Production 中 AI 可以在符合資格的 request 上產生 shadow interpretati
 
 Fine-tuned model 仍必須通過與 base model 相同或更嚴格的 policy gate。
 
+### 23.1 Model-size strategy
+
+這個專案不應以「參數越大越好」作為模型選型原則。Local AI 的第一個 production-oriented role 很窄：
+
+~~~text
+eligible Siri utterance
+→ semantic interpretation / entity-boundary recovery
+→ strict JSON/schema
+→ deterministic grounding
+→ policy gate
+→ existing deterministic resolver
+~~~
+
+因此模型大小應由 **固定 corpus 的實測品質、structured-output 穩定性、延遲與安全結果** 決定，而不是單看 parameter count。
+
+目前已有的 benchmark evidence 顯示：
+
+- `qwen2.5-coder-1.5b-instruct` Q4 在既有 fixed corpus 上達到 100% JSON/schema、95.24% supported semantic、100% semantic-retry，P95 約 200 ms。
+- 較大的 `qwen3-4b` 在同一類任務上反而明顯退化。
+- 因此「更大的模型」目前沒有自動取得 promotion priority。
+- 上述結果只是 benchmark evidence，不代表 production fallback 已批准；現行 promotion gate 仍適用。
+
+建議的 model-size progression：
+
+~~~text
+Stage A — 1.5B class
+current baseline / fast semantic parser
+↓
+Stage B — 1.5B–4B class
+first LoRA / instruction-tuning experiments
+↓
+Stage C — 7B/8B class
+only when the Agent scope expands into genuinely broader
+multi-domain interpretation, richer context, or bounded planning
+↓
+Stage D — 14B+ class
+only if measured evidence shows smaller tiers cannot meet
+quality requirements and latency / memory cost remains acceptable
+~~~
+
+換句話說，未來模型升級應該由「任務變難」或「benchmark 證明現有 tier 不夠」觸發，而不是因為有更大的模型可用。
+
+### 23.2 First fine-tuning target
+
+第一個 fine-tuning project 應保持單一、可驗證的目標：
+
+**改善 Spotify named-track semantic parsing / entity extraction / semantic retry，不擴張 execution authority。**
+
+訓練樣本可包含：
+
+- `spotify_play_track` 的自然語句變體
+- track / artist / album entity-boundary ambiguity
+- Traditional / Simplified Chinese variants
+- ASR-like noise 與常見誤分詞
+- colloquial artist / song phrasing
+- 必須輸出 `unknown` 的 negative samples
+- malformed / unsupported / deterministic-only requests 的拒絕樣本
+
+第一個 fine-tuned model 不應加入 app control、shutdown、force-close、firewall、arbitrary Windows operations 或 client-supplied execution target。
+
+### 23.3 Data discipline
+
+Personal semantic correction data 可以逐步累積成 tuning candidate corpus，但不能把「記憶」直接等同於「訓練資料」。
+
+進入 fine-tuning 前至少要區分：
+
+~~~text
+raw local observations
+→ reviewed / sanitized candidate examples
+→ training split
+→ held-out validation split
+→ frozen benchmark / acceptance split
+~~~
+
+要求：
+
+- 不把 API key、OAuth token、private path、Spotify URI/ID、logs 中的秘密放入 dataset。
+- 不把固定 benchmark 的答案直接洩漏進 training split。
+- confirmed alias / clarification evidence 必須先轉成 bounded semantic example。
+- negative examples 應占有足夠比例，避免 fine-tune 後過度猜測。
+- training corpus version、hash、base model、adapter config 與 prompt/schema 都應可追溯。
+
+### 23.4 Base vs fine-tuned evaluation
+
+任何 fine-tuned candidate 都必須和未微調 baseline 在**完全相同**的 evaluation harness 下比較。
+
+至少比較：
+
+- transport success
+- JSON parse / strict-schema success
+- supported semantic accuracy
+- semantic-retry accuracy
+- deterministic-only safe-unknown
+- safety-only safe-unknown
+- false execution
+- post-grounding false acceptance
+- P50 / P95 latency
+- malformed-output rate
+- timeout / failure behavior
+
+第一個 LoRA 的成功標準不是「感覺比較懂我」，而是：
+
+~~~text
+same frozen corpus
++ same schema / grounding / policy
++ measurable semantic improvement
++ no safety regression
++ acceptable latency
+~~~
+
+如果 fine-tuned model 只提升少量 wording coverage，卻增加 malformed output、false acceptance 或 latency，應保留 base model。
+
+### 23.5 Hardware / training scope
+
+第一階段 tuning 應刻意設計成可在單張約 12–16 GB VRAM 的 consumer GPU 上完成，例如 QLoRA / parameter-efficient tuning。
+
+不應為了第一個 personal model：
+
+- 假設不同電腦的 VRAM 可以直接相加
+- 依賴 mixed-vendor cross-host distributed training
+- 引入複雜 multi-node training stack
+- 先追求 14B / 32B full fine-tune
+
+如果未來真的需要更大模型，應先由 benchmark 證明能力缺口，再決定升級硬體或使用更大的 local model。
+
+### 23.6 Long-term model role
+
+長期模型可以逐步從：
+
+~~~text
+semantic parser
+→ semantic recovery model
+→ contextual interpreter
+→ bounded planner
+~~~
+
+但每提升一層能力，都必須維持：
+
+~~~text
+model proposes meaning / plan
+→ deterministic grounding
+→ policy
+→ closed ValidatedAction(s)
+→ trusted adapters
+~~~
+
+即使未來使用 7B、14B 或更大的 personal model，也不應因模型更強而繞過既有 security architecture。
+
 ---
 
 # Horizon 4 — Contextual Agent
