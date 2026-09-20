@@ -7,9 +7,11 @@ Installed target: `D:\ai\windows-siri-agent`
 
 ## Verdict
 
-**v1.0 release-cut READY for the reviewed deterministic scope.** This is not a
-claim that the documented known limitations are resolved or that deferred
-features are accepted.
+**v1.0 runtime release-cut gate PASSED for the reviewed deterministic scope.**
+The actual v1.0 release identity/version/tag remains pending; the reviewed
+source and installed runtime still report `0.1.0`. This is not a claim that the
+documented known limitations are resolved or that deferred features are
+accepted.
 
 ## Sanitized runtime evidence
 
@@ -23,7 +25,8 @@ features are accepted.
   - `semantic_memory_enabled=false`
   - `LOCAL_AI_MODE=shadow`
   - `local_ai_fallback_approved=false`
-- Installed version remained `0.1.0`.
+- Reviewed source and installed runtime version remained `0.1.0`; this
+  documentation-only PR includes no version bump.
 
 ## Evidence boundary
 

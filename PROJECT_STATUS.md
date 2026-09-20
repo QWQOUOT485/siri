@@ -63,8 +63,11 @@ evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/
   `spotify_continue` remains **NOT ACCEPTED**; Semantic Memory remains
   disabled; Local AI executable fallback remains unapproved; hosted CI remains
   absent.
-- **v1.0 release-cut verdict: READY for the reviewed deterministic scope, with
-  the documented known limitations and deferred items unchanged.**
+- **v1.0 runtime release-cut gate: PASSED for the reviewed deterministic scope.**
+  The actual v1.0 release identity/version/tag remains pending; reviewed source
+  and installed runtime still report `0.1.0`. This documentation-only PR does
+  not include a version bump. The documented known limitations and deferred
+  items remain unchanged.
 
 ## Security Invariants
 
