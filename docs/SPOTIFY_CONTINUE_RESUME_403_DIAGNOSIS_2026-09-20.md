@@ -35,11 +35,13 @@ The client only adds a request body when a trusted track is supplied. The
 same `/me/player/play` operation is therefore used for both ordinary resume
 and continue, while named-track playback supplies a trusted `uris` body.
 
-The source also parses a bounded provider `error.reason` in
-`SpotifyApiError`, but the service's generic 403 mapping currently returns
-only `SPOTIFY_FORBIDDEN` and drops that reason. The installed audit log has
-the same bounded generic error code, so it cannot distinguish Premium,
-device, content, or playback-state causes.
+The source parses a bounded provider `error.reason` in `SpotifyApiError`.
+Before the observability fix was merged, the service's generic 403 mapping
+returned only `SPOTIFY_FORBIDDEN` and dropped that reason; that historical
+gap is why the earlier installed audit lines cannot distinguish Premium,
+device, content, or playback-state causes. The reviewed fix now preserves a
+validated bounded reason in `OperationResult.data.provider_reason` without
+changing the user-visible error code or playback semantics.
 
 ## Reproduction and minimisation evidence
 
@@ -118,13 +120,55 @@ server-selected device was inactive. No `spotify_continue`, transfer, retry,
 or playback command was sent, so this follow-up captured no new provider 403
 reason and does not change the NO-GO decision.
 
+## Active-device acceptance after deployment
+
+After the user manually opened Spotify Desktop and established a controllable
+device, one new bounded acceptance was authorized against the installed Agent
+from current `main` (`6c10311`). The run used one read-only preflight followed
+by exactly one `spotify_continue` command; it did not use a retry, transfer,
+direct provider control, or a second command.
+
+Sanitized preflight state:
+
+```text
+device_count=1
+usable_nonrestricted=1
+active_nonrestricted=1
+restricted=0
+server_selected_exists=true
+server_selected_active=true
+repeat=off
+shuffle=false
+playback_is_playing=true
+playback_has_item=true
+```
+
+The installed Agent received the Siri text `就一直播下去` once. The HTTP
+transport returned 200, but the operation failed closed:
+
+```text
+success=false
+action=spotify_continue
+error_code=SPOTIFY_FORBIDDEN
+data.provider_reason=UNKNOWN
+```
+
+`UNKNOWN` is the sanitized bounded provider-reason value; no raw provider
+body, token, device ID, track ID, or credential was recorded. Because the
+operation returned 403, no post-command playback readback was performed. The
+selected device was already active, so no transfer was attempted. No 429 or
+`QUOTA_EXCEEDED` response occurred. The local Agent was stopped afterward and
+the loopback ports were closed.
+
 ## Hypothesis result
 
 - **External playback state / device / account condition — remains most
-  likely.** The current live state had no active device, and historical
-  failures are specific to empty-body resume while named-track playback and
-  other controls succeeded. The exact historical provider reason remains
-  unknown.
+  plausible, but not proven.** The new attempt had an active, usable,
+  non-restricted selected device and still returned 403, so the earlier
+  no-active-device observation is not sufficient to explain this failure.
+  Historical failures remain specific to empty-body resume while named-track
+  playback and other controls succeeded. The deployed bounded reason was
+  `UNKNOWN`, which does not identify a provider-side cause.
 - **Transfer or queue composition — not necessary.** An active-device mock
   reproduces the failure without either step.
 - **Malformed request shape — not supported by current evidence.** The
@@ -142,11 +186,12 @@ reason and does not change the NO-GO decision.
 ## Stop line and next evidence
 
 `spotify_continue` is still **NOT ACCEPTED**. The bounded provider-reason
-observability change is now reviewed, merged, and deployed to the installed
-Agent, but the active-device precondition was absent, so no live 403 reason was
-captured. Restore or identify a known active, non-restricted Spotify Desktop
-device, then permit one bounded real resume acceptance. Stop immediately on
-429 or `QUOTA_EXCEEDED`; do not retry or sleep.
+observability change is reviewed, merged, and deployed to the installed Agent.
+The active-device precondition then passed, but the one permitted command still
+returned `SPOTIFY_FORBIDDEN` with only the sanitized reason `UNKNOWN`; this
+does not prove a source bug or a provider root cause. No retry or post-403
+readback is authorized by this evidence. Stop immediately on 429 or
+`QUOTA_EXCEEDED`; do not retry or sleep.
 
 Until then, keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
 `LOCAL_AI_FALLBACK_APPROVED=false`; do not claim Siri voice acceptance or a
