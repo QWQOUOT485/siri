@@ -6,23 +6,42 @@ proxy.  Remote command text never reaches this adapter as a URL or endpoint.
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Sequence
+import threading
+import time
+from collections.abc import Callable, Sequence
 from typing import Any, Mapping
 
 import httpx
 
 
 _TRACK_URI = re.compile(r"^spotify:track:[A-Za-z0-9]+$")
+_REASON = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+_MAX_RETRY_AFTER_SECONDS = 3600
+_DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS = 5
+_DEFAULT_RATE_LIMIT_SCOPE = "api"
+_SEARCH_RATE_LIMIT_SCOPE = "search"
+_PERSONALIZATION_RATE_LIMIT_SCOPE = "personalization"
+_PLAYBACK_RATE_LIMIT_SCOPE = "playback"
+_PROVIDER_QUOTA_REASON = "QUOTA_EXCEEDED"
 
 
 class SpotifyApiError(RuntimeError):
     """An expected Spotify API or network failure without response secrets."""
 
-    def __init__(self, status_code: int | None, message: str, *, retry_after_seconds: int | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int | None,
+        message: str,
+        *,
+        retry_after_seconds: int | None = None,
+        reason: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
+        self.reason = reason
 
 
 class SpotifyApiClient:
@@ -34,10 +53,18 @@ class SpotifyApiClient:
         http_client: httpx.Client | None = None,
         api_base_url: str = "https://api.spotify.com/v1",
         accounts_base_url: str = "https://accounts.spotify.com",
+        clock: Callable[[], float] = time.monotonic,
+        default_rate_limit_cooldown_seconds: int = _DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS,
     ) -> None:
         self.http_client = http_client or httpx.Client(timeout=15.0, follow_redirects=True)
         self.api_base_url = api_base_url.rstrip("/")
         self.accounts_base_url = accounts_base_url.rstrip("/")
+        self._clock = clock
+        self._rate_limit_lock = threading.Lock()
+        self._provider_cooldown_until = 0.0
+        self._provider_cooldown_reason: str | None = None
+        self._scoped_cooldowns: dict[str, tuple[float, str | None]] = {}
+        self._default_rate_limit_cooldown_seconds = max(0, min(int(default_rate_limit_cooldown_seconds), 60))
 
     def close(self) -> None:
         self.http_client.close()
@@ -47,6 +74,7 @@ class SpotifyApiClient:
             "GET",
             "/search",
             access_token=access_token,
+            rate_limit_scope=_SEARCH_RATE_LIMIT_SCOPE,
             params={"q": query, "type": "track", "limit": str(max(1, min(limit, 50)))},
         )
         tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
@@ -67,6 +95,7 @@ class SpotifyApiClient:
             "GET",
             "/me/library/contains",
             access_token=access_token,
+            rate_limit_scope=_PERSONALIZATION_RATE_LIMIT_SCOPE,
             params={"uris": ",".join(uris)},
         )
         if not isinstance(payload, list) or len(payload) != len(uris) or any(not isinstance(value, bool) for value in payload):
@@ -78,6 +107,7 @@ class SpotifyApiClient:
             "GET",
             "/me/top/tracks",
             access_token=access_token,
+            rate_limit_scope=_PERSONALIZATION_RATE_LIMIT_SCOPE,
             params={"limit": str(max(1, min(limit, 50)))},
         )
         return self._top_items(payload)
@@ -87,6 +117,7 @@ class SpotifyApiClient:
             "GET",
             "/me/top/artists",
             access_token=access_token,
+            rate_limit_scope=_PERSONALIZATION_RATE_LIMIT_SCOPE,
             params={"limit": str(max(1, min(limit, 50)))},
         )
         return self._top_items(payload)
@@ -98,25 +129,37 @@ class SpotifyApiClient:
             "GET",
             "/me/player/recently-played",
             access_token=access_token,
+            rate_limit_scope=_PERSONALIZATION_RATE_LIMIT_SCOPE,
             params={"limit": str(max(1, min(limit, 50)))},
         )
         return self._recent_items(payload)
 
     def get_devices(self, access_token: str) -> list[dict[str, Any]]:
-        payload = self._api_json("GET", "/me/player/devices", access_token=access_token)
+        payload = self._api_json(
+            "GET",
+            "/me/player/devices",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+        )
         devices = payload.get("devices", []) if isinstance(payload, dict) else []
         return [device for device in devices if isinstance(device, dict)]
 
     def get_current_playback(self, access_token: str) -> dict[str, Any]:
         """Read the current playback state from the fixed Spotify endpoint."""
 
-        return self._api_json("GET", "/me/player", access_token=access_token)
+        return self._api_json(
+            "GET",
+            "/me/player",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+        )
 
     def transfer_playback(self, access_token: str, device_id: str, *, play: bool = False) -> None:
         self._api_json(
             "PUT",
             "/me/player",
             access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
             json={"device_ids": [device_id], "play": play},
             allow_non_json_success=True,
         )
@@ -124,16 +167,45 @@ class SpotifyApiClient:
     def start_resume(self, access_token: str, *, device_id: str | None = None, track_uri: str | None = None) -> None:
         params = {"device_id": device_id} if device_id else None
         body = {"uris": [track_uri]} if track_uri else None
-        self._api_json("PUT", "/me/player/play", access_token=access_token, params=params, json=body, allow_non_json_success=True)
+        self._api_json(
+            "PUT",
+            "/me/player/play",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=params,
+            json=body,
+            allow_non_json_success=True,
+        )
 
     def pause(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("PUT", "/me/player/pause", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
+        self._api_json(
+            "PUT",
+            "/me/player/pause",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=self._device_params(device_id),
+            allow_non_json_success=True,
+        )
 
     def next(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("POST", "/me/player/next", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
+        self._api_json(
+            "POST",
+            "/me/player/next",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=self._device_params(device_id),
+            allow_non_json_success=True,
+        )
 
     def previous(self, access_token: str, *, device_id: str | None = None) -> None:
-        self._api_json("POST", "/me/player/previous", access_token=access_token, params=self._device_params(device_id), allow_non_json_success=True)
+        self._api_json(
+            "POST",
+            "/me/player/previous",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=self._device_params(device_id),
+            allow_non_json_success=True,
+        )
 
     def exchange_code(self, client_id: str, code: str, redirect_uri: str, code_verifier: str) -> dict[str, Any]:
         return self._accounts_json(
@@ -175,7 +247,16 @@ class SpotifyApiClient:
             raise SpotifyApiError(200, "Spotify 回應格式無效。")
         return items
 
-    def _api_json(self, method: str, path: str, *, access_token: str, allow_non_json_success: bool = False, **kwargs) -> dict[str, Any]:
+    def _api_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        access_token: str,
+        rate_limit_scope: str = _DEFAULT_RATE_LIMIT_SCOPE,
+        allow_non_json_success: bool = False,
+        **kwargs,
+    ) -> dict[str, Any]:
         headers = dict(kwargs.pop("headers", {}) or {})
         headers["Authorization"] = f"Bearer {access_token}"
         headers.setdefault("Accept", "application/json")
@@ -183,11 +264,21 @@ class SpotifyApiClient:
             method,
             f"{self.api_base_url}{path}",
             headers=headers,
+            rate_limit_scope=rate_limit_scope,
             allow_non_json_success=allow_non_json_success,
             **kwargs,
         )
 
-    def _api_value(self, method: str, path: str, *, access_token: str, allow_non_json_success: bool = False, **kwargs) -> Any:
+    def _api_value(
+        self,
+        method: str,
+        path: str,
+        *,
+        access_token: str,
+        rate_limit_scope: str = _DEFAULT_RATE_LIMIT_SCOPE,
+        allow_non_json_success: bool = False,
+        **kwargs,
+    ) -> Any:
         headers = dict(kwargs.pop("headers", {}) or {})
         headers["Authorization"] = f"Bearer {access_token}"
         headers.setdefault("Accept", "application/json")
@@ -195,6 +286,7 @@ class SpotifyApiClient:
             method,
             f"{self.api_base_url}{path}",
             headers=headers,
+            rate_limit_scope=rate_limit_scope,
             allow_non_json_success=allow_non_json_success,
             **kwargs,
         )
@@ -204,6 +296,7 @@ class SpotifyApiClient:
             method,
             f"{self.accounts_base_url}{path}",
             headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"},
+            rate_limit_scope=None,
             data=data,
         )
 
@@ -214,6 +307,7 @@ class SpotifyApiClient:
         *,
         headers: Mapping[str, str] | None = None,
         allow_non_json_success: bool = False,
+        rate_limit_scope: str | None = _DEFAULT_RATE_LIMIT_SCOPE,
         **kwargs,
     ) -> dict[str, Any]:
         payload = self._request_value(
@@ -221,6 +315,7 @@ class SpotifyApiClient:
             url,
             headers=headers,
             allow_non_json_success=allow_non_json_success,
+            rate_limit_scope=rate_limit_scope,
             **kwargs,
         )
         return payload if isinstance(payload, dict) else {}
@@ -232,8 +327,11 @@ class SpotifyApiClient:
         *,
         headers: Mapping[str, str] | None = None,
         allow_non_json_success: bool = False,
+        rate_limit_scope: str | None = _DEFAULT_RATE_LIMIT_SCOPE,
         **kwargs,
     ) -> Any:
+        if rate_limit_scope is not None:
+            self._raise_if_rate_limited(rate_limit_scope)
         try:
             response = self.http_client.request(method, url, headers=headers, **kwargs)
         except httpx.HTTPError as exc:
@@ -241,12 +339,20 @@ class SpotifyApiClient:
 
         if response.status_code >= 400:
             retry_after = self._retry_after(response)
+            reason = self._error_reason(response)
+            if rate_limit_scope is not None and response.status_code == 429:
+                self._record_rate_limit(rate_limit_scope, retry_after, reason)
             messages = {
                 401: "Spotify 授權已失效。",
                 403: "Spotify 拒絕這項播放操作，請確認 Premium 與帳戶狀態。",
                 429: "Spotify 目前請求過多，請稍後再試。",
             }
-            raise SpotifyApiError(response.status_code, messages.get(response.status_code, "Spotify API 請求失敗。"), retry_after_seconds=retry_after)
+            raise SpotifyApiError(
+                response.status_code,
+                messages.get(response.status_code, "Spotify API 請求失敗。"),
+                retry_after_seconds=retry_after,
+                reason=reason,
+            )
         if response.status_code == 204 or not response.content:
             return {}
         try:
@@ -261,6 +367,73 @@ class SpotifyApiClient:
     def _retry_after(response: httpx.Response) -> int | None:
         value = response.headers.get("Retry-After")
         try:
-            return max(0, min(int(value), 3600)) if value is not None else None
+            parsed = int(value) if value is not None else None
+            if parsed is None or parsed < 0:
+                return None
+            return min(parsed, _MAX_RETRY_AFTER_SECONDS)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _error_reason(response: httpx.Response) -> str | None:
+        """Keep only a bounded provider reason; never retain arbitrary error text."""
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        error = payload.get("error") if isinstance(payload, dict) else None
+        reason = error.get("reason") if isinstance(error, dict) else None
+        if not isinstance(reason, str) or _REASON.fullmatch(reason) is None:
+            return None
+        return reason
+
+    def _raise_if_rate_limited(self, scope: str) -> None:
+        now = self._clock()
+        retry_after: int | None = None
+        reason: str | None = None
+        with self._rate_limit_lock:
+            provider_remaining = self._provider_cooldown_until - now
+            if provider_remaining > 0:
+                retry_after = max(1, min(math.ceil(provider_remaining), _MAX_RETRY_AFTER_SECONDS))
+                reason = self._provider_cooldown_reason
+            elif self._provider_cooldown_until:
+                self._provider_cooldown_until = 0.0
+                self._provider_cooldown_reason = None
+
+            if retry_after is None:
+                scoped = self._scoped_cooldowns.get(scope)
+                if scoped is not None:
+                    deadline, scoped_reason = scoped
+                    remaining = deadline - now
+                    if remaining > 0:
+                        retry_after = max(1, min(math.ceil(remaining), _MAX_RETRY_AFTER_SECONDS))
+                        reason = scoped_reason
+                    else:
+                        self._scoped_cooldowns.pop(scope, None)
+
+        if retry_after is None:
+            return
+        raise SpotifyApiError(
+            429,
+            "Spotify 目前請求過多，請稍後再試。",
+            retry_after_seconds=retry_after,
+            reason=reason,
+        )
+
+    def _record_rate_limit(self, scope: str, retry_after: int | None, reason: str | None) -> None:
+        cooldown_seconds = retry_after
+        if cooldown_seconds is None:
+            cooldown_seconds = self._default_rate_limit_cooldown_seconds
+        if cooldown_seconds <= 0:
+            return
+        deadline = self._clock() + min(cooldown_seconds, _MAX_RETRY_AFTER_SECONDS)
+        with self._rate_limit_lock:
+            if reason == _PROVIDER_QUOTA_REASON:
+                if deadline >= self._provider_cooldown_until:
+                    self._provider_cooldown_until = deadline
+                    self._provider_cooldown_reason = reason
+                return
+            current = self._scoped_cooldowns.get(scope)
+            if current is None or deadline >= current[0]:
+                self._scoped_cooldowns[scope] = (deadline, reason)

@@ -321,6 +321,59 @@ def test_clarification_selection_plays_only_the_server_stored_candidate(tmp_path
     ]
 
 
+def test_ordinary_personalization_429_does_not_block_clarification_playback(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            return httpx.Response(
+                200,
+                json={
+                    "tracks": {
+                        "items": [
+                            spotify_track("one", "Stay", "Artist One"),
+                            spotify_track("two", "Stay", "Artist Two"),
+                        ]
+                    }
+                },
+            )
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False, False])
+        if request.url.path == "/v1/me/top/tracks":
+            return httpx.Response(
+                429,
+                headers={"Retry-After": "30"},
+                json={"error": {"reason": "RATE_LIMITED"}},
+            )
+        if request.url.path in {"/v1/me/top/artists", "/v1/me/player/recently-played"}:
+            raise AssertionError(f"scoped personalization cooldown should suppress {request.url.path}")
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/play":
+            assert json.loads(request.content) == {"uris": ["spotify:track:two"]}
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+
+    assert initial.success is False
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    token = initial.data["clarification_token"]
+
+    selected = spotify.execute_clarification("第二首", token)
+
+    assert selected.success is True
+    assert [request.url.path for request in calls] == [
+        "/v1/search",
+        "/v1/me/library/contains",
+        "/v1/me/top/tracks",
+        "/v1/me/player/devices",
+        "/v1/me/player/play",
+    ]
+
+
 def test_unclear_clarification_keeps_the_same_bounded_context(tmp_path):
     calls = []
 

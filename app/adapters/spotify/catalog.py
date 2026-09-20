@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.adapters.spotify.personalization_cache import SpotifyPersonalizationCache
 from app.domain.chinese import normalize_chinese_text
 
 
@@ -40,13 +42,17 @@ class TrackResolution:
     retry_signal: str | None = None
 
 
+_PersonalizationValue = TypeVar("_PersonalizationValue")
+
+
 class SpotifyCatalog:
     """Expose one deep search interface over the external Spotify catalog."""
 
     _MIN_SAFE_TRACK_SCORE = 0.70
 
-    def __init__(self, client) -> None:
+    def __init__(self, client, *, personalization_cache: SpotifyPersonalizationCache | None = None) -> None:
         self.client = client
+        self.personalization_cache = personalization_cache or SpotifyPersonalizationCache()
 
     def find_track(
         self,
@@ -266,35 +272,37 @@ class SpotifyCatalog:
         getter = getattr(self.client, "get_top_tracks", None)
         if not callable(getter):
             return set()
-        try:
+
+        def load() -> frozenset[str] | None:
             items = getter(access_token)
             if not isinstance(items, list):
-                return set()
+                return None
             track_ids: set[str] = set()
             for item in items:
                 if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"].strip():
-                    return set()
+                    return None
                 track_ids.add(item["id"].strip())
-            return track_ids
-        except Exception:
-            return set()
+            return frozenset(track_ids)
+
+        return set(self._cached_personalization(access_token, "top_tracks", load, frozenset()))
 
     def _top_artist_names(self, access_token: str) -> set[str]:
         getter = getattr(self.client, "get_top_artists", None)
         if not callable(getter):
             return set()
-        try:
+
+        def load() -> frozenset[str] | None:
             items = getter(access_token)
             if not isinstance(items, list):
-                return set()
+                return None
             artist_names: set[str] = set()
             for item in items:
                 if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not item["name"].strip():
-                    return set()
+                    return None
                 artist_names.add(self._normalize(item["name"]))
-            return artist_names
-        except Exception:
-            return set()
+            return frozenset(artist_names)
+
+        return set(self._cached_personalization(access_token, "top_artists", load, frozenset()))
 
     def _recent_signals(self, access_token: str) -> tuple[set[str], set[str]]:
         """Return only bounded identity evidence from the fixed recent-items read."""
@@ -302,21 +310,22 @@ class SpotifyCatalog:
         getter = getattr(self.client, "get_recently_played", None)
         if not callable(getter):
             return set(), set()
-        try:
+
+        def load() -> tuple[frozenset[str], frozenset[str]] | None:
             items = getter(access_token)
             if not isinstance(items, list):
-                return set(), set()
+                return None
             track_ids: set[str] = set()
             artist_names: set[str] = set()
             for item in items:
                 if not isinstance(item, dict):
-                    return set(), set()
+                    return None
                 # The concrete adapter returns Spotify recently-played wrappers;
                 # accepting a track-shaped item as well keeps this optional seam
                 # compatible with small test/double adapters without widening it.
                 track = item.get("track") if "track" in item else item
                 if not isinstance(track, dict):
-                    return set(), set()
+                    return None
                 track_id = track.get("id")
                 artists = track.get("artists")
                 if (
@@ -325,18 +334,60 @@ class SpotifyCatalog:
                     or not isinstance(artists, list)
                     or not artists
                 ):
-                    return set(), set()
+                    return None
                 track_ids.add(track_id.strip())
                 for artist in artists:
                     if not isinstance(artist, dict) or not isinstance(artist.get("name"), str):
-                        return set(), set()
+                        return None
                     normalized = self._normalize(artist["name"])
                     if not normalized:
-                        return set(), set()
+                        return None
                     artist_names.add(normalized)
-            return track_ids, artist_names
+            return frozenset(track_ids), frozenset(artist_names)
+
+        track_ids, artist_names = self._cached_personalization(
+            access_token,
+            "recently_played",
+            load,
+            (frozenset(), frozenset()),
+        )
+        return set(track_ids), set(artist_names)
+
+    def _cached_personalization(
+        self,
+        access_token: str,
+        signal: str,
+        loader: Callable[[], _PersonalizationValue | None],
+        default: _PersonalizationValue,
+    ) -> _PersonalizationValue:
+        scope: bytes | None = None
+        try:
+            scope = self.personalization_cache.scope_for(access_token)
+            fresh = self.personalization_cache.get_fresh(scope, signal)
+            if fresh is not None:
+                return fresh
         except Exception:
-            return set(), set()
+            # Cache failure must never block the deterministic catalog path.
+            scope = None
+        try:
+            value = loader()
+        except Exception:
+            value = None
+        if value is not None:
+            if scope is not None:
+                try:
+                    self.personalization_cache.put(scope, signal, value)
+                except Exception:
+                    pass
+            return value
+        if scope is not None:
+            try:
+                stale = self.personalization_cache.get_stale(scope, signal)
+            except Exception:
+                stale = None
+            if stale is not None:
+                return stale
+        return default
 
     @classmethod
     def _has_explicit_chinese_artist_track_shape(

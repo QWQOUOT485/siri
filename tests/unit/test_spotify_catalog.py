@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.adapters.spotify.catalog import SpotifyCatalog, SpotifyTrackRef
+from app.adapters.spotify.personalization_cache import SpotifyPersonalizationCache
 
 
 class FakeSpotifySearchClient:
@@ -731,3 +732,199 @@ def test_catalog_prefers_one_exact_bare_title_over_similar_titles():
     assert result.track is not None
     assert result.track.track_id == "exacttitle"
     assert result.ambiguous is False
+
+
+class FakeClock:
+    def __init__(self, now=0.0):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
+def test_catalog_caches_top_and_recent_reads_inside_the_ttl():
+    class CachedClient(FakeSpotifySearchClient):
+        def __init__(self, tracks):
+            super().__init__(tracks)
+            self.calls = {"top_tracks": 0, "top_artists": 0, "recent": 0, "saved": 0}
+
+        def check_saved_tracks(self, _access_token, track_uris):
+            self.calls["saved"] += 1
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            self.calls["top_tracks"] += 1
+            return [track("top", "Stay", ["Artist Two"])]
+
+        def get_top_artists(self, _access_token):
+            self.calls["top_artists"] += 1
+            return []
+
+        def get_recently_played(self, _access_token):
+            self.calls["recent"] += 1
+            return []
+
+    clock = FakeClock()
+    cache = SpotifyPersonalizationCache(clock=clock, ttl_seconds=60, stale_grace_seconds=30)
+    client = CachedClient(
+        [
+            track("other", "Stay", ["Artist One"]),
+            track("top", "Stay", ["Artist Two"]),
+        ]
+    )
+    catalog = SpotifyCatalog(client, personalization_cache=cache)
+
+    first = catalog.find_track("Stay", None, access_token="test-token")
+    second = catalog.find_track("Stay", None, access_token="test-token")
+
+    assert first.ambiguous is True
+    assert second.ambiguous is True
+    assert [candidate.track_id for candidate in second.candidates] == ["top", "other"]
+    assert client.calls == {"top_tracks": 1, "top_artists": 1, "recent": 1, "saved": 2}
+
+
+def test_catalog_refreshes_personalization_after_ttl_expiry():
+    class CountingClient(FakeSpotifySearchClient):
+        def __init__(self, tracks):
+            super().__init__(tracks)
+            self.top_calls = 0
+
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            self.top_calls += 1
+            return []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return []
+
+    clock = FakeClock()
+    cache = SpotifyPersonalizationCache(clock=clock, ttl_seconds=60, stale_grace_seconds=30)
+    client = CountingClient([track("one", "Stay", ["Artist One"]), track("two", "Stay", ["Artist Two"])])
+    catalog = SpotifyCatalog(client, personalization_cache=cache)
+
+    catalog.find_track("Stay", None, access_token="test-token")
+    clock.now = 61
+    catalog.find_track("Stay", None, access_token="test-token")
+
+    assert client.top_calls == 2
+
+
+def test_catalog_uses_stale_personalization_only_during_bounded_refresh_grace():
+    class FlakyClient(FakeSpotifySearchClient):
+        def __init__(self, tracks):
+            super().__init__(tracks)
+            self.fail = False
+
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, _access_token):
+            if self.fail:
+                raise RuntimeError("quota cooldown")
+            return [track("top", "Stay", ["Artist Two"])]
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return []
+
+    clock = FakeClock()
+    cache = SpotifyPersonalizationCache(clock=clock, ttl_seconds=60, stale_grace_seconds=30)
+    client = FlakyClient([track("other", "Stay", ["Artist One"]), track("top", "Stay", ["Artist Two"])])
+    catalog = SpotifyCatalog(client, personalization_cache=cache)
+
+    first = catalog.find_track("Stay", None, access_token="test-token")
+    client.fail = True
+    clock.now = 61
+    stale = catalog.find_track("Stay", None, access_token="test-token")
+    clock.now = 91
+    expired = catalog.find_track("Stay", None, access_token="test-token")
+
+    assert [candidate.track_id for candidate in first.candidates] == ["top", "other"]
+    assert [candidate.track_id for candidate in stale.candidates] == ["top", "other"]
+    assert [candidate.track_id for candidate in expired.candidates] == ["other", "top"]
+
+
+def test_catalog_ignores_personalization_cache_failure():
+    class BrokenCache:
+        def scope_for(self, _access_token):
+            raise RuntimeError("cache unavailable")
+
+    class TopClient(FakeSpotifySearchClient):
+        def check_saved_tracks(self, _access_token, _track_uris):
+            return [False, False]
+
+        def get_top_tracks(self, _access_token):
+            return [track("top", "Stay", ["Artist Two"])]
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return []
+
+    client = TopClient(
+        [
+            track("other", "Stay", ["Artist One"]),
+            track("top", "Stay", ["Artist Two"]),
+        ]
+    )
+
+    result = SpotifyCatalog(client, personalization_cache=BrokenCache()).find_track(
+        "Stay",
+        None,
+        access_token="test-token",
+    )
+
+    assert result.ambiguous is True
+    assert [candidate.track_id for candidate in result.candidates] == ["top", "other"]
+
+
+def test_catalog_personalization_cache_isolated_by_authorization_context():
+    class AccountAwareClient(FakeSpotifySearchClient):
+        def __init__(self, tracks):
+            super().__init__(tracks)
+            self.top_calls = []
+
+        def check_saved_tracks(self, _access_token, track_uris):
+            return [False for _ in track_uris]
+
+        def get_top_tracks(self, access_token):
+            self.top_calls.append(access_token)
+            return [track("top", "Stay", ["Artist Two"])] if access_token == "account-a" else []
+
+        def get_top_artists(self, _access_token):
+            return []
+
+        def get_recently_played(self, _access_token):
+            return []
+
+    cache = SpotifyPersonalizationCache(ttl_seconds=60)
+    client = AccountAwareClient([track("other", "Stay", ["Artist One"]), track("top", "Stay", ["Artist Two"])])
+    catalog = SpotifyCatalog(client, personalization_cache=cache)
+
+    account_a = catalog.find_track("Stay", None, access_token="account-a")
+    account_b = catalog.find_track("Stay", None, access_token="account-b")
+
+    assert [candidate.track_id for candidate in account_a.candidates] == ["top", "other"]
+    assert [candidate.track_id for candidate in account_b.candidates] == ["other", "top"]
+    assert client.top_calls == ["account-a", "account-b"]
+
+
+def test_personalization_cache_evicts_old_entries_at_the_bound():
+    cache = SpotifyPersonalizationCache(max_entries=2)
+    scope = cache.scope_for("access-token")
+
+    cache.put(scope, "one", frozenset({"one"}))
+    cache.put(scope, "two", frozenset({"two"}))
+    cache.put(scope, "three", frozenset({"three"}))
+
+    assert cache.entry_count == 2
+    assert cache.get_fresh(scope, "one") is None
+    assert cache.get_fresh(scope, "three") == frozenset({"three"})
