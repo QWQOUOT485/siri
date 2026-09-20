@@ -121,6 +121,13 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - response limit 固定 bounded；empty/malformed history、timeout、401、403、429、缺少 scope 或 optional method 都安全忽略並退回既有 deterministic ranking。
 - source/unit regression 已完成；bounded probe 的 candidate/membership boundary 已修正為比對 server-owned URI set，不受個人化排序改變順序影響。2026-09-20 重新授權 token 的真實只讀 run 完成了 20 個 genuine ambiguity / 20 個 raw candidate set，Recently Played 命中 6 個 candidates，但沒有 saved/top signal 缺席且 recent-only 重排的 qualifying case；Search、Library、Top、Recently Played error 均為 0。Recently Played real-account acceptance 仍未通過，沒有播放或 Library write。精確證據見 [`docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md)。
 
+### Spotify quota hardening and personalization read reduction
+
+- source 已加入 bounded `SpotifyApiError.reason` parsing：只保留有限長度、固定字元形狀的 provider reason，不保存任意 provider message，也不把 token 放入 exception text、cache key 或 log。
+- `SpotifyApiClient` 對 Web API 429 建立 per-client、in-memory cooldown；遵循 capped `Retry-After`（最多 3600 秒），missing / malformed / negative header 使用短 fallback cooldown，不 sleep、不 busy-loop、不自動重試。OAuth Accounts token endpoint 不受 Web API cooldown 阻擋，避免 401 refresh path 誤清除有效 refresh token。
+- Top Tracks、Top Artists、Recently Played 使用 process-local bounded cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 signal entries；authorization context 以 process-local HMAC scope 隔離，raw token 不持久化，saved membership 不進這個 cache。cache 或 refresh 失敗時維持 deterministic ranking。
+- 本次 source/unit targeted regression 為 78 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
+
 ### Windows exact volume
 
 `set_volume(volume_percent=0..100)` 已完成：
@@ -203,7 +210,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-目前完整 source test run為 **246 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **262 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 新增的 `docs/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
 
@@ -288,6 +295,7 @@ Phase 1 原則：
 
 - exact Windows volume：尚缺 Siri voice E2E / independent physical-speaker check。
 - clarification store bounded attempts / concurrency hardening：source/unit 已完成，但未因這個內部修正另外重跑完整 Siri E2E。
+- Spotify quota hardening / personalization cache：source/unit 已完成；本次沒有重跑 real Spotify，因 Development Mode `QUOTA_EXCEEDED` / 3600 秒 Retry-After blocker 仍在。Top-Artist-only 與 Recently Played-only 的 real-account evidence 維持原狀，不能以 mock/cache 測試代替。
 - Recently Played 尚缺 real Spotify account acceptance；boundary assertion 已修正，但本次 bounded real-account run 未找到 recent-only reorder case。沒有 playback 或 Library write；下一步是新的 bounded corpus 或明確接受「source slice 完成、real-account gate 未證明」的產品決策。
 - Spotify OAuth callback 曾出現「瀏覽器顯示通用失敗，但 status/token 實際成功保存」的不一致；功能可用，但 UI/root cause 尚未釐清。
 - GitHub hosted CI 尚未建立；目前 source test evidence 主要由本機執行與狀態文件記錄。

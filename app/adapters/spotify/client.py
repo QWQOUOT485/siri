@@ -6,23 +6,37 @@ proxy.  Remote command text never reaches this adapter as a URL or endpoint.
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Sequence
+import threading
+import time
+from collections.abc import Callable, Sequence
 from typing import Any, Mapping
 
 import httpx
 
 
 _TRACK_URI = re.compile(r"^spotify:track:[A-Za-z0-9]+$")
+_REASON = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+_MAX_RETRY_AFTER_SECONDS = 3600
+_DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS = 5
 
 
 class SpotifyApiError(RuntimeError):
     """An expected Spotify API or network failure without response secrets."""
 
-    def __init__(self, status_code: int | None, message: str, *, retry_after_seconds: int | None = None) -> None:
+    def __init__(
+        self,
+        status_code: int | None,
+        message: str,
+        *,
+        retry_after_seconds: int | None = None,
+        reason: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
+        self.reason = reason
 
 
 class SpotifyApiClient:
@@ -34,10 +48,17 @@ class SpotifyApiClient:
         http_client: httpx.Client | None = None,
         api_base_url: str = "https://api.spotify.com/v1",
         accounts_base_url: str = "https://accounts.spotify.com",
+        clock: Callable[[], float] = time.monotonic,
+        default_rate_limit_cooldown_seconds: int = _DEFAULT_RATE_LIMIT_COOLDOWN_SECONDS,
     ) -> None:
         self.http_client = http_client or httpx.Client(timeout=15.0, follow_redirects=True)
         self.api_base_url = api_base_url.rstrip("/")
         self.accounts_base_url = accounts_base_url.rstrip("/")
+        self._clock = clock
+        self._rate_limit_lock = threading.Lock()
+        self._rate_limit_cooldown_until = 0.0
+        self._rate_limit_reason: str | None = None
+        self._default_rate_limit_cooldown_seconds = max(0, min(int(default_rate_limit_cooldown_seconds), 60))
 
     def close(self) -> None:
         self.http_client.close()
@@ -183,6 +204,7 @@ class SpotifyApiClient:
             method,
             f"{self.api_base_url}{path}",
             headers=headers,
+            rate_limit_guard=True,
             allow_non_json_success=allow_non_json_success,
             **kwargs,
         )
@@ -195,6 +217,7 @@ class SpotifyApiClient:
             method,
             f"{self.api_base_url}{path}",
             headers=headers,
+            rate_limit_guard=True,
             allow_non_json_success=allow_non_json_success,
             **kwargs,
         )
@@ -204,6 +227,7 @@ class SpotifyApiClient:
             method,
             f"{self.accounts_base_url}{path}",
             headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"},
+            rate_limit_guard=False,
             data=data,
         )
 
@@ -214,6 +238,7 @@ class SpotifyApiClient:
         *,
         headers: Mapping[str, str] | None = None,
         allow_non_json_success: bool = False,
+        rate_limit_guard: bool = True,
         **kwargs,
     ) -> dict[str, Any]:
         payload = self._request_value(
@@ -221,6 +246,7 @@ class SpotifyApiClient:
             url,
             headers=headers,
             allow_non_json_success=allow_non_json_success,
+            rate_limit_guard=rate_limit_guard,
             **kwargs,
         )
         return payload if isinstance(payload, dict) else {}
@@ -232,8 +258,11 @@ class SpotifyApiClient:
         *,
         headers: Mapping[str, str] | None = None,
         allow_non_json_success: bool = False,
+        rate_limit_guard: bool = True,
         **kwargs,
     ) -> Any:
+        if rate_limit_guard:
+            self._raise_if_rate_limited()
         try:
             response = self.http_client.request(method, url, headers=headers, **kwargs)
         except httpx.HTTPError as exc:
@@ -241,12 +270,20 @@ class SpotifyApiClient:
 
         if response.status_code >= 400:
             retry_after = self._retry_after(response)
+            reason = self._error_reason(response)
+            if rate_limit_guard and response.status_code == 429:
+                self._record_rate_limit(retry_after, reason)
             messages = {
                 401: "Spotify 授權已失效。",
                 403: "Spotify 拒絕這項播放操作，請確認 Premium 與帳戶狀態。",
                 429: "Spotify 目前請求過多，請稍後再試。",
             }
-            raise SpotifyApiError(response.status_code, messages.get(response.status_code, "Spotify API 請求失敗。"), retry_after_seconds=retry_after)
+            raise SpotifyApiError(
+                response.status_code,
+                messages.get(response.status_code, "Spotify API 請求失敗。"),
+                retry_after_seconds=retry_after,
+                reason=reason,
+            )
         if response.status_code == 204 or not response.content:
             return {}
         try:
@@ -261,6 +298,54 @@ class SpotifyApiClient:
     def _retry_after(response: httpx.Response) -> int | None:
         value = response.headers.get("Retry-After")
         try:
-            return max(0, min(int(value), 3600)) if value is not None else None
+            parsed = int(value) if value is not None else None
+            if parsed is None or parsed < 0:
+                return None
+            return min(parsed, _MAX_RETRY_AFTER_SECONDS)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _error_reason(response: httpx.Response) -> str | None:
+        """Keep only a bounded provider reason; never retain arbitrary error text."""
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        error = payload.get("error") if isinstance(payload, dict) else None
+        reason = error.get("reason") if isinstance(error, dict) else None
+        if not isinstance(reason, str) or _REASON.fullmatch(reason) is None:
+            return None
+        return reason
+
+    def _raise_if_rate_limited(self) -> None:
+        now = self._clock()
+        with self._rate_limit_lock:
+            remaining = self._rate_limit_cooldown_until - now
+            if remaining <= 0:
+                if self._rate_limit_cooldown_until:
+                    self._rate_limit_cooldown_until = 0.0
+                    self._rate_limit_reason = None
+                return
+            retry_after = max(1, min(math.ceil(remaining), _MAX_RETRY_AFTER_SECONDS))
+            reason = self._rate_limit_reason
+        raise SpotifyApiError(
+            429,
+            "Spotify 目前請求過多，請稍後再試。",
+            retry_after_seconds=retry_after,
+            reason=reason,
+        )
+
+    def _record_rate_limit(self, retry_after: int | None, reason: str | None) -> None:
+        cooldown_seconds = retry_after
+        if cooldown_seconds is None:
+            cooldown_seconds = self._default_rate_limit_cooldown_seconds
+        if cooldown_seconds <= 0:
+            return
+        deadline = self._clock() + min(cooldown_seconds, _MAX_RETRY_AFTER_SECONDS)
+        with self._rate_limit_lock:
+            if deadline >= self._rate_limit_cooldown_until:
+                self._rate_limit_cooldown_until = deadline
+            if reason is not None:
+                self._rate_limit_reason = reason

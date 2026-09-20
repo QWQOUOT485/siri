@@ -239,6 +239,14 @@ Top Tracks / Top Artists 的 source slice 也已完成：Agent 只呼叫固定�
 
 Recently Played 的 source slice 也已完成：Agent 只呼叫固定的 `GET /me/player/recently-played`，將 server 回傳的 track ID / artist name 作為既有 ambiguity candidates 內的次級排序 evidence，順序位於 Top Tracks / Top Artists 之後、Search relevance 之前。它不建立新候選、不消除 genuine ambiguity、不覆蓋 explicit metadata，也不進 AI、Shortcut 或一般 API response。空歷史、malformed item、timeout、401、403、429、缺少 optional method 或其他 lookup failure 都會忽略該訊號並維持既有 deterministic ranking。此 slice 需要 `user-read-recently-played`；token 已於 2026-09-20 重新授權取得，但 real-account acceptance 尚未單獨執行。
 
+### Spotify quota 與 personalization read budget
+
+Spotify Web API 的 quota 是 production path 的有限資源。`SpotifyApiClient` 對 Web API `429` 只保存 bounded provider reason（例如 `QUOTA_EXCEEDED`），並建立 process-local、per-client cooldown：合法 `Retry-After` 最多採用 3600 秒；missing、malformed 或負值 header 使用短暫 fallback cooldown。cooldown 期間 request 直接 fail fast，不 sleep、不 busy-loop、不 background retry。OAuth Accounts token endpoint 不共用這個 Web API cooldown，因此 401 refresh path 不會因先前的 API 429 而被錯誤阻擋。provider 任意 message 與 access token 不會進 exception metadata 或 log。
+
+Top Tracks、Top Artists、Recently Played 的 server-side ranking evidence 使用 bounded、process-local cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 entries。cache scope 由 process-local HMAC 從 authorization context 衍生，不保存 raw token；Agent restart 後 cache 可為空；saved membership 仍是 candidate-specific read，不會被長期 cache。refresh error、429、malformed response 或 cache failure 都只移除該 personalization evidence，保留 deterministic relevance、clarification 與 playback safety。這些規則只降低重複 read，不新增 client 權限、Spotify URI/ID authority 或自動播放 authority。
+
+本次 quota hardening 與 cache change 只完成 source/unit/mock validation；2026-09-20 active Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 下沒有重跑 real Spotify，也沒有把 mock evidence 宣稱為 provider quota 或 real-account acceptance。
+
 真正 ambiguous 時，回傳最多三個 server-owned、適合 Siri 朗讀的候選，並附帶短效 `clarification_token`：
 
 > 找到多個可能的 Stay，請再說歌手名稱。
@@ -324,6 +332,8 @@ Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語
 如果 Spotify 回傳 403：回傳權限 / Premium / account 狀態相關的友善錯誤，不繞過 Spotify 限制。
 
 如果 Spotify 回傳 429：遵循 `Retry-After`，不可 busy-loop 重試。
+
+Web API 429 也會在同一個 `SpotifyApiClient` 的 bounded cooldown 內 fail fast；OAuth token exchange / refresh 使用 Accounts endpoint，不受 Web API cooldown 阻擋。429 不會觸發長時間 sleep 或背景重試，個人化 read 失敗時必須退回 deterministic ranking。
 
 ## Extended Playback Controls
 

@@ -4,9 +4,9 @@ import pytest
 from app.adapters.spotify.client import SpotifyApiClient, SpotifyApiError
 
 
-def client_for(handler):
+def client_for(handler, **kwargs):
     transport = httpx.MockTransport(handler)
-    return SpotifyApiClient(http_client=httpx.Client(transport=transport))
+    return SpotifyApiClient(http_client=httpx.Client(transport=transport), **kwargs)
 
 
 def test_search_uses_only_the_fixed_spotify_search_endpoint():
@@ -124,7 +124,11 @@ def test_pkce_code_exchange_uses_form_data_and_does_not_use_a_client_secret():
 
 def test_rate_limit_error_preserves_retry_after_without_leaking_the_access_token():
     def handler(_request: httpx.Request):
-        return httpx.Response(429, headers={"Retry-After": "7"}, json={"error": "rate limited"})
+        return httpx.Response(
+            429,
+            headers={"Retry-After": "7"},
+            json={"error": {"status": 429, "message": "Too many requests", "reason": "QUOTA_EXCEEDED"}},
+        )
 
     client = client_for(handler)
 
@@ -133,7 +137,194 @@ def test_rate_limit_error_preserves_retry_after_without_leaking_the_access_token
 
     assert error.value.status_code == 429
     assert error.value.retry_after_seconds == 7
+    assert error.value.reason == "QUOTA_EXCEEDED"
     assert "super-secret-access-token" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"error": {"reason": "x" * 65}},
+        {"error": {"reason": "quota exceeded"}},
+        {"error": "rate limited"},
+        {"message": "rate limited"},
+    ],
+)
+def test_rate_limit_reason_rejects_unbounded_or_malformed_provider_payloads(payload):
+    client = client_for(lambda _request: httpx.Response(429, json=payload))
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_devices("access-token")
+
+    assert error.value.reason is None
+
+
+def test_rate_limit_cooldown_fails_fast_without_a_second_transport_call():
+    class FakeClock:
+        now = 100.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            429,
+            headers={"Retry-After": "30"},
+            json={"error": {"reason": "QUOTA_EXCEEDED"}},
+        )
+
+    client = client_for(handler, clock=clock)
+
+    with pytest.raises(SpotifyApiError):
+        client.get_devices("access-token")
+    with pytest.raises(SpotifyApiError) as second_error:
+        client.get_devices("access-token")
+
+    assert calls == 1
+    assert second_error.value.status_code == 429
+    assert second_error.value.retry_after_seconds == 30
+    assert second_error.value.reason == "QUOTA_EXCEEDED"
+
+    clock.now += 30
+    with pytest.raises(SpotifyApiError):
+        client.get_devices("access-token")
+    assert calls == 2
+
+
+def test_malformed_retry_after_uses_a_short_local_cooldown_without_sleeping():
+    class FakeClock:
+        now = 10.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "not-a-number"}, json={"error": {}})
+        return httpx.Response(200, json={"devices": []})
+
+    client = client_for(handler, clock=clock, default_rate_limit_cooldown_seconds=5)
+
+    with pytest.raises(SpotifyApiError) as first_error:
+        client.get_devices("access-token")
+    assert first_error.value.retry_after_seconds is None
+
+    with pytest.raises(SpotifyApiError) as second_error:
+        client.get_devices("access-token")
+    assert second_error.value.retry_after_seconds == 5
+    assert calls == 1
+
+    clock.now += 5
+    assert client.get_devices("access-token") == []
+    assert calls == 2
+
+
+def test_negative_retry_after_uses_a_short_local_cooldown():
+    class FakeClock:
+        now = 10.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(429, headers={"Retry-After": "-1"}, json={"error": {}})
+
+    client = client_for(handler, clock=clock, default_rate_limit_cooldown_seconds=5)
+
+    with pytest.raises(SpotifyApiError) as first_error:
+        client.get_devices("access-token")
+    assert first_error.value.retry_after_seconds is None
+
+    with pytest.raises(SpotifyApiError) as second_error:
+        client.get_devices("access-token")
+    assert second_error.value.retry_after_seconds == 5
+    assert calls == 1
+
+
+def test_retry_after_is_capped_at_one_hour():
+    class FakeClock:
+        now = 10.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    client = client_for(
+        lambda _request: httpx.Response(429, headers={"Retry-After": "999999"}, json={"error": {}}),
+        clock=clock,
+    )
+
+    with pytest.raises(SpotifyApiError):
+        client.get_devices("access-token")
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_devices("access-token")
+
+    assert error.value.retry_after_seconds == 3600
+
+
+def test_api_cooldown_does_not_block_oauth_refresh_after_a_401_path():
+    class FakeClock:
+        now = 100.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(429, headers={"Retry-After": "30"}, json={"error": {"reason": "QUOTA_EXCEEDED"}})
+        if request.url.path == "/api/token":
+            return httpx.Response(200, json={"access_token": "refreshed", "expires_in": 3600})
+        raise AssertionError(request.url)
+
+    client = client_for(handler, clock=clock)
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_devices("access-token")
+    assert error.value.status_code == 429
+
+    assert client.refresh_token("client-id", "refresh-token") == {
+        "access_token": "refreshed",
+        "expires_in": 3600,
+    }
+    assert calls == ["/v1/me/player/devices", "/api/token"]
+
+
+def test_non_rate_limit_errors_do_not_start_provider_cooldown():
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(401, json={"error": {"reason": "TOKEN_EXPIRED"}})
+        return httpx.Response(200, json={"devices": []})
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.get_devices("access-token")
+    assert error.value.status_code == 401
+    assert client.get_devices("access-token") == []
+    assert calls == 2
 
 
 def test_playback_controls_accept_successful_non_json_responses():
