@@ -258,7 +258,7 @@ Phase 1 原則：
 1. **Spotify Top-Artist-only genuine-ambiguity acceptance**
    - Top Track 已有 1 個 real-account partial acceptance；如要完成 combined Top Tracks / Top Artists gate，需補一個沒有 Top Track / saved / recent 強訊號、由 Top Artist 單獨提升的 case。
    - 驗證 Top Artist 只改善候選順序、不覆蓋 explicit metadata、不消除 genuine ambiguity、不自動播放。
-   - 目前被 Spotify Development Mode quota 阻塞：最近一次 bounded probe 收到 `429 QUOTA_EXCEEDED`、`Retry-After=3600`；最小下一步是 quota window 清除後只跑一次 bounded read-only probe。
+   - 目前被 Spotify Development Mode quota 阻塞：重開機後先完成既有本機 refresh token 的 access-token refresh，隨後同一個 bounded probe 仍收到 `429 QUOTA_EXCEEDED`、`Retry-After=3600`；這確認 blocker 是 provider quota，不是 token expiry。依 stop rule，最小下一步是 quota window 明確清除後只跑一次 bounded read-only probe。
 
 2. **Spotify personalization real acceptance and next signal**
    - Top Track 的 genuine-ambiguity ordering 已取得 1 個 real-account partial acceptance；仍需決定是否補一個 Top-Artist-only reorder 以完成 combined Top Tracks / Top Artists gate。

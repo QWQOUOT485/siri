@@ -81,6 +81,19 @@ The probe records only the bounded status, provider reason, and retry delay.
 It does not retry a `QUOTA_EXCEEDED` response or busy-loop; no further Spotify
 calls were made after this blocker appeared.
 
+## Post-restart verification
+
+After the workstation restart, the first probe from this repository reported a
+missing local token because the active Agent token store is kept outside this
+repository. The existing local refresh token was used through the source auth
+manager; the access token refreshed successfully and no token value was
+printed or logged. Re-running the same bounded probe then returned the same
+`429 QUOTA_EXCEEDED` with `Retry-After: 3600`. This confirms that the current
+blocker is the provider quota, not token expiry or a missing refresh token.
+
+Per the project stop rule, no further Spotify calls will be made until the
+provider quota window is known to have cleared.
+
 ## Safety and decision
 
 The real case preserved genuine ambiguity and did not execute playback. The
