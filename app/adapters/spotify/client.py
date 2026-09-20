@@ -207,6 +207,40 @@ class SpotifyApiClient:
             allow_non_json_success=True,
         )
 
+    def set_shuffle(self, access_token: str, enabled: bool, *, device_id: str | None = None) -> None:
+        """Set the closed Spotify shuffle state on a server-selected device."""
+
+        if not isinstance(enabled, bool):
+            raise ValueError("shuffle state must be boolean")
+        params = {"state": "true" if enabled else "false"}
+        if device_id:
+            params["device_id"] = device_id
+        self._api_json(
+            "PUT",
+            "/me/player/shuffle",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=params,
+            allow_non_json_success=True,
+        )
+
+    def set_repeat(self, access_token: str, mode: str, *, device_id: str | None = None) -> None:
+        """Set one of Spotify's closed repeat modes on a server-selected device."""
+
+        if mode not in {"off", "track", "context"}:
+            raise ValueError("repeat mode is not supported")
+        params = {"state": mode}
+        if device_id:
+            params["device_id"] = device_id
+        self._api_json(
+            "PUT",
+            "/me/player/repeat",
+            access_token=access_token,
+            rate_limit_scope=_PLAYBACK_RATE_LIMIT_SCOPE,
+            params=params,
+            allow_non_json_success=True,
+        )
+
     def exchange_code(self, client_id: str, code: str, redirect_uri: str, code_verifier: str) -> dict[str, Any]:
         return self._accounts_json(
             "POST",

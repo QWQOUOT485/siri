@@ -69,6 +69,42 @@ class SpotifyPlayer:
             resume_after=True,
         )
 
+    def shuffle(self, access_token: str, *, enabled: bool) -> OperationResult:
+        device = self._resolve_device(access_token)
+        if device is None:
+            return self._missing_device()
+        self.client.set_shuffle(access_token, enabled, device_id=device.device_id)
+        state = "開啟" if enabled else "關閉"
+        return OperationResult(True, f"已{state} Spotify 隨機播放。", data={"device_name": device.name, "shuffle": enabled})
+
+    def repeat(self, access_token: str, mode: str) -> OperationResult:
+        if mode not in {"off", "track", "context"}:
+            return OperationResult(False, "不支援這個 Spotify 循環模式。", "INVALID_SPOTIFY_REPEAT")
+        device = self._resolve_device(access_token)
+        if device is None:
+            return self._missing_device()
+        self.client.set_repeat(access_token, mode, device_id=device.device_id)
+        messages = {
+            "off": "已關閉 Spotify 循環播放。",
+            "track": "已設定 Spotify 單曲循環。",
+            "context": "已設定 Spotify 情境循環。",
+        }
+        return OperationResult(True, messages[mode], data={"device_name": device.name, "repeat": mode})
+
+    def continue_playback(self, access_token: str) -> OperationResult:
+        device = self._resolve_device(access_token)
+        if device is None:
+            return self._missing_device()
+        if not device.is_active:
+            self.client.transfer_playback(access_token, device.device_id, play=False)
+        self.client.set_repeat(access_token, "off", device_id=device.device_id)
+        self.client.start_resume(access_token, device_id=device.device_id)
+        return OperationResult(
+            True,
+            "已關閉循環並繼續播放 Spotify。",
+            data={"device_name": device.name, "repeat": "off"},
+        )
+
     def _control(
         self,
         access_token: str,

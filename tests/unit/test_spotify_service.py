@@ -489,3 +489,69 @@ def test_forbidden_and_rate_limited_responses_are_safe_and_bounded(tmp_path):
     limited_result = limited.execute(ValidatedAction(action=ActionName.SPOTIFY_PAUSE))
     assert limited_result.error_code == "SPOTIFY_RATE_LIMITED"
     assert limited_result.data == {"retry_after_seconds": 9}
+
+
+def test_state_control_actions_dispatch_to_fixed_player_operations(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/shuffle":
+            assert request.method == "PUT"
+            assert request.url.params["state"] == "true"
+            assert request.url.params["device_id"] == "pc"
+            assert request.content == b""
+            return httpx.Response(204)
+        if request.url.path == "/v1/me/player/repeat":
+            assert request.method == "PUT"
+            assert request.url.params["device_id"] == "pc"
+            assert request.content == b""
+            return httpx.Response(204)
+        if request.url.path == "/v1/me/player/play":
+            assert request.method == "PUT"
+            assert request.url.params["device_id"] == "pc"
+            assert request.content == b""
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+
+    shuffle = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_SHUFFLE_ON))
+    repeat = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_REPEAT_CONTEXT))
+    continued = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_CONTINUE))
+
+    assert shuffle.success is True
+    assert repeat.success is True
+    assert continued.success is True
+    assert [request.url.path for request in calls] == [
+        "/v1/me/player/devices",
+        "/v1/me/player/shuffle",
+        "/v1/me/player/devices",
+        "/v1/me/player/repeat",
+        "/v1/me/player/devices",
+        "/v1/me/player/repeat",
+        "/v1/me/player/play",
+    ]
+
+
+def test_continue_surfaces_repeat_failure_and_does_not_resume_partially(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/repeat":
+            return httpx.Response(429, headers={"Retry-After": "6"}, json={"error": {"reason": "RATE_LIMITED"}})
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+
+    result = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_CONTINUE))
+
+    assert result.success is False
+    assert result.error_code == "SPOTIFY_RATE_LIMITED"
+    assert result.data == {"retry_after_seconds": 6}
+    assert calls == ["/v1/me/player/devices", "/v1/me/player/repeat"]

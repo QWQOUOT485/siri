@@ -88,3 +88,21 @@ def test_exact_volume_schema_accepts_only_bounded_values_and_its_own_field():
 
     with pytest.raises(ValidationError):
         ActionRequest(action=ActionName.VOLUME_UP, volume_percent=37)
+
+
+def test_extended_spotify_controls_are_closed_actions_without_client_state_fields():
+    for action in (
+        ActionName.SPOTIFY_SHUFFLE_ON,
+        ActionName.SPOTIFY_SHUFFLE_OFF,
+        ActionName.SPOTIFY_REPEAT_OFF,
+        ActionName.SPOTIFY_REPEAT_TRACK,
+        ActionName.SPOTIFY_REPEAT_CONTEXT,
+        ActionName.SPOTIFY_CONTINUE,
+    ):
+        assert ActionRequest(action=action).to_validated().action is action
+
+    with pytest.raises(ValidationError):
+        ActionRequest(action=ActionName.SPOTIFY_REPEAT_TRACK, repeat_mode="playlist")
+
+    with pytest.raises(ValidationError):
+        ValidatedAction(action=ActionName.SPOTIFY_REPEAT_TRACK, steps=2)

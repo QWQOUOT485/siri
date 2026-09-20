@@ -1,3 +1,5 @@
+import pytest
+
 from app.domain.actions import ActionName
 from app.services.command_parser import CommandParser
 
@@ -94,3 +96,38 @@ def test_spotify_prefix_is_still_a_closed_spotify_command():
     assert parsed.action.action is ActionName.SPOTIFY_PLAY_TRACK
     assert parsed.action.track == "晴天"
     assert parsed.action.artist == "周杰倫"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("隨機播放", ActionName.SPOTIFY_SHUFFLE_ON),
+        ("開啟隨機播放", ActionName.SPOTIFY_SHUFFLE_ON),
+        ("shuffle on", ActionName.SPOTIFY_SHUFFLE_ON),
+        ("不要隨機", ActionName.SPOTIFY_SHUFFLE_OFF),
+        ("關閉隨機播放", ActionName.SPOTIFY_SHUFFLE_OFF),
+        ("shuffle off", ActionName.SPOTIFY_SHUFFLE_OFF),
+        ("單曲循環", ActionName.SPOTIFY_REPEAT_TRACK),
+        ("repeat this track", ActionName.SPOTIFY_REPEAT_TRACK),
+        ("循環播放清單", ActionName.SPOTIFY_REPEAT_CONTEXT),
+        ("repeat context", ActionName.SPOTIFY_REPEAT_CONTEXT),
+        ("不要循環", ActionName.SPOTIFY_REPEAT_OFF),
+        ("關閉循環", ActionName.SPOTIFY_REPEAT_OFF),
+        ("repeat off", ActionName.SPOTIFY_REPEAT_OFF),
+        ("正常播就好", ActionName.SPOTIFY_CONTINUE),
+        ("continue normally", ActionName.SPOTIFY_CONTINUE),
+    ],
+)
+def test_extended_spotify_controls_are_closed_parser_actions(text, expected):
+    parsed = CommandParser().parse(text)
+
+    assert parsed.accepted is True
+    assert parsed.action is not None
+    assert parsed.action.action is expected
+
+
+def test_repeat_and_shuffle_phrases_do_not_cross_domains():
+    parser = CommandParser()
+
+    assert parser.parse("關閉隨機播放").action.action is ActionName.SPOTIFY_SHUFFLE_OFF
+    assert parser.parse("關閉循環").action.action is ActionName.SPOTIFY_REPEAT_OFF

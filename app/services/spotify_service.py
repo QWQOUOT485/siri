@@ -6,7 +6,7 @@ from typing import Any
 
 from app.adapters.spotify.client import SpotifyApiError
 from app.adapters.windows.base import OperationResult
-from app.domain.actions import ActionName, ValidatedAction
+from app.domain.actions import ActionName, SPOTIFY_ACTIONS, ValidatedAction
 from app.domain.chinese import normalize_chinese_text
 from app.domain.semantic_memory import SemanticEntity
 from app.infrastructure.spotify_auth import SpotifyAuthError
@@ -38,13 +38,7 @@ class SpotifyService:
         self.metrics = metrics
 
     def execute(self, command: ValidatedAction, *, source_text: str | None = None) -> OperationResult:
-        if command.action not in {
-            ActionName.SPOTIFY_RESUME,
-            ActionName.SPOTIFY_PAUSE,
-            ActionName.SPOTIFY_NEXT,
-            ActionName.SPOTIFY_PREVIOUS,
-            ActionName.SPOTIFY_PLAY_TRACK,
-        }:
+        if command.action not in SPOTIFY_ACTIONS:
             return OperationResult(False, "不支援這個 Spotify action。", "INVALID_SPOTIFY_ACTION")
         if command.action is ActionName.SPOTIFY_PLAY_TRACK and self._version_value(command.version_hint) == "live":
             return OperationResult(
@@ -123,6 +117,18 @@ class SpotifyService:
             return self.player.next(access_token)
         if command.action is ActionName.SPOTIFY_PREVIOUS:
             return self.player.previous(access_token)
+        if command.action is ActionName.SPOTIFY_SHUFFLE_ON:
+            return self.player.shuffle(access_token, enabled=True)
+        if command.action is ActionName.SPOTIFY_SHUFFLE_OFF:
+            return self.player.shuffle(access_token, enabled=False)
+        if command.action is ActionName.SPOTIFY_REPEAT_OFF:
+            return self.player.repeat(access_token, "off")
+        if command.action is ActionName.SPOTIFY_REPEAT_TRACK:
+            return self.player.repeat(access_token, "track")
+        if command.action is ActionName.SPOTIFY_REPEAT_CONTEXT:
+            return self.player.repeat(access_token, "context")
+        if command.action is ActionName.SPOTIFY_CONTINUE:
+            return self.player.continue_playback(access_token)
 
         if self._version_value(command.version_hint) == "live":
             return OperationResult(

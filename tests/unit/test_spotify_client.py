@@ -477,3 +477,75 @@ def test_current_playback_uses_the_fixed_player_state_endpoint():
     client = client_for(handler)
 
     assert client.get_current_playback("access-token") == {"item": {"id": "track-1"}, "is_playing": True}
+
+
+@pytest.mark.parametrize("enabled, expected_state", [(True, "true"), (False, "false")])
+def test_shuffle_uses_fixed_boolean_state_endpoint_without_request_body(enabled, expected_state):
+    requests = []
+
+    def handler(request: httpx.Request):
+        requests.append(request)
+        assert request.method == "PUT"
+        assert request.url.path == "/v1/me/player/shuffle"
+        assert request.url.params["state"] == expected_state
+        assert request.url.params["device_id"] == "pc"
+        assert request.content == b""
+        assert request.headers["Authorization"] == "Bearer access-token"
+        return httpx.Response(204)
+
+    client = client_for(handler)
+
+    client.set_shuffle("access-token", enabled, device_id="pc")
+
+    with pytest.raises(ValueError):
+        client.set_shuffle("access-token", 1, device_id="pc")
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("mode", ["off", "track", "context"])
+def test_repeat_uses_fixed_closed_state_endpoint(mode):
+    def handler(request: httpx.Request):
+        assert request.method == "PUT"
+        assert request.url.path == "/v1/me/player/repeat"
+        assert request.url.params["state"] == mode
+        assert request.url.params["device_id"] == "pc"
+        assert request.content == b""
+        assert request.headers["Authorization"] == "Bearer access-token"
+        return httpx.Response(204)
+
+    client = client_for(handler)
+
+    client.set_repeat("access-token", mode, device_id="pc")
+
+
+def test_repeat_rejects_free_form_state_before_transport():
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(204)
+
+    client = client_for(handler)
+
+    with pytest.raises(ValueError):
+        client.set_repeat("access-token", "playlist", device_id="pc")
+
+    assert calls == 0
+
+
+@pytest.mark.parametrize("status_code", [401, 403, 429])
+def test_shuffle_surfaces_fixed_endpoint_http_failures_without_fallback(status_code):
+    def handler(_request: httpx.Request):
+        headers = {"Retry-After": "4"} if status_code == 429 else None
+        return httpx.Response(status_code, headers=headers, json={"error": {"reason": "RATE_LIMITED"}})
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as error:
+        client.set_shuffle("access-token", False, device_id="pc")
+
+    assert error.value.status_code == status_code
+    if status_code == 429:
+        assert error.value.retry_after_seconds == 4
+    assert "access-token" not in str(error.value)

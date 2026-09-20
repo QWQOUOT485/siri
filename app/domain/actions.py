@@ -26,6 +26,12 @@ class ActionName(str, Enum):
     SPOTIFY_NEXT = "spotify_next"
     SPOTIFY_PREVIOUS = "spotify_previous"
     SPOTIFY_PLAY_TRACK = "spotify_play_track"
+    SPOTIFY_SHUFFLE_ON = "spotify_shuffle_on"
+    SPOTIFY_SHUFFLE_OFF = "spotify_shuffle_off"
+    SPOTIFY_REPEAT_OFF = "spotify_repeat_off"
+    SPOTIFY_REPEAT_TRACK = "spotify_repeat_track"
+    SPOTIFY_REPEAT_CONTEXT = "spotify_repeat_context"
+    SPOTIFY_CONTINUE = "spotify_continue"
     VOLUME_UP = "volume_up"
     VOLUME_DOWN = "volume_down"
     SET_VOLUME = "set_volume"
@@ -53,6 +59,22 @@ VOLUME_ACTIONS = {
     ActionName.TOGGLE_MUTE,
 }
 SPOTIFY_TRACK_ACTIONS = {ActionName.SPOTIFY_PLAY_TRACK}
+SPOTIFY_STATE_ACTIONS = {
+    ActionName.SPOTIFY_SHUFFLE_ON,
+    ActionName.SPOTIFY_SHUFFLE_OFF,
+    ActionName.SPOTIFY_REPEAT_OFF,
+    ActionName.SPOTIFY_REPEAT_TRACK,
+    ActionName.SPOTIFY_REPEAT_CONTEXT,
+    ActionName.SPOTIFY_CONTINUE,
+}
+SPOTIFY_ACTIONS = {
+    ActionName.SPOTIFY_RESUME,
+    ActionName.SPOTIFY_PAUSE,
+    ActionName.SPOTIFY_NEXT,
+    ActionName.SPOTIFY_PREVIOUS,
+    ActionName.SPOTIFY_PLAY_TRACK,
+    *SPOTIFY_STATE_ACTIONS,
+}
 
 
 class ValidatedAction(BaseModel):
