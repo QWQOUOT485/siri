@@ -2,16 +2,31 @@
 
 ## Current Milestone
 
-Verify release-cut readiness for the accepted Windows Siri Agent v1.0 scope
-without weakening the deterministic security boundary.
+**v1.0.0 release identity cut / final installed verification pending**
+
+The runtime release-cut gate has PASSED for the reviewed deterministic scope.
+The source product version is now `1.0.0`, but the formal tag/release has not
+been created. Installed `1.0.0` deployment, parity, and health are not yet
+verified, so final v1.0.0 release completion must not be claimed.
 
 Core Siri → Windows → Spotify playback and clarification are functional. The
 v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
 scope, `spotify_continue` known limitation, proposed blockers, and v1.1
-deferrals are recorded in
-`docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is release-cut verification
-and documentation cleanup only; do not add a source workaround or a new live
-Spotify retry.
+deferrals are recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is
+release identity cut and final installed verification; do not add a source
+workaround or a new live Spotify retry.
+
+## v1.0.0 Release Identity Cut
+
+- Runtime release-cut gate: **PASSED** for the reviewed deterministic scope.
+- Source product version is now `1.0.0`.
+- The formal v1.0.0 tag/release is still not created.
+- Installed `1.0.0` deployment, parity, and `/health` remain unverified; final
+  v1.0.0 release completion must not be claimed.
+- `spotify_continue` remains **NOT ACCEPTED**.
+- `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+  `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
+- Hosted CI remains absent and is not being added in this PR.
 
 ## v1.0 Scope Freeze Decision
 
