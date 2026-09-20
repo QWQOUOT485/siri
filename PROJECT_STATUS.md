@@ -4,7 +4,14 @@
 
 ## Current Phase
 
-**Windows Siri Agent v1.0 implementation scope freeze was accepted when PR #29 merged into `main` (`c31a0ac0f59fa45a31a06991116845bebfb5b734`).** The project is now in release-cut verification around the deterministic, safety-gated core. The accepted core remains the priority; optional Spotify controls, semantic memory, and broader Local AI authority are either explicit known limitations or deferred as recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
+**v1.0.0 release identity cut / final installed verification pending.** The
+runtime release-cut gate has PASSED for the reviewed deterministic scope. The
+source product version is now `1.0.0`; the formal tag/release has not been
+created. Installed `1.0.0` deployment, parity, and health have not been
+verified, so the final v1.0.0 release is not complete. The accepted core
+remains the priority; optional Spotify controls, semantic memory, and broader
+Local AI authority are either explicit known limitations or deferred as
+recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
 
 目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
 
@@ -63,11 +70,22 @@ evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/
   `spotify_continue` remains **NOT ACCEPTED**; Semantic Memory remains
   disabled; Local AI executable fallback remains unapproved; hosted CI remains
   absent.
-- **v1.0 runtime release-cut gate: PASSED for the reviewed deterministic scope.**
-  The actual v1.0 release identity/version/tag remains pending; reviewed source
-  and installed runtime still report `0.1.0`. This documentation-only PR does
-  not include a version bump. The documented known limitations and deferred
-  items remain unchanged.
+- The pre-identity-cut source and installed runtime reported `0.1.0`; this is
+  historical evidence for the gate above and does not prove installed `1.0.0`
+  deployment, parity, or health.
+
+## v1.0.0 Release Identity Cut (2026-09-20)
+
+- Runtime release-cut gate: **PASSED** for the reviewed deterministic scope.
+- Source product identity is now `1.0.0` in `VERSION`, `app.__version__`, the
+  FastAPI metadata, and the runtime fallback.
+- The formal v1.0.0 tag/release has **not** been created.
+- Installed `1.0.0` deployment, source/runtime parity, and `/health` have not
+  been verified; do not claim final v1.0.0 release completion yet.
+- `spotify_continue` remains **NOT ACCEPTED**.
+- `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+  `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
+- Hosted CI remains absent and is not being added in this PR.
 
 ## Security Invariants
 

@@ -87,7 +87,7 @@ def _version() -> str:
 
         return __version__
     except ImportError:
-        return "0.1.0"
+        return "1.0.0"
 
 
 def build_runtime(

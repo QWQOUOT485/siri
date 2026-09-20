@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app import __version__
 from app.api.routes_action import router as action_router
 from app.api.routes_apps import router as apps_router
 from app.api.routes_command import router as command_router
@@ -32,7 +33,7 @@ def create_app(runtime: AgentRuntime | None = None, *, refresh_on_startup: bool 
                 runtime.logger.exception("startup catalog refresh failed")
         yield
 
-    application = FastAPI(title="Windows Siri Agent", version="0.1.0", lifespan=lifespan)
+    application = FastAPI(title="Windows Siri Agent", version=__version__, lifespan=lifespan)
     application.state.runtime = runtime
     application.state.auth_fail_limiter = RateLimiter(limit=10, window_seconds=60.0)
     application.add_middleware(RateLimitMiddleware, limit=runtime.config.rate_limit_per_minute)
