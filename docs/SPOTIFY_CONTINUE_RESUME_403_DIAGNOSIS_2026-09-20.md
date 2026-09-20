@@ -3,10 +3,11 @@
 Date: 2026-09-20
 
 Decision: **`spotify_continue` remains NOT ACCEPTED; no source fix is proven
-necessary.** The bounded evidence points to an external Spotify playback
-state, device, or account condition, but the provider's concrete 403 reason
-was not captured by the installed audit path. This branch records evidence
-only; it does not retry playback or change control semantics.
+necessary.** The strongest current hypothesis is an external Spotify
+playback-state, device, or account condition, but that is not a proven root
+cause: the provider's concrete 403 reason was not captured by the installed
+audit path. This branch records evidence only; it does not retry playback or
+change control semantics.
 
 ## Scope and safety boundary
 
@@ -123,12 +124,13 @@ resume request and did not transfer playback. It also observed no 429 or
 
 ## Stop line and next evidence
 
-`spotify_continue` is still **NOT ACCEPTED**. The smallest next action is to
-restore or identify a known active, non-restricted Spotify Desktop device and
-capture one bounded provider response with a sanitized reason before any new
-resume acceptance. Stop immediately on 429 or `QUOTA_EXCEEDED`; do not retry
-or sleep. If the provider reason points to a source-observability defect,
-make that a separate single-purpose source change with a regression test.
+`spotify_continue` is still **NOT ACCEPTED**. The next implementation step is
+a separate source PR for safe, bounded, sanitized provider-reason
+observability; that change is not part of this diagnostic evidence PR. After
+the observability source change is reviewed and deployed to the installed
+Agent, restore or identify a known active, non-restricted Spotify Desktop
+device, then permit one bounded real resume acceptance. Stop immediately on
+429 or `QUOTA_EXCEEDED`; do not retry or sleep.
 
 Until then, keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
 `LOCAL_AI_FALLBACK_APPROVED=false`; do not claim Siri voice acceptance or a
