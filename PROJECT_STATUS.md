@@ -128,6 +128,13 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Top Tracks、Top Artists、Recently Played 使用 process-local bounded cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 signal entries；authorization context 以 process-local HMAC scope 隔離，raw token 不持久化，saved membership 不進這個 cache。cache 或 refresh 失敗時維持 deterministic ranking。
 - 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
 
+### Deterministic Spotify shuffle / repeat / continue
+
+- current source 已加入 closed actions：`spotify_shuffle_on/off`、`spotify_repeat_off/track/context`、`spotify_continue`；parser、`SpotifyService`、`SpotifyPlayer` 與 fixed Spotify endpoints `/me/player/shuffle`、`/me/player/repeat` 已接通。
+- `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
+- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；本次完整 source suite 為 **303 passed**，另有 2 個既有 dependency deprecation warnings。未呼叫真實 Spotify，未做 Windows/Siri voice acceptance，也未把這批 source patch 視為 installed runtime acceptance。
+- `spotify_seek`、`spotify_set_volume`、`spotify_like_current`、`spotify_unlike_current` 尚未在本批實作；Local AI allowlist 維持不擴張。
+
 ### Windows exact volume
 
 `set_volume(volume_percent=0..100)` 已完成：
@@ -272,12 +279,8 @@ Phase 1 原則：
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
-   - shuffle on/off
-   - repeat off/track/context
-   - continue
-   - seek
-   - Spotify device volume
-   - like/unlike current track
+   - shuffle on/off、repeat off/track/context、continue：current source/unit 已完成，仍未做安全 real Spotify/Windows/Siri acceptance。
+   - seek、Spotify device volume、like/unlike current track：尚未實作。
    - 都不得擴張 Local AI allowlist。
 
 4. **Local Semantic Recovery Phase 1 runtime acceptance**
@@ -305,7 +308,7 @@ Phase 1 原則：
 ```text
 1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
 2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
-3. deterministic Spotify playback-state controls
+3. safe Windows/Spotify/Siri acceptance for shuffle/repeat/continue, then implement the remaining deterministic playback controls
 4. Local Semantic Recovery Phase 1 runtime acceptance
 5. Local AI production-loopback shadow acceptance
 6. sanitized promotion evidence

@@ -43,7 +43,7 @@ See [Security](SECURITY.md#api-response-security)
 
 - Requires authentication
 - Accepts structured safe operations:
-  `open_app`, `close_app`, `force_close_app`, `open_website`, `spotify_resume`, `spotify_play_track`, `spotify_pause`, `spotify_next`, `spotify_previous`, `volume_up`, `volume_down`, `set_volume`, `mute`, `unmute`, `toggle_mute`, `lock`, `request_shutdown`, `confirm_shutdown`, `refresh_apps`
+  `open_app`, `close_app`, `force_close_app`, `open_website`, `spotify_resume`, `spotify_play_track`, `spotify_pause`, `spotify_next`, `spotify_previous`, `spotify_shuffle_on`, `spotify_shuffle_off`, `spotify_repeat_off`, `spotify_repeat_track`, `spotify_repeat_context`, `spotify_continue`, `volume_up`, `volume_down`, `set_volume`, `mute`, `unmute`, `toggle_mute`, `lock`, `request_shutdown`, `confirm_shutdown`, `refresh_apps`
 
 ## POST /command
 

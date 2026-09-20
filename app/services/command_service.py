@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.adapters.windows.base import OperationResult
-from app.domain.actions import ActionName, ValidatedAction
+from app.domain.actions import ActionName, SPOTIFY_ACTIONS, ValidatedAction
 
 from .app_service import ApplicationService
 from .shutdown_service import ShutdownConfirmationService
@@ -61,14 +61,7 @@ class CommandService:
                 message = {"SHUTDOWN_TOKEN_EXPIRED": "關機確認已過期。", "SHUTDOWN_TOKEN_REUSED": "這個關機確認已使用過。"}.get(error_code, "關機確認無效。")
                 return ServiceResult(False, "error", action.value, message, error_code=error_code)
             return self._operation(action, self.system.shutdown())
-        spotify_actions = {
-            ActionName.SPOTIFY_RESUME,
-            ActionName.SPOTIFY_PAUSE,
-            ActionName.SPOTIFY_NEXT,
-            ActionName.SPOTIFY_PREVIOUS,
-            ActionName.SPOTIFY_PLAY_TRACK,
-        }
-        if action in spotify_actions:
+        if action in SPOTIFY_ACTIONS:
             if self.spotify is None:
                 return ServiceResult(False, "error", action.value, "Spotify 整合尚未設定。", error_code="SPOTIFY_NOT_CONFIGURED")
             return self._operation(action, self.spotify.execute(command, source_text=source_text))
