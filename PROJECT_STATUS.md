@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now match at that merge commit; the installed Windows Agent remains outside this merge and runtime acceptance is a separate gate.
+**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff; the installed Windows Agent remains outside this merge and runtime acceptance is a separate gate.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
 head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
