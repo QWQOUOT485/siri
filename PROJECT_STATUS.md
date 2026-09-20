@@ -134,6 +134,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
 - source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；source 與 installed-host 完整 suite 都是 **303 passed**，各有 2 個既有 dependency deprecation warnings。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
 - 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
+- 2026-09-20 bounded diagnosis：targeted source/mock differential 顯示 active device、無 transfer/queue/readback 時，empty-body `PUT /me/player/play` 已足以重現 fail-closed 403；同 endpoint 的 trusted named-track body 在 mock 與 installed historical log 均成功。官方契約允許 empty body，因此目前沒有足夠證據宣稱 source request bug。一次新的 live read-only device check 讀到 1 個 usable、0 個 active device，因而沒有對 inactive device transfer 或發送新的 resume；沒有 429/`QUOTA_EXCEEDED`。外部 device/account/playback-state 是目前最強的 plausible hypothesis、不是已證明 root cause；provider reason 未被 installed audit 保留。下一個獨立 source PR 才處理 safe/bounded observability，部署後才允許新的 bounded real resume acceptance；精確診斷見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
 - Installed alignment 保留 `.env`、local config、runtime data、Spotify token、logs、work/outputs；live token lifecycle 的正常 refresh 可能更新 token JSON，但沒有將 token 值寫入報告。Local AI controls requests 維持 `unsupported_domain`、未進 executable AI path。
 - `spotify_seek`、`spotify_set_volume`、`spotify_like_current`、`spotify_unlike_current` 尚未在本批實作；Local AI allowlist 維持不擴張。
 
@@ -281,7 +282,7 @@ Phase 1 原則：
    - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
 
 3. **Deterministic Spotify controls**
-   - shuffle on/off、repeat off/track/context：installed real Spotify bounded acceptance 已通過；continue 只有 repeat-off / shuffle-preservation partial evidence，因 real `SPOTIFY_FORBIDDEN` 尚未接受，需先釐清 resume blocker。Siri voice E2E 仍未執行。
+   - shuffle on/off、repeat off/track/context：installed real Spotify bounded acceptance 已通過；continue 只有 repeat-off / shuffle-preservation partial evidence，因 real `SPOTIFY_FORBIDDEN` 尚未接受。已完成 bounded source/mock differential 與一次 live device-state check，但 provider reason / active device 根因仍未釐清；Siri voice E2E 仍未執行。見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
    - seek、Spotify device volume、like/unlike current track：尚未實作。
    - 都不得擴張 Local AI allowlist。
 
@@ -310,7 +311,7 @@ Phase 1 原則：
 ```text
 1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
 2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
-3. diagnose the installed real Spotify `spotify_continue` resume `SPOTIFY_FORBIDDEN` blocker, then run a new bounded retry only with evidence; keep Siri voice acceptance separate
+3. restore/identify a known active non-restricted Spotify device, capture the bounded provider reason for the resume 403, then run one new bounded acceptance only with evidence; keep Siri voice acceptance separate
 4. Local Semantic Recovery Phase 1 runtime acceptance
 5. Local AI production-loopback shadow acceptance
 6. sanitized promotion evidence
