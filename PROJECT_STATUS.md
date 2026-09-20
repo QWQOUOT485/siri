@@ -11,8 +11,8 @@ PR #32 is merged into `main` as
 installed deployment now report `1.0.0`; the formal tag/release has not been
 created. The final acceptance evidence is recorded in
 [`docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md`](docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md)
-and is awaiting an evidence-only PR review/merge. The final v1.0.0 release is
-not complete. The accepted core
+and is awaiting review/merge of [evidence-only PR #33](https://github.com/QWQOUOT485/siri/pull/33).
+The final v1.0.0 release is not complete. The accepted core
 remains the priority; optional Spotify controls, semantic memory, and broader
 Local AI authority are either explicit known limitations or deferred as
 recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
