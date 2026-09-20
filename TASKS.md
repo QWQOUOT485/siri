@@ -30,8 +30,7 @@ start v1.1 implementation in this documentation sync.
   `f1c201ddc2e9866ae46befd279c04c61921ad586`, and the formal GitHub Release
   `Windows Siri Agent v1.0.0` is published.
 - Evidence-only PR #33 is merged as
-  `f1c201ddc2e9866ae46befd279c04c61921ad586`; no open PR is part of this
-  post-release sync.
+  `f1c201ddc2e9866ae46befd279c04c61921ad586`.
 - `spotify_continue` remains **NOT ACCEPTED**.
 - `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
   `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
