@@ -40,6 +40,7 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Clarification context invalidates after three unclear attempts, and concurrent selection/attempt updates are atomic
 - Candidate recovery keeps an internal pool bounded, exposes at most three public options, filters Live/Concert results, suppresses already-shown provider IDs, shares a two-round user-visible budget across local/provider pages, and never auto-plays a recovered result
 - Reviewed exact recovery phrases (`都不是`, `不是這些`, `換一批`, `再一批`, `none of these`, `not these`, `another batch`, `next batch`, `different ones`) use only the server-owned clarification token; unreviewed prefixes plus client-supplied track IDs, URIs, offsets, and recovery cursors are rejected
+- Initial title-first recovery creates the initial clarification page without consuming a continuation round; mocked provider offsets progress `0` → `10` → `20`, then the third continuation is exhausted, including the Sad overlxrd first-occurrence boundary
 - Candidate recovery exhaustion is fail-closed; the Sad overlxrd first-occurrence path requires explicit selection and successful playback before alias learning
 - Spotify API calls are mocked in unit tests
 - Spotify 429 with bounded `reason` parsing (`QUOTA_EXCEEDED`), capped/malformed `Retry-After`, no token leakage, and no transport call during fake-clock cooldown

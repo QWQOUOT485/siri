@@ -270,6 +270,12 @@ bounded pool 或 bounded title-first recovery search 取得下一批候選，但
 播放。每次成功換頁都會輪換 clarification token，舊 token 不能再 select 或
 advance。
 
+第一次 title-first provider fetch 是建立 initial clarification page 的
+pre-clarification fetch，固定使用 server-owned offset 0，不消耗
+user-visible recovery round。後續 provider continuation 依序使用 offset
+10、20；local page 與 provider page 都各消耗一個共用的兩次 continuation
+budget，第三次要求直接 exhaustion。
+
 Clarification context 使用 Windows Agent process 內的 bounded in-memory store：
 
 - context 有短 TTL，Agent restart 後全部失效；
@@ -522,7 +528,7 @@ Unit tests 必須 mock Spotify API，不真的播放音樂。
 - same-ISRC release duplicates may collapse; duration alone must not auto-select
 - ambiguous results 不自動播放
 - ambiguous results 最多三個 trusted candidates，clarification token 短效、最多三次不清楚嘗試且只能一次成功選擇；bounded recovery continuation 不得改變這個 authority boundary
-- candidate recovery 會 bounded title-first search、排除已展示 IDs 與 Live/Concert、耗盡時 fail closed，且不自動播放
+- candidate recovery 會 bounded title-first search、排除已展示 IDs 與 Live/Concert、耗盡時 fail closed，且不自動播放；initial fetch 不算 continuation round，provider continuation offset 必須是 10、20 的 server-owned progression
 - clarification failed-attempt bound 與 concurrent selection 必須由 unit tests 驗證
 - no results
 - token refresh

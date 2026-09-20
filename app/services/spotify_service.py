@@ -183,8 +183,13 @@ class SpotifyService:
                     source_text,
                     recovered[:3],
                     recovery_candidates=recovered,
-                    recovery_rounds=1,
-                    provider_fetches=1,
+                    # This title-first fetch produced the initial public
+                    # clarification page. It is not a user-visible
+                    # continuation, so both continuation counters remain at
+                    # zero; the server-owned request offset already advances
+                    # the next provider page to 10.
+                    recovery_rounds=0,
+                    provider_fetches=0,
                     recovery_offset=self._recovery_offset(artist, after_fetch=True),
                 )
             if resolution.ambiguous:

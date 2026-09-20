@@ -199,6 +199,50 @@ def test_single_weak_candidate_exposes_low_confidence_retry_signal(tmp_path):
     assert result.error_code == "SPOTIFY_LOW_CONFIDENCE_TRACK"
 
 
+def test_initial_track_first_recovery_keeps_two_continuation_rounds_and_offsets(tmp_path):
+    title_first_offsets = []
+    pages = {
+        0: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(1, 4)],
+        10: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(4, 7)],
+        20: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(7, 10)],
+    }
+
+    def handler(request: httpx.Request):
+        if request.url.path == "/v1/search":
+            query = request.url.params["q"]
+            if query in {"track:Stay artist:Sad overlxrd", "track:Sad overlxrd的Stay"}:
+                return httpx.Response(200, json={"tracks": {"items": []}})
+            assert query == "track:Stay"
+            offset = int(request.url.params["offset"])
+            title_first_offsets.append(offset)
+            return httpx.Response(200, json={"tracks": {"items": pages[offset]}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists", "/v1/me/player/recently-played"}:
+            return httpx.Response(200, json={"items": []})
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(
+        ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay", artist="Sad overlxrd")
+    )
+
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert len(initial.data["options"]) == 3
+    initial_token = initial.data["clarification_token"]
+    first = spotify.execute_clarification("none of these", initial_token)
+    second = spotify.execute_clarification("none of these", first.data["clarification_token"])
+    exhausted = spotify.execute_clarification("none of these", second.data["clarification_token"])
+
+    assert first.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert second.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert first.data["clarification_token"] != initial_token
+    assert second.data["clarification_token"] != first.data["clarification_token"]
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert title_first_offsets == [0, 10, 20]
+    assert spotify.execute_clarification("第一首", initial_token).error_code == "SPOTIFY_CLARIFICATION_USED"
+
+
 def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
     calls = []
 

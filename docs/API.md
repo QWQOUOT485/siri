@@ -77,6 +77,12 @@ The client cannot submit a Spotify URI, track ID, paging cursor, or
 memory-trust value; the server chooses the next candidate page and removes
 provider IDs already shown.
 
+The bounded title-first fetch used to create the initial clarification page
+is not a continuation round. It uses the server-owned provider offset `0`;
+the first and second provider-backed continuations use offsets `10` and `20`
+respectively. After two successful user-visible continuation pages, another
+continuation returns exhaustion.
+
 ## Response Schema
 
 Unified response:
@@ -120,7 +126,7 @@ Server flow:
 2. Search Spotify for a track.
 3. Rank exact title + artist matches above weaker matches.
 4. Exclude Live/Concert/Tour/演唱會/現場 candidates. If confidence is insufficient or several plausible tracks remain, return at most three trusted candidates and a short-lived clarification token instead of guessing.
-5. If the user asks for another batch, use only server-owned recovery state: the implementation may use the bounded internal pool or a bounded title-first Spotify page (10 results per fetch, at most 20 internal candidates and two successful user-visible recovery rounds total). Each successful local or provider page rotates the clarification token; remove already-shown IDs, preserve album/version constraints, and continue to require explicit clarification.
+5. If the user asks for another batch, use only server-owned recovery state: the implementation may use the bounded internal pool or a bounded title-first Spotify page (10 results per fetch, at most 20 internal candidates and two successful user-visible recovery rounds total). The initial title-first fetch at offset `0` creates the initial page and does not consume that budget; continuation provider offsets progress `10` then `20`. Each successful local or provider page rotates the clarification token; remove already-shown IDs, preserve album/version constraints, and continue to require explicit clarification.
 6. Resolve a trusted Spotify track URI/ID from the server-owned candidate context only after explicit selection.
 7. Resolve the configured/active Spotify Connect device.
 8. Start playback using the trusted Spotify URI.

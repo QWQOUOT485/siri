@@ -289,15 +289,21 @@ The server decides which trusted candidates belong to that page.
 
 Candidate recovery must be bounded.
 
-Possible initial experimental limits:
+Accepted Phase 1B limits:
 
 ~~~
 internal Spotify retrieval pool: <= 20
 public clarification candidates: <= 3
-candidate recovery rounds: small fixed maximum
+successful user-visible continuation rounds: at most 2
+initial title-first fetch: server-owned offset 0, not a continuation round
+provider continuation offsets: 10, then 20
 ~~~
 
-Exact numbers require testing.
+The initial title-first fetch creates the initial clarification page. A local
+or provider page returned after an exact reviewed continuation consumes one
+shared round, rotates the clarification token, and retires the old token as
+USED. A third continuation is exhausted. Offsets and duplicate suppression
+remain server-owned.
 
 Do not permit:
 

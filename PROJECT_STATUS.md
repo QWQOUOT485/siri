@@ -36,6 +36,10 @@ server-owned clarification continuation for `都不是` / `不是這些` / `換�
   authority branch per token; provider/auth failure leaves the usable context
   retryable without creating a second client-visible state. Recovery phrases
   are reviewed exact matches after normalization, not broad prefixes.
+- The initial title-first provider fetch uses offset 0 and creates the initial
+  clarification page without consuming continuation budget; only successful
+  user-visible local/provider pages count, with provider continuation offsets
+  progressing 10 then 20 before exhaustion.
 - Recovery excludes Live/Concert variants, removes already-shown provider
   identities, preserves explicit album/version constraints, and never accepts a
   client URI, track ID, paging offset, or recovery cursor.
@@ -43,7 +47,7 @@ server-owned clarification continuation for `都不是` / `不是這些` / `換�
   auto-plays and recovery alone never confirms Semantic Memory. Alias learning
   still requires server-owned candidate selection followed by successful
   playback.
-- Current source/unit verification is complete: full pytest **334 passed**,
+- Current source/unit verification is complete: full pytest **336 passed**,
   compileall, pip check, and git diff check passed. Installed Windows Agent,
   real Spotify, and Siri voice acceptance have not been run for this phase. The
   installed runtime remains outside this branch and Semantic Memory remains
