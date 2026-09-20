@@ -157,4 +157,3 @@ represented as Siri E2E evidence.
   or GitHub Release change was made.
 - Live acceptance stopped after the continuation exhaustion result; no retry or
   second continuation was used to force a pass.
-
