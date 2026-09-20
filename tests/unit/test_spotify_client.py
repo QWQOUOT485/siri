@@ -196,6 +196,135 @@ def test_rate_limit_cooldown_fails_fast_without_a_second_transport_call():
     assert calls == 2
 
 
+def test_explicit_quota_exhaustion_from_personalization_blocks_playback_web_api():
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/me/top/tracks":
+            return httpx.Response(
+                429,
+                headers={"Retry-After": "30"},
+                json={"error": {"reason": "QUOTA_EXCEEDED"}},
+            )
+        raise AssertionError(request.url)
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as first_error:
+        client.get_top_tracks("access-token")
+    with pytest.raises(SpotifyApiError) as playback_error:
+        client.get_devices("access-token")
+
+    assert first_error.value.reason == "QUOTA_EXCEEDED"
+    assert playback_error.value.reason == "QUOTA_EXCEEDED"
+    assert playback_error.value.retry_after_seconds == 30
+    assert calls == ["/v1/me/top/tracks"]
+
+
+def test_ordinary_personalization_429_does_not_block_playback_scope():
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/me/top/tracks":
+            return httpx.Response(
+                429,
+                headers={"Retry-After": "30"},
+                json={"error": {"reason": "RATE_LIMITED"}},
+            )
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": []})
+        if request.url.path == "/v1/me/player/play":
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as personalization_error:
+        client.get_top_tracks("access-token")
+    assert personalization_error.value.reason == "RATE_LIMITED"
+    assert client.get_devices("access-token") == []
+    client.start_resume("access-token")
+
+    assert calls == [
+        "/v1/me/top/tracks",
+        "/v1/me/player/devices",
+        "/v1/me/player/play",
+    ]
+
+
+def test_ordinary_search_429_does_not_block_playback_scope():
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/search":
+            return httpx.Response(429, json={"error": {"reason": "RATE_LIMITED"}})
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": []})
+        raise AssertionError(request.url)
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as search_error:
+        client.search_tracks("access-token", "track:Stay")
+    assert search_error.value.reason == "RATE_LIMITED"
+    assert client.get_devices("access-token") == []
+    assert calls == ["/v1/search", "/v1/me/player/devices"]
+
+
+def test_ordinary_playback_429_does_not_poison_personalization_scope():
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request.url.path)
+        if request.url.path == "/v1/me/player/pause":
+            return httpx.Response(429, json={"error": {"reason": "RATE_LIMITED"}})
+        if request.url.path == "/v1/me/top/tracks":
+            return httpx.Response(200, json={"items": [{"id": "top-track"}]})
+        raise AssertionError(request.url)
+
+    client = client_for(handler)
+
+    with pytest.raises(SpotifyApiError) as playback_error:
+        client.pause("access-token")
+    assert playback_error.value.reason == "RATE_LIMITED"
+    assert client.get_top_tracks("access-token") == [{"id": "top-track"}]
+    assert calls == ["/v1/me/player/pause", "/v1/me/top/tracks"]
+
+
+def test_ordinary_personalization_cooldown_expires_with_fake_clock():
+    class FakeClock:
+        now = 100.0
+
+        def __call__(self):
+            return self.now
+
+    clock = FakeClock()
+    calls = 0
+
+    def handler(_request: httpx.Request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "30"}, json={"error": {"reason": "RATE_LIMITED"}})
+        return httpx.Response(200, json={"items": [{"id": "top-track"}]})
+
+    client = client_for(handler, clock=clock)
+
+    with pytest.raises(SpotifyApiError):
+        client.get_top_tracks("access-token")
+    with pytest.raises(SpotifyApiError) as cooldown_error:
+        client.get_top_tracks("access-token")
+    assert cooldown_error.value.reason == "RATE_LIMITED"
+    assert calls == 1
+
+    clock.now += 30
+    assert client.get_top_tracks("access-token") == [{"id": "top-track"}]
+    assert calls == 2
+
+
 def test_malformed_retry_after_uses_a_short_local_cooldown_without_sleeping():
     class FakeClock:
         now = 10.0

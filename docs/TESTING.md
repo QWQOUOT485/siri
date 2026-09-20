@@ -40,8 +40,10 @@ All mock-based, can execute in any environment (including non-Windows CI):
 - Clarification context invalidates after three unclear attempts, and concurrent selection/attempt updates are atomic
 - Spotify API calls are mocked in unit tests
 - Spotify 429 with bounded `reason` parsing (`QUOTA_EXCEEDED`), capped/malformed `Retry-After`, no token leakage, and no transport call during fake-clock cooldown
+- Explicit `QUOTA_EXCEEDED` may block all Web API scopes, while ordinary Search, personalization, and playback 429s remain operation-scoped
 - Web API cooldown does not block OAuth token refresh after a 401 recovery path
 - Top Tracks / Top Artists / Recently Played personalization cache hits, TTL expiry, stale-on-refresh-error fallback, account-context isolation, and bounded eviction
+- Shared `SpotifyCatalog` + clarification store + `SpotifyPlayer` composition proves ordinary personalization 429 does not block the selected track's playback request
 - Spotify access/refresh tokens are never returned or logged
 - User song/artist/album strings never become executable paths, shell commands, command-line arguments, process IDs, or arbitrary URLs
 - Pause / next / previous map to Spotify playback actions

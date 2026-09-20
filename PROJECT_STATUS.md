@@ -124,9 +124,9 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 ### Spotify quota hardening and personalization read reduction
 
 - source 已加入 bounded `SpotifyApiError.reason` parsing：只保留有限長度、固定字元形狀的 provider reason，不保存任意 provider message，也不把 token 放入 exception text、cache key 或 log。
-- `SpotifyApiClient` 對 Web API 429 建立 per-client、in-memory cooldown；遵循 capped `Retry-After`（最多 3600 秒），missing / malformed / negative header 使用短 fallback cooldown，不 sleep、不 busy-loop、不自動重試。OAuth Accounts token endpoint 不受 Web API cooldown 阻擋，避免 401 refresh path 誤清除有效 refresh token。
+- `SpotifyApiClient` 對明確 `QUOTA_EXCEEDED` 建立 provider-wide Web API cooldown；普通 429 只進入 bounded operation scope（Search、personalization、playback 分開），遵循 capped `Retry-After`（最多 3600 秒），missing / malformed / negative header 使用短 fallback cooldown，不 sleep、不 busy-loop、不自動重試。OAuth Accounts token endpoint 不受 Web API cooldown 阻擋，避免 401 refresh path 誤清除有效 refresh token。
 - Top Tracks、Top Artists、Recently Played 使用 process-local bounded cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 signal entries；authorization context 以 process-local HMAC scope 隔離，raw token 不持久化，saved membership 不進這個 cache。cache 或 refresh 失敗時維持 deterministic ranking。
-- 本次 source/unit targeted regression 為 78 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
+- 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
 
 ### Windows exact volume
 
@@ -210,7 +210,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-目前完整 source test run為 **262 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **268 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 新增的 `docs/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
 

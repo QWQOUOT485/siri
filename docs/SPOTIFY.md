@@ -241,7 +241,7 @@ Recently Played 的 source slice 也已完成：Agent 只呼叫固定的 `GET /m
 
 ### Spotify quota 與 personalization read budget
 
-Spotify Web API 的 quota 是 production path 的有限資源。`SpotifyApiClient` 對 Web API `429` 只保存 bounded provider reason（例如 `QUOTA_EXCEEDED`），並建立 process-local、per-client cooldown：合法 `Retry-After` 最多採用 3600 秒；missing、malformed 或負值 header 使用短暫 fallback cooldown。cooldown 期間 request 直接 fail fast，不 sleep、不 busy-loop、不 background retry。OAuth Accounts token endpoint 不共用這個 Web API cooldown，因此 401 refresh path 不會因先前的 API 429 而被錯誤阻擋。provider 任意 message 與 access token 不會進 exception metadata 或 log。
+Spotify Web API 的 quota 是 production path 的有限資源。`SpotifyApiClient` 對 Web API `429` 只保存 bounded provider reason（例如 `QUOTA_EXCEEDED`）。明確 `QUOTA_EXCEEDED` 才建立 provider-wide Web API cooldown；普通 429 依 operation scope 分開抑制（Search、personalization、playback），因此普通 Top/Artist/Recent 429 不會阻擋無關的 devices/play/pause/next/previous。合法 `Retry-After` 最多採用 3600 秒；missing、malformed 或負值 header 使用該 scope 的短暫 fallback cooldown。cooldown 期間 request 直接 fail fast，不 sleep、不 busy-loop、不 background retry。OAuth Accounts token endpoint 不共用這個 Web API cooldown，因此 401 refresh path 不會因先前的 API 429 而被錯誤阻擋。provider 任意 message 與 access token 不會進 exception metadata 或 log。
 
 Top Tracks、Top Artists、Recently Played 的 server-side ranking evidence 使用 bounded、process-local cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 entries。cache scope 由 process-local HMAC 從 authorization context 衍生，不保存 raw token；Agent restart 後 cache 可為空；saved membership 仍是 candidate-specific read，不會被長期 cache。refresh error、429、malformed response 或 cache failure 都只移除該 personalization evidence，保留 deterministic relevance、clarification 與 playback safety。這些規則只降低重複 read，不新增 client 權限、Spotify URI/ID authority 或自動播放 authority。
 
@@ -333,7 +333,7 @@ Spotify 在目前曲目播放超過一段時間時重播目前曲目的正常語
 
 如果 Spotify 回傳 429：遵循 `Retry-After`，不可 busy-loop 重試。
 
-Web API 429 也會在同一個 `SpotifyApiClient` 的 bounded cooldown 內 fail fast；OAuth token exchange / refresh 使用 Accounts endpoint，不受 Web API cooldown 阻擋。429 不會觸發長時間 sleep 或背景重試，個人化 read 失敗時必須退回 deterministic ranking。
+明確 `QUOTA_EXCEEDED` 會在同一個 `SpotifyApiClient` 的 provider-wide bounded cooldown 內 fail fast；普通 429 只在對應的 Search、personalization 或 playback scope 內 fail fast，不會把 personalization rate limit 錯誤擴大成 playback blocker。OAuth token exchange / refresh 使用 Accounts endpoint，不受 Web API cooldown 阻擋。429 不會觸發長時間 sleep 或背景重試，個人化 read 失敗時必須退回 deterministic ranking。
 
 ## Extended Playback Controls
 
