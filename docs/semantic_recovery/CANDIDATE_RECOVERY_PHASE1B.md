@@ -1,10 +1,11 @@
 
-# Deferred Candidate Recovery / Phase 1B
+# Candidate Recovery / Phase 1B
 
-Status: **Deferred design note — do not implement until explicitly scheduled**
+Status: **Phase 1B explicitly scheduled; source implementation is in progress on the dedicated branch. Runtime acceptance is not yet proven.**
 
-This document records a known product/retrieval gap that should be handled after
-the current acceptance work is complete.
+This document records the product/retrieval scope now being implemented after
+the v1.0 acceptance handoff. Installed/runtime acceptance remains a separate
+gate and is not implied by source or unit evidence.
 
 It does not change the current production authority model and does not authorize
 new automatic playback behavior.
@@ -288,15 +289,21 @@ The server decides which trusted candidates belong to that page.
 
 Candidate recovery must be bounded.
 
-Possible initial experimental limits:
+Accepted Phase 1B limits:
 
 ~~~
 internal Spotify retrieval pool: <= 20
 public clarification candidates: <= 3
-candidate recovery rounds: small fixed maximum
+successful user-visible continuation rounds: at most 2
+initial title-first fetch: server-owned offset 0, not a continuation round
+provider continuation offsets: 10, then 20
 ~~~
 
-Exact numbers require testing.
+The initial title-first fetch creates the initial clarification page. A local
+or provider page returned after an exact reviewed continuation consumes one
+shared round, rotates the clarification token, and retires the old token as
+USED. A third continuation is exhausted. Offsets and duplicate suppression
+remain server-owned.
 
 Do not permit:
 

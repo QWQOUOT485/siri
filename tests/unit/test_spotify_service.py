@@ -1,13 +1,17 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 
 import httpx
 import pytest
 
-from app.adapters.spotify.catalog import SpotifyCatalog
-from app.adapters.spotify.client import SpotifyApiClient
+from app.adapters.spotify.catalog import SpotifyCatalog, SpotifyTrackRef
+from app.adapters.spotify.client import SpotifyApiClient, SpotifyApiError
 from app.adapters.spotify.player import SpotifyPlayer
+from app.adapters.windows.base import OperationResult
 from app.domain.actions import ActionName, ValidatedAction
 from app.infrastructure.spotify_auth import SpotifyAuthManager, SpotifyToken, SpotifyTokenStore
+from app.services.spotify_clarification import ClarificationRecoveryRequest, SpotifyClarificationStore
 from app.services.spotify_service import SpotifyService
 
 
@@ -19,6 +23,45 @@ def spotify_track(track_id, name, artist):
         "artists": [{"name": artist}],
         "album": {"name": "Album"},
     }
+
+
+def trusted_track(track_id, name="Stay", artist="Artist"):
+    return SpotifyTrackRef(
+        track_id=track_id,
+        track_uri=f"spotify:track:{track_id}",
+        track_name=name,
+        artist_names=(artist,),
+        album_name="Album",
+    )
+
+
+class RecoveryAuth:
+    def __init__(self):
+        self.refresh_calls = 0
+
+    def get_access_token(self):
+        return "access-token"
+
+    def refresh_access_token(self):
+        self.refresh_calls += 1
+        return "refreshed-token"
+
+
+class RecoveryPlayer:
+    def __init__(self):
+        self.calls = []
+
+    def resume(self, access_token, track=None):
+        self.calls.append((access_token, track.track_id if track is not None else None))
+        return OperationResult(True, "played", "OK", {"track_name": track.track_name} if track else {})
+
+
+class RecoveryMemory:
+    def __init__(self):
+        self.calls = []
+
+    def learn(self, event):
+        self.calls.append(event)
 
 
 def service(tmp_path, handler):
@@ -129,7 +172,9 @@ def test_parser_split_reconstruction_failure_exposes_entity_retry_signal(tmp_pat
 
     assert result.success is False
     assert result.error_code == "SPOTIFY_ENTITY_SEGMENTATION_RISK"
-    assert len(calls) == 2
+    # The failed deterministic lookup now makes one bounded title-first
+    # recovery attempt before preserving the parser retry signal.
+    assert len(calls) == 3
 
 
 def test_single_weak_candidate_exposes_low_confidence_retry_signal(tmp_path):
@@ -152,6 +197,50 @@ def test_single_weak_candidate_exposes_low_confidence_retry_signal(tmp_path):
 
     assert result.success is False
     assert result.error_code == "SPOTIFY_LOW_CONFIDENCE_TRACK"
+
+
+def test_initial_track_first_recovery_keeps_two_continuation_rounds_and_offsets(tmp_path):
+    title_first_offsets = []
+    pages = {
+        0: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(1, 4)],
+        10: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(4, 7)],
+        20: [spotify_track(str(index), "Stay", f"Artist {index}") for index in range(7, 10)],
+    }
+
+    def handler(request: httpx.Request):
+        if request.url.path == "/v1/search":
+            query = request.url.params["q"]
+            if query in {"track:Stay artist:Sad overlxrd", "track:Sad overlxrd的Stay"}:
+                return httpx.Response(200, json={"tracks": {"items": []}})
+            assert query == "track:Stay"
+            offset = int(request.url.params["offset"])
+            title_first_offsets.append(offset)
+            return httpx.Response(200, json={"tracks": {"items": pages[offset]}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists", "/v1/me/player/recently-played"}:
+            return httpx.Response(200, json={"items": []})
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(
+        ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay", artist="Sad overlxrd")
+    )
+
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert len(initial.data["options"]) == 3
+    initial_token = initial.data["clarification_token"]
+    first = spotify.execute_clarification("none of these", initial_token)
+    second = spotify.execute_clarification("none of these", first.data["clarification_token"])
+    exhausted = spotify.execute_clarification("none of these", second.data["clarification_token"])
+
+    assert first.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert second.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert first.data["clarification_token"] != initial_token
+    assert second.data["clarification_token"] != first.data["clarification_token"]
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert title_first_offsets == [0, 10, 20]
+    assert spotify.execute_clarification("第一首", initial_token).error_code == "SPOTIFY_CLARIFICATION_USED"
 
 
 def test_ambiguous_search_never_reaches_playback_endpoint(tmp_path):
@@ -229,6 +318,224 @@ def test_ambiguous_search_issues_at_most_three_trusted_options(tmp_path):
         "/v1/me/top/artists",
         "/v1/me/player/recently-played",
     ]
+
+
+def test_none_of_these_recovers_a_server_owned_page_without_auto_play(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            assert request.url.params["q"] == "track:Stay"
+            if request.url.params["offset"] == "0":
+                items = [
+                    spotify_track("wrongone", "Stay", "Artist One"),
+                    spotify_track("wrongtwo", "Stay", "Artist Two"),
+                    spotify_track("wrongthree", "Stay", "Artist Three"),
+                ]
+            else:
+                assert request.url.params["offset"] == "10"
+                items = [
+                    spotify_track("wrongone", "Stay", "Artist One"),
+                    spotify_track("desired", "Stay", "The Kid LAROI"),
+                ]
+            return httpx.Response(200, json={"tracks": {"items": items}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/play":
+            assert json.loads(request.content) == {"uris": ["spotify:track:desired"]}
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+
+    assert initial.success is False
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    token = initial.data["clarification_token"]
+    assert "desired" not in repr(initial.data)
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
+
+    recovered = spotify.execute_clarification("都不是", token)
+
+    assert recovered.success is False
+    assert recovered.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    recovered_token = recovered.data["clarification_token"]
+    assert recovered_token != token
+    assert [option["artist_names"][0] for option in recovered.data["options"]] == ["The Kid LAROI"]
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
+
+    selected = spotify.execute_clarification("第一首", recovered_token)
+
+    assert selected.success is True
+    assert selected.data["track_name"] == "Stay"
+    assert len([request for request in calls if request.url.path == "/v1/me/player/play"]) == 1
+
+
+def test_none_of_these_exhaustion_excludes_duplicates_and_live_tracks(tmp_path):
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(request)
+        if request.url.path == "/v1/search":
+            assert request.url.params["q"] == "track:Stay"
+            if request.url.params["offset"] == "0":
+                items = [
+                    spotify_track("one", "Stay", "Artist One"),
+                    spotify_track("two", "Stay", "Artist Two"),
+                    spotify_track("three", "Stay", "Artist Three"),
+                ]
+            else:
+                items = [
+                    spotify_track("one", "Stay", "Artist One"),
+                    spotify_track("live", "Stay (Live)", "Artist Four"),
+                ]
+            return httpx.Response(200, json={"tracks": {"items": items}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/recently-played":
+            return httpx.Response(200, json={"items": []})
+        raise AssertionError(request.url)
+
+    spotify, _ = service(tmp_path, handler)
+    initial = spotify.execute(ValidatedAction(action=ActionName.SPOTIFY_PLAY_TRACK, track="Stay"))
+    exhausted = spotify.execute_clarification("none of these", initial.data["clarification_token"])
+
+    assert exhausted.success is False
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert exhausted.data["clarification_token"] == initial.data["clarification_token"]
+    assert not any(request.url.path == "/v1/me/player/play" for request in calls)
+
+
+def recovery_service(catalog, memory=None):
+    auth = RecoveryAuth()
+    player = RecoveryPlayer()
+    store = SpotifyClarificationStore()
+    token = store.create(
+        [trusted_track("one")],
+        recovery_request=ClarificationRecoveryRequest(track="Stay"),
+    )
+    service = SpotifyService(
+        auth,
+        catalog,
+        player,
+        clarification_store=store,
+        memory_learner=memory,
+    )
+    return service, auth, player, store, token
+
+
+def test_provider_recovery_concurrency_fetches_once_and_rotates_token():
+    class BlockingCatalog:
+        def __init__(self):
+            self.calls = []
+            self.started = Event()
+            self.release = Event()
+
+        def recover_candidates(self, track, artist, album, **kwargs):
+            self.calls.append(kwargs["access_token"])
+            self.started.set()
+            assert self.release.wait(5)
+            return (trusted_track("two"),)
+
+    catalog = BlockingCatalog()
+    service, _auth, _player, store, token = recovery_service(catalog)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first_future = executor.submit(service.execute_clarification, "none of these", token)
+        assert catalog.started.wait(5)
+        second_future = executor.submit(service.execute_clarification, "none of these", token)
+        second = second_future.result(timeout=5)
+        blocked_selection = service.execute_clarification("第一首", token)
+        catalog.release.set()
+        first = first_future.result(timeout=5)
+
+    assert len(catalog.calls) == 1
+    assert first.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    next_token = first.data["clarification_token"]
+    assert next_token != token
+    assert second.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_IN_PROGRESS"
+    assert blocked_selection.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_IN_PROGRESS"
+    assert store.select(token, "第一首").error_code == "SPOTIFY_CLARIFICATION_USED"
+    assert store.select(next_token, "第一首").track.track_id == "two"
+
+
+def test_provider_recovery_401_refreshes_once_and_completes_one_transition():
+    class RefreshingCatalog:
+        def __init__(self):
+            self.calls = []
+
+        def recover_candidates(self, track, artist, album, **kwargs):
+            self.calls.append(kwargs["access_token"])
+            if len(self.calls) == 1:
+                raise SpotifyApiError(401, "unauthorized")
+            return (trusted_track("two"),)
+
+    catalog = RefreshingCatalog()
+    memory = RecoveryMemory()
+    service, auth, player, store, token = recovery_service(catalog, memory)
+
+    result = service.execute_clarification("none of these", token)
+
+    assert result.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    next_token = result.data["clarification_token"]
+    assert next_token != token
+    assert catalog.calls == ["access-token", "refreshed-token"]
+    assert auth.refresh_calls == 1
+    assert player.calls == []
+    assert memory.calls == []
+    assert store.select(token, "第一首").error_code == "SPOTIFY_CLARIFICATION_USED"
+    assert store.select(next_token, "第一首").track.track_id == "two"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retry_after_seconds", "expected_code"),
+    [
+        (403, None, "SPOTIFY_FORBIDDEN"),
+        (429, 17, "SPOTIFY_RATE_LIMITED"),
+    ],
+)
+def test_provider_recovery_errors_fail_closed_without_retry_or_memory(
+    status_code, retry_after_seconds, expected_code
+):
+    class FailingCatalog:
+        def __init__(self):
+            self.calls = 0
+
+        def recover_candidates(self, track, artist, album, **kwargs):
+            self.calls += 1
+            raise SpotifyApiError(
+                status_code,
+                "provider failure",
+                retry_after_seconds=retry_after_seconds,
+                reason="QUOTA_EXCEEDED" if status_code == 429 else None,
+            )
+
+    catalog = FailingCatalog()
+    memory = RecoveryMemory()
+    service, auth, player, store, token = recovery_service(catalog, memory)
+
+    result = service.execute_clarification("none of these", token)
+
+    assert result.success is False
+    assert result.error_code == expected_code
+    assert catalog.calls == 1
+    assert auth.refresh_calls == 0
+    assert player.calls == []
+    assert memory.calls == []
+    if status_code == 429:
+        assert result.data == {"retry_after_seconds": 17}
+    else:
+        assert result.data == {}
+    assert store.select(token, "第一首").track.track_id == "one"
 
 
 def test_ambiguous_search_uses_saved_status_to_order_options_without_auto_playing(tmp_path):

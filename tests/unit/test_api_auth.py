@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.adapters.windows.base import OperationResult
 from app.main import create_app
@@ -109,7 +110,15 @@ def test_command_clarification_token_routes_only_to_server_owned_spotify_context
     assert calls == [("第二首", "opaque-server-token")]
 
 
-def test_command_clarification_request_rejects_client_track_targets(fake_runtime):
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"track_uri": "spotify:track:client-supplied"},
+        {"offset": 50},
+        {"recovery_cursor": "client-supplied"},
+    ],
+)
+def test_command_clarification_request_rejects_client_targets_and_paging(fake_runtime, extra):
     runtime, launcher, process, media, volume, system = fake_runtime
     client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
 
@@ -119,7 +128,7 @@ def test_command_clarification_request_rejects_client_track_targets(fake_runtime
         json={
             "text": "第一首",
             "clarification_token": "opaque-server-token",
-            "track_uri": "spotify:track:client-supplied",
+            **extra,
         },
     )
 

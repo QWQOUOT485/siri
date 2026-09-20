@@ -49,7 +49,7 @@ See [Security](SECURITY.md#api-response-security)
 
 - Requires authentication
 - Main Siri API
-- Input: `text` (natural language), plus optional server-issued `clarification_token` for a second-turn Spotify selection
+- Input: `text` (natural language), plus optional server-issued `clarification_token` for a second-turn Spotify selection or bounded candidate recovery
 - Agent parses internally
 - All command parsing on Windows Agent, not Apple Shortcut
 - If `clarification_token` is present, the request is handled directly by the server-owned deterministic Spotify clarification store; it does not invoke Local AI and does not accept a client-provided track ID or URI.
@@ -64,10 +64,24 @@ spoken follow-up and the returned opaque token back to this same endpoint:
 }
 ```
 
-The token is short-lived and one-use. The client cannot use it to submit a
-Spotify URI or track ID; selection is restricted to the server-created
-candidate set. An unclear follow-up may retain the same token only while its
-bounded attempt/TTL policy permits it.
+The token is a short-lived, server-owned clarification context. An explicit
+candidate selection consumes it. A reviewed exact continuation such as
+`都不是`, `不是這些`, `換一批`, `再一批`, `none of these`,
+`not these`, `another batch`, `next batch`, or `different ones` advances
+the context at most two user-visible recovery rounds. Every successful
+continuation atomically consumes the old token and returns a new opaque token;
+the old token is permanently `USED` and cannot select or advance another
+branch. A provider/auth failure releases the in-flight marker so the old
+context can be retried, without creating a second client-visible state.
+The client cannot submit a Spotify URI, track ID, paging cursor, or
+memory-trust value; the server chooses the next candidate page and removes
+provider IDs already shown.
+
+The bounded title-first fetch used to create the initial clarification page
+is not a continuation round. It uses the server-owned provider offset `0`;
+the first and second provider-backed continuations use offsets `10` and `20`
+respectively. After two successful user-visible continuation pages, another
+continuation returns exhaustion.
 
 ## Response Schema
 
@@ -112,9 +126,10 @@ Server flow:
 2. Search Spotify for a track.
 3. Rank exact title + artist matches above weaker matches.
 4. Exclude Live/Concert/Tour/演唱會/現場 candidates. If confidence is insufficient or several plausible tracks remain, return at most three trusted candidates and a short-lived clarification token instead of guessing.
-5. Resolve a trusted Spotify track URI/ID from the Spotify response.
-6. Resolve the configured/active Spotify Connect device.
-7. Start playback using the trusted Spotify URI.
+5. If the user asks for another batch, use only server-owned recovery state: the implementation may use the bounded internal pool or a bounded title-first Spotify page (10 results per fetch, at most 20 internal candidates and two successful user-visible recovery rounds total). The initial title-first fetch at offset `0` creates the initial page and does not consume that budget; continuation provider offsets progress `10` then `20`. Each successful local or provider page rotates the clarification token; remove already-shown IDs, preserve album/version constraints, and continue to require explicit clarification.
+6. Resolve a trusted Spotify track URI/ID from the server-owned candidate context only after explicit selection.
+7. Resolve the configured/active Spotify Connect device.
+8. Start playback using the trusted Spotify URI.
 
 A successful response may include safe display metadata such as track title and artist, but must not expose OAuth tokens or internal secrets.
 

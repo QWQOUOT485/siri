@@ -13,7 +13,7 @@ from app.domain.semantic_memory import SemanticEntity
 from app.infrastructure.spotify_auth import SpotifyAuthError
 
 from .memory_learner import MemoryLearningEvent
-from .spotify_clarification import SpotifyClarificationStore
+from .spotify_clarification import ClarificationRecoveryRequest, ClarificationSelection, SpotifyClarificationStore
 
 
 _PROVIDER_REASON = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
@@ -73,11 +73,12 @@ class SpotifyService:
         """Play only the trusted candidate selected from a live server context."""
 
         selection = self.clarification_store.select(clarification_token, text)
+        if selection.recovery_request is not None:
+            return self._execute_recovery_request(clarification_token, selection)
         if selection.track is None:
-            data: dict[str, Any] = {}
-            if selection.clarification_token:
-                options = self._options(selection.candidates)
-                data = self._clarification_data(selection.clarification_token, options)
+            if selection.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE":
+                return self._next_page_result(selection)
+            data = self._selection_data(selection)
             return OperationResult(
                 False,
                 self._clarification_error_message(selection.error_code),
@@ -158,30 +159,224 @@ class SpotifyService:
         if resolution.track is None:
             if resolution.ambiguous:
                 candidates = tuple(resolution.candidates[:3])
-                if not candidates:
-                    return OperationResult(False, f"Spotify 無法判斷歌曲 {command.track}。", "SPOTIFY_AMBIGUOUS_TRACK")
-                token = self.clarification_store.create(candidates, observed_alias=command.artist)
-                if self.metrics is not None:
-                    self.metrics.increment("recovery_clarification")
-                options = self._options(candidates)
-                details = []
-                if command.album:
-                    details.append(f"專輯：{command.album}")
-                if command.version_hint and self._version_value(command.version_hint) != "live":
-                    details.append(f"版本：{command.version_hint.value}")
-                detail_suffix = f"（{'／'.join(details)}）" if details else ""
-                return OperationResult(
-                    False,
-                    self._clarification_message(command.track or "歌曲", options, detail_suffix),
-                    "SPOTIFY_CLARIFICATION_REQUIRED",
-                    self._clarification_data(token, options),
+                if candidates:
+                    return self._create_clarification(
+                        command,
+                        artist,
+                        source_text,
+                        candidates,
+                        recovery_candidates=resolution.recovery_candidates,
+                        recovery_offset=self._recovery_offset(artist),
+                    )
+
+            recovered = self._recover_candidates(
+                command,
+                artist,
+                source_text,
+                access_token,
+                offset=0,
+            )
+            if recovered:
+                return self._create_clarification(
+                    command,
+                    artist,
+                    source_text,
+                    recovered[:3],
+                    recovery_candidates=recovered,
+                    # This title-first fetch produced the initial public
+                    # clarification page. It is not a user-visible
+                    # continuation, so both continuation counters remain at
+                    # zero; the server-owned request offset already advances
+                    # the next provider page to 10.
+                    recovery_rounds=0,
+                    provider_fetches=0,
+                    recovery_offset=self._recovery_offset(artist, after_fetch=True),
                 )
+            if resolution.ambiguous:
+                return OperationResult(False, f"Spotify 無法判斷歌曲 {command.track}。", "SPOTIFY_AMBIGUOUS_TRACK")
             return OperationResult(
                 False,
                 f"Spotify 找不到歌曲 {command.track}。",
                 resolution.retry_signal or "SPOTIFY_TRACK_NOT_FOUND",
             )
         return self._play_candidate(access_token, resolution.track)
+
+    def _create_clarification(
+        self,
+        command: ValidatedAction,
+        artist: str | None,
+        source_text: str | None,
+        candidates,
+        *,
+        recovery_candidates=(),
+        recovery_rounds: int = 0,
+        provider_fetches: int = 0,
+        recovery_offset: int = 0,
+    ) -> OperationResult:
+        trusted = tuple(candidates[:3])
+        if not trusted:
+            return OperationResult(
+                False,
+                f"Spotify 無法判斷歌曲 {command.track}。",
+                "SPOTIFY_AMBIGUOUS_TRACK",
+            )
+        recovery_request = None
+        if callable(getattr(self.catalog, "recover_candidates", None)):
+            recovery_request = ClarificationRecoveryRequest(
+                track=command.track or "",
+                artist=artist,
+                album=command.album,
+                version_hint=self._version_value(command.version_hint),
+                source_text=source_text,
+                offset=max(0, min(int(recovery_offset), 50)),
+            )
+        token = self.clarification_store.create(
+            trusted,
+            observed_alias=command.artist,
+            recovery_candidates=tuple(recovery_candidates),
+            recovery_request=recovery_request,
+            recovery_rounds=recovery_rounds,
+            provider_fetches=provider_fetches,
+        )
+        if self.metrics is not None:
+            self.metrics.increment("recovery_clarification")
+        options = self._options(trusted)
+        details = []
+        if command.album:
+            details.append(f"專輯：{command.album}")
+        if command.version_hint and self._version_value(command.version_hint) != "live":
+            details.append(f"版本：{command.version_hint.value}")
+        detail_suffix = f"（{'／'.join(details)}）" if details else ""
+        return OperationResult(
+            False,
+            self._clarification_message(command.track or "歌曲", options, detail_suffix),
+            "SPOTIFY_CLARIFICATION_REQUIRED",
+            self._clarification_data(token, options),
+        )
+
+    def _recover_candidates(
+        self,
+        command: ValidatedAction,
+        artist: str | None,
+        source_text: str | None,
+        access_token: str,
+        *,
+        offset: int,
+        exclude_track_ids: tuple[str, ...] = (),
+    ):
+        recover = getattr(self.catalog, "recover_candidates", None)
+        if not callable(recover):
+            return ()
+        return tuple(
+            recover(
+                command.track or "",
+                artist,
+                command.album,
+                version_hint=command.version_hint,
+                source_text=source_text,
+                access_token=access_token,
+                exclude_track_ids=exclude_track_ids,
+                offset=offset,
+            )
+        )
+
+    @staticmethod
+    def _recovery_offset(artist: str | None, *, after_fetch: bool = False) -> int:
+        # A failed artist-constrained search needs a fresh title-first page;
+        # a bare-title search uses the next server-owned Spotify offset.
+        if artist:
+            return 10 if after_fetch else 0
+        return 10
+
+    def _execute_recovery_request(
+        self,
+        clarification_token: str,
+        selection: ClarificationSelection,
+    ) -> OperationResult:
+        request = selection.recovery_request
+        fetch_index = selection.recovery_fetch_index
+        if request is None or fetch_index is None:
+            return OperationResult(
+                False,
+                "找不到這個歌曲選擇，請重新說出歌曲。",
+                "SPOTIFY_CLARIFICATION_INVALID",
+            )
+        try:
+            access_token = self.auth.get_access_token()
+        except SpotifyAuthError as exc:
+            self.clarification_store.cancel_recovery(clarification_token, fetch_index)
+            return OperationResult(False, str(exc), exc.error_code)
+
+        offset = min(50, request.offset + (fetch_index - 1) * 10)
+        try:
+            candidates = self._recover_candidates(
+                ValidatedAction(
+                    action=ActionName.SPOTIFY_PLAY_TRACK,
+                    track=request.track,
+                    artist=request.artist,
+                    album=request.album,
+                    version_hint=request.version_hint,
+                ),
+                request.artist,
+                request.source_text,
+                access_token,
+                offset=offset,
+                exclude_track_ids=selection.shown_track_ids,
+            )
+        except SpotifyApiError as exc:
+            if exc.status_code == 401:
+                try:
+                    access_token = self.auth.refresh_access_token()
+                    candidates = self._recover_candidates(
+                        ValidatedAction(
+                            action=ActionName.SPOTIFY_PLAY_TRACK,
+                            track=request.track,
+                            artist=request.artist,
+                            album=request.album,
+                            version_hint=request.version_hint,
+                        ),
+                        request.artist,
+                        request.source_text,
+                        access_token,
+                        offset=offset,
+                        exclude_track_ids=selection.shown_track_ids,
+                    )
+                except SpotifyAuthError as auth_error:
+                    self.clarification_store.cancel_recovery(clarification_token, fetch_index)
+                    return OperationResult(False, str(auth_error), auth_error.error_code)
+                except SpotifyApiError as retry_error:
+                    self.clarification_store.cancel_recovery(clarification_token, fetch_index)
+                    return self._api_error(retry_error)
+            else:
+                self.clarification_store.cancel_recovery(clarification_token, fetch_index)
+                return self._api_error(exc)
+
+        page = self.clarification_store.complete_recovery(clarification_token, fetch_index, candidates)
+        if page.error_code == "SPOTIFY_CLARIFICATION_NEXT_PAGE":
+            return self._next_page_result(page)
+        data = self._selection_data(page)
+        return OperationResult(
+            False,
+            self._clarification_error_message(page.error_code),
+            page.error_code or "SPOTIFY_CLARIFICATION_INVALID",
+            data,
+        )
+
+    def _next_page_result(self, selection: ClarificationSelection) -> OperationResult:
+        options = self._options(selection.candidates)
+        data = self._clarification_data(selection.clarification_token or "", options)
+        return OperationResult(
+            False,
+            self._next_page_message(options),
+            "SPOTIFY_CLARIFICATION_REQUIRED",
+            data,
+        )
+
+    def _selection_data(self, selection: ClarificationSelection) -> dict[str, Any]:
+        if not selection.clarification_token:
+            return {}
+        options = self._options(selection.candidates)
+        return self._clarification_data(selection.clarification_token, options)
 
     def _play_candidate(self, access_token: str, track) -> OperationResult:
         result = self.player.resume(access_token, track)
@@ -265,7 +460,12 @@ class SpotifyService:
     @classmethod
     def _clarification_message(cls, track_name: str, options: list[dict[str, Any]], detail_suffix: str) -> str:
         option_text = "；".join(f"第{option['ordinal']}首，{option['label']}" for option in options)
-        return f"找到多個可能的 {track_name}{detail_suffix}：{option_text}。請說第一首、第二首或第三首。"
+        return f"找到多個可能的 {track_name}{detail_suffix}：{option_text}。請說第一首、第二首或第三首；如果都不是，請說換一批。"
+
+    @classmethod
+    def _next_page_message(cls, options: list[dict[str, Any]]) -> str:
+        option_text = "；".join(f"第{option['ordinal']}首，{option['label']}" for option in options)
+        return f"好，換一批候選：{option_text}。請說第一首、第二首或第三首；如果都不是，請說換一批。"
 
     @staticmethod
     def _clarification_error_message(error_code: str | None) -> str:
@@ -274,6 +474,9 @@ class SpotifyService:
             "SPOTIFY_CLARIFICATION_USED": "歌曲選擇已使用過，請重新說出歌曲。",
             "SPOTIFY_CLARIFICATION_ATTEMPTS_EXHAUSTED": "歌曲選擇嘗試次數已用完，請重新說出歌曲。",
             "SPOTIFY_CLARIFICATION_UNCLEAR": "我無法判斷你選哪一首，請說第一首、第二首、第三首，或說歌手／專輯。",
+            "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED": "沒有更多新的候選歌曲了；請選目前這一批，或重新說出更完整的歌手／專輯。",
+            "SPOTIFY_CLARIFICATION_RECOVERY_IN_PROGRESS": "我正在準備下一批候選，請稍後再說換一批。",
+            "SPOTIFY_CLARIFICATION_RECOVERY_INVALID": "歌曲候選恢復狀態無效，請重新說出歌曲。",
         }.get(error_code or "", "找不到這個歌曲選擇，請重新說出歌曲。")
 
     @staticmethod

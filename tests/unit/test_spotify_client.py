@@ -24,6 +24,17 @@ def test_search_uses_only_the_fixed_spotify_search_endpoint():
     assert client.search_tracks("access-token", "track:Stay artist:The Kid LAROI") == [{"id": "track-1"}]
 
 
+def test_search_recovery_offset_is_server_bounded():
+    def handler(request: httpx.Request):
+        assert request.url.params["offset"] == "50"
+        assert request.url.params["limit"] == "10"
+        return httpx.Response(200, json={"tracks": {"items": []}})
+
+    client = client_for(handler)
+
+    assert client.search_tracks("access-token", "track:Stay", offset=999) == []
+
+
 def test_saved_track_lookup_uses_only_server_owned_track_uris_and_preserves_order():
     def handler(request: httpx.Request):
         assert request.method == "GET"

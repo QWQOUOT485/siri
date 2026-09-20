@@ -70,19 +70,23 @@ def test_sad_overlxrd_first_clarification_then_exact_memory_hit(tmp_path: Path):
         if request.url.path == "/v1/search":
             query = request.url.params["q"]
             search_queries.append(query)
-            if "artist:SASIOVERLXRD" in query:
+            if query == "track:Stay artist:SASIOVERLXRD":
                 return httpx.Response(200, json={"tracks": {"items": [spotify_track("one", "artist123")]}})
-            return httpx.Response(
-                200,
-                json={
-                    "tracks": {
-                        "items": [
-                            spotify_track("one", "artist123"),
-                            spotify_track("two", "artist123"),
-                        ]
-                    }
-                },
-            )
+            if query in {"track:Stay artist:Sad overlxrd", "track:Sad overlxrd的Stay"}:
+                return httpx.Response(200, json={"tracks": {"items": []}})
+            if query == "track:Stay":
+                return httpx.Response(
+                    200,
+                    json={
+                        "tracks": {
+                            "items": [
+                                spotify_track("one", "artist123"),
+                                spotify_track("two", "artist123"),
+                            ]
+                        }
+                    },
+                )
+            raise AssertionError(query)
         if request.url.path == "/v1/me/library/contains":
             return httpx.Response(200, json=[False, False])
         if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists"}:
@@ -106,6 +110,7 @@ def test_sad_overlxrd_first_clarification_then_exact_memory_hit(tmp_path: Path):
     assert first.success is False
     assert first.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
     assert memory.lookup_exact("Sad overlxrd") is None
+    assert playback_calls == 0
 
     selected = service.execute_clarification("第一首", first.data["clarification_token"])
     assert selected.success is True
@@ -117,13 +122,69 @@ def test_sad_overlxrd_first_clarification_then_exact_memory_hit(tmp_path: Path):
     assert playback_calls == 2
     assert search_queries == [
         "track:Stay artist:Sad overlxrd",
+        "track:Sad overlxrd的Stay",
+        "track:Stay",
         "track:Stay artist:SASIOVERLXRD",
     ]
+
+
+def test_sad_overlxrd_first_occurrence_keeps_two_recovery_rounds(tmp_path: Path):
+    title_first_offsets: list[int] = []
+    playback_calls = 0
+
+    def handler(request: httpx.Request):
+        nonlocal playback_calls
+        if request.url.path == "/v1/search":
+            query = request.url.params["q"]
+            if query in {"track:Stay artist:Sad overlxrd", "track:Sad overlxrd的Stay"}:
+                return httpx.Response(200, json={"tracks": {"items": []}})
+            assert query == "track:Stay"
+            offset = int(request.url.params["offset"])
+            title_first_offsets.append(offset)
+            items = [
+                spotify_track(str(index), "artist123")
+                for index in range(offset // 10 * 3 + 1, offset // 10 * 3 + 4)
+            ]
+            return httpx.Response(200, json={"tracks": {"items": items}})
+        if request.url.path == "/v1/me/library/contains":
+            return httpx.Response(200, json=[False] * len(request.url.params["uris"].split(",")))
+        if request.url.path in {"/v1/me/top/tracks", "/v1/me/top/artists", "/v1/me/player/recently-played"}:
+            return httpx.Response(200, json={"items": []})
+        if request.url.path == "/v1/me/player/devices":
+            return httpx.Response(200, json={"devices": [{"id": "pc", "name": "Windows Spotify", "is_active": True}]})
+        if request.url.path == "/v1/me/player/play":
+            playback_calls += 1
+            return httpx.Response(204)
+        raise AssertionError(request.url)
+
+    service, memory = build_service(tmp_path, handler)
+    command = ValidatedAction(
+        action=ActionName.SPOTIFY_PLAY_TRACK,
+        track="Stay",
+        artist="Sad overlxrd",
+    )
+
+    initial = service.execute(command)
+    first = service.execute_clarification("none of these", initial.data["clarification_token"])
+    second = service.execute_clarification("none of these", first.data["clarification_token"])
+    exhausted = service.execute_clarification("none of these", second.data["clarification_token"])
+
+    assert initial.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert first.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert second.error_code == "SPOTIFY_CLARIFICATION_REQUIRED"
+    assert exhausted.error_code == "SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED"
+    assert title_first_offsets == [0, 10, 20]
+    assert memory.lookup_exact("Sad overlxrd") is None
+    assert playback_calls == 0
 
 
 def test_selected_candidate_with_failed_playback_does_not_confirm_alias(tmp_path: Path):
     def handler(request: httpx.Request):
         if request.url.path == "/v1/search":
+            query = request.url.params["q"]
+            if query in {"track:Stay artist:Sad overlxrd", "track:Sad overlxrd的Stay"}:
+                return httpx.Response(200, json={"tracks": {"items": []}})
+            assert query == "track:Stay"
             return httpx.Response(
                 200,
                 json={

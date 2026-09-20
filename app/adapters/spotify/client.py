@@ -69,13 +69,29 @@ class SpotifyApiClient:
     def close(self) -> None:
         self.http_client.close()
 
-    def search_tracks(self, access_token: str, query: str, *, limit: int = 10) -> list[dict[str, Any]]:
+    def search_tracks(
+        self,
+        access_token: str,
+        query: str,
+        *,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        # Offset is an internal, server-owned recovery cursor.  The public API
+        # never accepts it, and the adapter keeps it bounded even if a future
+        # caller passes an invalid value.
+        bounded_offset = max(0, min(int(offset), 50))
         payload = self._api_json(
             "GET",
             "/search",
             access_token=access_token,
             rate_limit_scope=_SEARCH_RATE_LIMIT_SCOPE,
-            params={"q": query, "type": "track", "limit": str(max(1, min(limit, 50)))},
+            params={
+                "q": query,
+                "type": "track",
+                "limit": str(max(1, min(limit, 50))),
+                "offset": str(bounded_offset),
+            },
         )
         tracks = payload.get("tracks", {}) if isinstance(payload, dict) else {}
         items = tracks.get("items", []) if isinstance(tracks, dict) else []
