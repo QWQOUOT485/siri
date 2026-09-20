@@ -1,8 +1,9 @@
 # Windows Siri Agent v1.0 Scope Freeze
 
 Date: 2026-09-20
+Acceptance status: Accepted when PR #29 merged into `main` (`c31a0ac0f59fa45a31a06991116845bebfb5b734`); docs-only, no implementation change
 Freeze branch base: `f9f36695dfe092bca0cfeb21e8b15ea1044fd7c7`
-Related merge: PR #28 (`4c66a9d`), evidence-only; no implementation change
+Historical related merge: PR #28 (`4c66a9d`), evidence-only; no implementation change
 
 ## Decision
 

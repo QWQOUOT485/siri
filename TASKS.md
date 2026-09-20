@@ -2,14 +2,16 @@
 
 ## Current Milestone
 
-Review the Windows Siri Agent v1.0 scope freeze without weakening the
-deterministic security boundary.
+Verify release-cut readiness for the accepted Windows Siri Agent v1.0 scope
+without weakening the deterministic security boundary.
 
 Core Siri → Windows → Spotify playback and clarification are functional. The
-v1.0 retained scope, `spotify_continue` known limitation, proposed blockers,
-and v1.1 deferrals are recorded in
-`docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is documentation/review only;
-do not add a source workaround or a new live Spotify retry.
+v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
+scope, `spotify_continue` known limitation, proposed blockers, and v1.1
+deferrals are recorded in
+`docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is release-cut verification
+and documentation cleanup only; do not add a source workaround or a new live
+Spotify retry.
 
 ## v1.0 Scope Freeze Decision
 

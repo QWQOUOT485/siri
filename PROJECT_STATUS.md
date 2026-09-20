@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-**Windows Siri Agent v1.0 scope is now frozen for review around the deterministic, safety-gated core.** The accepted core remains the priority; optional Spotify controls, semantic memory, and broader Local AI authority are either explicit known limitations or deferred as recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
+**Windows Siri Agent v1.0 implementation scope freeze was accepted when PR #29 merged into `main` (`c31a0ac0f59fa45a31a06991116845bebfb5b734`).** The project is now in release-cut verification around the deterministic, safety-gated core. The accepted core remains the priority; optional Spotify controls, semantic memory, and broader Local AI authority are either explicit known limitations or deferred as recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
 
 目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
 
@@ -25,15 +25,24 @@
 
 ## v1.0 Scope Freeze
 
-PR #28 的 evidence-only merge 已由 GitHub 完成，merge commit 是
-`f9f36695dfe092bca0cfeb21e8b15ea1044fd7c7`。本次 scope freeze 從該最新
-`main` 建立，**只整理文件，不修改 implementation，也不新增
-`spotify_continue` live retry 或 provider workaround**。
+PR #29 的 docs-only scope-freeze merge 已由 GitHub 完成，merge commit 是
+`c31a0ac0f59fa45a31a06991116845bebfb5b734`；這次合併代表 v1.0
+implementation scope freeze accepted。PR #28 的 evidence-only merge commit
+`f9f36695dfe092bca0cfeb21e8b15ea1044fd7c7` 是建立本次 freeze 時的
+historical base，不是目前的 `main`。本次 scope freeze **只整理文件，不修改
+implementation，也不新增 `spotify_continue` live retry 或 provider workaround**。
 
 v1.0 retained scope、known limitation、proposed blockers 與 v1.1 deferred
 items 的唯一整理見 [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md)。
 `spotify_continue` 仍是 **NOT ACCEPTED**；`LOCAL_SEMANTIC_MEMORY_ENABLED`
 與 `LOCAL_AI_FALLBACK_APPROVED` 必須維持 `false`。
+
+## Release-cut Verification (2026-09-20)
+
+- Current source `main` full pytest: **306 passed**; `compileall` and `pip check` passed.
+- Installed `D:\ai\windows-siri-agent` full pytest: **306 passed**; `compileall` and `pip check` passed. The checked non-sensitive source/version files have the same SHA-256 hashes as the current tree.
+- The installed Agent was not running on `127.0.0.1:8000` during this inspection, so the current result is connection refused. PR #26's earlier installed-host `/health` HTTP 200 remains historical evidence and is not relabeled as a current live check.
+- No live Spotify request or Siri voice E2E was run during this release-cut inspection; `spotify_continue`, semantic memory, and Local AI promotion boundaries remain unchanged.
 
 ## Security Invariants
 
@@ -233,7 +242,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 - P95 約 200 ms
 - source resolver / route regressions 已補齊
 
-目前完整 source test run為 **268 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
+目前完整 source test run為 **306 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
 新增的 `docs/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
 
