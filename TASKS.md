@@ -2,9 +2,30 @@
 
 ## Current Milestone
 
-Finish Windows Siri Agent v1 without weakening the deterministic security boundary.
+Review the Windows Siri Agent v1.0 scope freeze without weakening the
+deterministic security boundary.
 
-Core Siri → Windows → Spotify playback and clarification are already functional. Current work is **quality, remaining deterministic controls, semantic memory, and Local AI promotion evidence** — not rebuilding the project skeleton.
+Core Siri → Windows → Spotify playback and clarification are functional. The
+v1.0 retained scope, `spotify_continue` known limitation, proposed blockers,
+and v1.1 deferrals are recorded in
+`docs/V1_SCOPE_FREEZE_2026-09-20.md`. This phase is documentation/review only;
+do not add a source workaround or a new live Spotify retry.
+
+## v1.0 Scope Freeze Decision
+
+- Retain the Windows security boundary, API key/LAN-only operation, trusted app
+  control, shutdown confirmation, Windows volume, Spotify basic/named-track
+  playback, clarification, shuffle/repeat, and installed regression evidence.
+- Keep `spotify_continue` deterministic and fail-closed, but mark it
+  **NOT ACCEPTED** because the active-device real run returned
+  `SPOTIFY_FORBIDDEN` with sanitized `provider_reason=UNKNOWN`.
+- Treat Top-Artist-only and Recently-Played-only acceptance gaps as optional
+  evidence, not v1.0 blockers.
+- Defer seek, Spotify device volume, like/unlike, Candidate Recovery Phase 1B,
+  preference memory, and broader Local AI authority to v1.1 or a separately
+  approved scope.
+- Keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+  `LOCAL_AI_FALLBACK_APPROVED=false`.
 
 ## Before Coding
 
@@ -23,84 +44,52 @@ Core Siri → Windows → Spotify playback and clarification are already functio
 6. Before finishing, run relevant tests per `docs/TESTING.md`.
 7. If real project state changed, update `PROJECT_STATUS.md`.
 
-## Priority Queue
+## Post-freeze Queue
 
-### P0 — Preserve safety
+### P0 — Preserve safety and release evidence
 
-- No user text may become shell/subprocess/PowerShell/CMD/executable path/arbitrary URL.
-- Local AI remains off/shadow unless a separate promotion gate is completed.
+- No user text may become shell/subprocess/PowerShell/CMD/executable
+  path/arbitrary URL.
+- Local AI remains off/shadow and semantic memory remains disabled.
 - Clarification tokens and trusted Spotify IDs remain server-owned.
 - Do not turn candidate-quality signals into automatic execution authority.
 - Do not delete security regressions to make tests pass.
+- Keep source/unit, installed, and real-device evidence explicitly separate.
 
-### P1 — Spotify candidate quality
+### P1 — v1.1 candidates, only with a separate decision
 
-1. Complete a genuine-ambiguity real-account acceptance case for saved/liked ranking.
-2. Validate the implemented Top Tracks / Top Artists signal after `user-top-read` reauthorization; it must improve ordering without overriding explicit metadata or ambiguity safety.
-3. Recently Played source ranking slice is implemented under the same rule; real-account acceptance remains pending reauthorization.
-4. Keep Spotify Search relevance / popularity as lower-priority evidence only.
-
-### P2 — Deterministic playback-state controls
-
-Implement and test closed actions from `docs/PLAYBACK_CONTROLS.md`:
-
-- `spotify_shuffle_on` / `spotify_shuffle_off`
-- `spotify_repeat_off` / `spotify_repeat_track` / `spotify_repeat_context`
-- `spotify_continue`
 - `spotify_seek`
-- `spotify_set_volume`
+- Spotify device volume
 - `spotify_like_current` / `spotify_unlike_current`
+- Candidate Recovery Phase 1B
+- preference memory
+- broader Local AI authority or executable fallback
 
-Requirements:
+These are not to be implemented as part of the v1.0 scope-freeze PR.
 
-- no arbitrary Spotify endpoint / body / device ID / track ID / URI from the client
-- like/unlike operates only on server-read current track
-- these actions remain deterministic-only and outside Local AI
+### P2 — Optional evidence, not a v1.0 blocker
 
-### P3 — Local Semantic Recovery Phase 1
+- Top-Artist-only genuine-ambiguity reordering
+- Recently-Played-only genuine-ambiguity reordering
+- Siri voice / independent speaker acceptance for exact Windows volume
 
-Implement the approved exact-confirmed-alias design:
+Keep Spotify relevance/popularity and personalization signals as bounded
+candidate evidence only.
 
-- EntityNormalizer
-- SQLite persistence
-- confirmed-alias RAM index
-- candidate-only RapidFuzz path
-- MemoryLearner
-- conflict handling / poisoning tests
-- fail-open-to-existing-deterministic behavior on DB failure
+### P3 — Project infrastructure
 
-Promotion to confirmed alias requires server-owned clarification selection followed by successful playback.
-
-### P4 — Local AI promotion preparation
-
-Do **not** enable executable fallback yet.
-
-Required work:
-
-1. reconcile any stale broad AI wording with the current narrow `spotify_play_track / unknown` contract
-2. produce a sanitized committed benchmark evidence summary tied to exact commit/model/config
-3. run production-loopback shadow acceptance on real Windows Agent
-4. verify hostile input, timeout, busy/unavailable model and malformed output all fail closed
-5. verify deterministic commands and clarification remain unchanged
-6. run separate independent promotion review
-
-Only after all gates pass may `LOCAL_AI_FALLBACK_APPROVED=true` be considered.
-
-### P5 — Project infrastructure
-
-- Add hosted CI for unit/security tests if practical.
+- Add hosted CI for unit/security tests if separately scheduled.
 - Keep Windows/Spotify/Siri real acceptance separate from hosted CI claims.
 - Keep `PROJECT_STATUS.md` concise; do not re-add chronological debug history.
 
 ## Current Acceptance Gaps
 
-- saved=true has been verified against a real Spotify account, but its effect on a genuine ambiguity ordering case is not yet accepted.
-- Top Tracks / Top Artists source ranking is implemented and covered, but real-account acceptance is pending `user-top-read` reauthorization; Recently Played source ranking is implemented and real-account acceptance is pending `user-read-recently-played` reauthorization.
-- Shuffle/repeat/continue source slice is implemented and covered by source/unit tests. Installed bounded real Spotify acceptance passed shuffle on/off and repeat track/context/off; `spotify_continue` remains partial/NO-GO because the real resume portion returned `SPOTIFY_FORBIDDEN`. Source/mock differential and one bounded live device-state check did not prove a source request bug; the provider/device/account reason remains unknown, and Siri voice acceptance is still pending. Seek, Spotify device volume, and like/unlike remain incomplete. See `docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`.
-- exact Windows volume has Windows runtime acceptance but not Siri voice / physical-speaker acceptance.
-- Local Semantic Recovery Phase 1 is approved but not complete.
-- Local AI production fallback remains unapproved.
-- GitHub currently has no hosted workflow/status evidence for HEAD.
+- `spotify_continue` is source-tested and implemented, but its only permitted active-device real run failed closed with `SPOTIFY_FORBIDDEN` / sanitized `provider_reason=UNKNOWN`; it remains a v1.0 known limitation and **NOT ACCEPTED**. See `docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`.
+- Exact Windows volume has installed runtime acceptance but not Siri voice / physical-speaker acceptance.
+- Top-Artist-only and Recently-Played-only real-account ordering cases remain partial/unproven and are not v1.0 blockers.
+- Semantic-memory runtime acceptance is incomplete; keep it disabled.
+- Local AI production fallback remains unapproved; keep shadow/off.
+- Hosted CI is not established; local source evidence must not be presented as hosted CI evidence.
 
 ## Definition of Done for v1
 
@@ -113,6 +102,7 @@ Only after all gates pass may `LOCAL_AI_FALLBACK_APPROVED=true` be considered.
 - relevant unit/security tests pass
 - Windows integration tests pass where required
 - setup/start flow works on real Windows
-- remaining v1-scoped Spotify controls are implemented or explicitly deferred by product decision
-- Local AI is either safely kept off/shadow or separately promoted through the documented gate
+- remaining v1-scoped Spotify controls are implemented or explicitly deferred by the scope-freeze decision
+- Local AI is safely kept off/shadow; executable fallback is not part of this freeze
+- semantic memory remains disabled until its separate runtime acceptance gate passes
 - `PROJECT_STATUS.md` accurately distinguishes source completion from real acceptance

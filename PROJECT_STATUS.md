@@ -4,9 +4,9 @@
 
 ## Current Phase
 
-**Windows Siri Agent v1 核心流程已可用；目前重點是 Spotify 候選品質、剩餘 deterministic controls、Local Semantic Recovery Phase 1，以及 Local AI production promotion gate。**
+**Windows Siri Agent v1.0 scope is now frozen for review around the deterministic, safety-gated core.** The accepted core remains the priority; optional Spotify controls, semantic memory, and broader Local AI authority are either explicit known limitations or deferred as recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
 
-目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。**
+目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
 
 ## Source of Truth
 
@@ -22,6 +22,18 @@
 `PROJECT_STATUS.md` 只描述目前 implementation / acceptance 狀態，不能覆蓋安全規格。
 
 `docs/SOURCE_SPEC.md` 是唯讀歷史快照，不再是現行規格的 final arbiter。這個 authority blocker 已於 2026-09-19 由 `AGENTS.md` 與現行規格順序明確解決。
+
+## v1.0 Scope Freeze
+
+PR #28 的 evidence-only merge 已由 GitHub 完成，merge commit 是
+`f9f36695dfe092bca0cfeb21e8b15ea1044fd7c7`。本次 scope freeze 從該最新
+`main` 建立，**只整理文件，不修改 implementation，也不新增
+`spotify_continue` live retry 或 provider workaround**。
+
+v1.0 retained scope、known limitation、proposed blockers 與 v1.1 deferred
+items 的唯一整理見 [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md)。
+`spotify_continue` 仍是 **NOT ACCEPTED**；`LOCAL_SEMANTIC_MEMORY_ENABLED`
+與 `LOCAL_AI_FALLBACK_APPROVED` 必須維持 `false`。
 
 ## Security Invariants
 
@@ -126,14 +138,14 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - source 已加入 bounded `SpotifyApiError.reason` parsing：只保留有限長度、固定字元形狀的 provider reason，不保存任意 provider message，也不把 token 放入 exception text、cache key 或 log。
 - `SpotifyApiClient` 對明確 `QUOTA_EXCEEDED` 建立 provider-wide Web API cooldown；普通 429 只進入 bounded operation scope（Search、personalization、playback 分開），遵循 capped `Retry-After`（最多 3600 秒），missing / malformed / negative header 使用短 fallback cooldown，不 sleep、不 busy-loop、不自動重試。OAuth Accounts token endpoint 不受 Web API cooldown 阻擋，避免 401 refresh path 誤清除有效 refresh token。
 - Top Tracks、Top Artists、Recently Played 使用 process-local bounded cache：fresh TTL 60 秒、stale refresh grace 30 秒、最多 12 個 signal entries；authorization context 以 process-local HMAC scope 隔離，raw token 不持久化，saved membership 不進這個 cache。cache 或 refresh 失敗時維持 deterministic ranking。
-- 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 仍存在，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；installed Agent alignment 仍是獨立 gate。
+- 本次 source/unit targeted regression 為 84 passed；未呼叫真實 Spotify。Development Mode `429 / QUOTA_EXCEEDED / Retry-After=3600` blocker 與其他 provider conditions 仍限制 real-provider evidence，因此本次不宣稱 provider quota 或 real-account acceptance 已解決；mock/cache evidence 不等於 real Spotify acceptance，installed Agent alignment 仍是獨立 gate。
 - 2026-09-20 PR #26 (`fix/spotify-403-provider-reason-20260920`) merged to `main` as `874a944`; bounded 403 observability exposes only the already-validated provider reason as `OperationResult.data.provider_reason`, omitting missing, malformed, or overlong values. User-visible 403 code/message, 429 retry data, and 401 refresh behavior remain unchanged. The reviewed non-secret source was staged to the installed Agent with a reversible backup; installed targeted Spotify/security tests passed (169), full pytest passed (306), compileall and pip check passed, and loopback `/health` returned 200. The first post-deployment read-only preflight found 1 usable non-restricted device but 0 active devices, so no command was sent; that earlier precondition gap is now superseded by the active-device acceptance recorded below.
 
 ### Deterministic Spotify shuffle / repeat / continue
 
 - current source 已加入 closed actions：`spotify_shuffle_on/off`、`spotify_repeat_off/track/context`、`spotify_continue`；parser、`SpotifyService`、`SpotifyPlayer` 與 fixed Spotify endpoints `/me/player/shuffle`、`/me/player/repeat` 已接通。
 - `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
-- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；current source full suite 是 **306 passed**，先前 installed-host full suite 是 **303 passed**，各有 2 個既有 dependency deprecation warnings。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
+- source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；current-source full suite 是 **306 passed**。PR #26 post-deployment installed-host verification 另有 targeted Spotify/security **169 passed**、installed full pytest **306 passed**、compileall passed、pip check passed 與 loopback `/health` HTTP 200。先前 installed-host full suite 的 **303 passed** 僅為 earlier installed regression，不是 latest installed full suite；各 run 的既有 dependency deprecation warnings 仍分開看待。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
 - 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
 - 2026-09-20 bounded diagnosis：targeted source/mock differential 顯示 active device、無 transfer/queue/readback 時，empty-body `PUT /me/player/play` 已足以重現 fail-closed 403；同 endpoint 的 trusted named-track body 在 mock 與 installed historical log 均成功。官方契約允許 empty body，因此目前沒有足夠證據宣稱 source request bug。PR #26 的 safe/bounded observability 已 review、merge、部署；其後在使用者手動開啟 Spotify Desktop 後，installed Agent 的一次 read-only preflight 確認 1 個 usable non-restricted、1 個 active、selected active，且 repeat=off、shuffle=false、正在播放並有 item。唯一一次 `就一直播下去` command 仍回傳 `SPOTIFY_FORBIDDEN`，sanitized `provider_reason=UNKNOWN`；因 403 沒有 post-command readback、retry 或 transfer，沒有 429/`QUOTA_EXCEEDED`。這排除了「本次沒有 active device」作為充分解釋，但仍未證明 source bug 或 provider root cause；精確診斷見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
 - Installed alignment 保留 `.env`、local config、runtime data、Spotify token、logs、work/outputs；live token lifecycle 的正常 refresh 可能更新 token JSON，但沒有將 token 值寫入報告。Local AI controls requests 維持 `unsupported_domain`、未進 executable AI path。
@@ -271,53 +283,72 @@ Phase 1 原則：
 
 ## Not Yet Proven / Remaining Work
 
-### Highest priority
+### v1.0 known limitation
 
-1. **Spotify Top-Artist-only genuine-ambiguity acceptance**
-   - Top Track 已有 1 個 real-account partial acceptance；如要完成 combined Top Tracks / Top Artists gate，需補一個沒有 Top Track / saved / recent 強訊號、由 Top Artist 單獨提升的 case。
-   - 驗證 Top Artist 只改善候選順序、不覆蓋 explicit metadata、不消除 genuine ambiguity、不自動播放。
+1. **`spotify_continue` remains NOT ACCEPTED.**
+   - The deterministic source path and source/unit coverage exist.
+   - The one permitted active-device real run had a usable, non-restricted,
+     selected active device but still failed closed with
+     `SPOTIFY_FORBIDDEN` and sanitized `provider_reason=UNKNOWN`.
+   - No retry, transfer, post-403 readback, 429, or `QUOTA_EXCEEDED` occurred.
+     No source bug or safe workaround is proven; do not retry for scope freeze.
+   - See [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md).
 
-2. **Spotify personalization real acceptance and next signal**
-   - Top Track 的 genuine-ambiguity ordering 已取得 1 個 real-account partial acceptance；仍需決定是否補一個 Top-Artist-only reorder 以完成 combined Top Tracks / Top Artists gate。
-   - `user-read-recently-played` 已在 2026-09-20 重新授權取得；仍需單獨驗證 Recently Played 的 genuine-ambiguity ordering。
-   - 必須保持 explicit artist / album / version 與 ambiguity safety 優先。
+### Optional evidence gaps, not v1.0 blockers
 
-3. **Deterministic Spotify controls**
-   - shuffle on/off、repeat off/track/context：installed real Spotify bounded acceptance 已通過；continue 只有 repeat-off / shuffle-preservation partial evidence，因 real `SPOTIFY_FORBIDDEN` 尚未接受。新的 active-device 嘗試仍回傳 `SPOTIFY_FORBIDDEN`，只得到 sanitized `provider_reason=UNKNOWN`；未 retry、未 post-403 readback、未遇到 429/`QUOTA_EXCEEDED`，Siri voice E2E 仍未執行。見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
-   - seek、Spotify device volume、like/unlike current track：尚未實作。
-   - 都不得擴張 Local AI allowlist。
+2. **Spotify personalization acceptance**
+   - Top Track has one real-account partial acceptance; Top-Artist-only
+     reordering is not independently proven.
+   - Recently Played source/unit evidence exists, but the bounded real-account
+     run found no recent-only qualifying reorder case.
+   - Keep explicit metadata priority and genuine ambiguity safety. Do not turn
+     these optional ranking gaps into a v1.0 blocker.
 
-4. **Local Semantic Recovery Phase 1 runtime acceptance**
-   - current-source Windows SQLite/create/restart/RAM/fallback harness 已完成；source/unit與mocked Spotify regression已通過。
-   - current Phase 1 source 已 staged 到 installed Agent；本次 installed-host full regression 為 303 passed，disabled loopback `/health` smoke 通過，且未建立 production semantic-memory SQLite artifact。
-   - 仍需正常 ASR alias → trusted candidate → clarification path、real Spotify playback/write/restart、iPhone/Siri voice E2E 與 installed-host latency/RAM review；memory 保持 disabled。
-   - rollout evidence 見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md)、[`docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md) 與 [`docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
+3. **Exact Windows volume presentation**
+   - Installed exact scalar behavior is verified; Siri voice E2E and an
+     independent physical-speaker check remain unproven.
 
-5. **Local AI promotion evidence**
-   - 保持 off/shadow。
-   - 2026-09-20 three-model/two-mode benchmark 與 sanitized combined evidence 已完成；`qwen3-4b` 未達初始品質門檻，且不得據此自動選定模型或啟用 fallback。
-   - 下一步是 current exact commit/configuration 的 production-aligned loopback shadow acceptance，再做 deterministic regressions 與 separate promotion review。
+### Non-blocking known evidence / UX gaps
 
-### Smaller validation gaps
+These remain valid evidence boundaries but are **not v1.0 release blockers**:
 
-- exact Windows volume：尚缺 Siri voice E2E / independent physical-speaker check。
-- clarification store bounded attempts / concurrency hardening：source/unit 已完成，但未因這個內部修正另外重跑完整 Siri E2E。
-- Spotify quota hardening / personalization cache：source/unit 已完成；本次沒有重跑 real Spotify，因 Development Mode `QUOTA_EXCEEDED` / 3600 秒 Retry-After blocker 仍在。Top-Artist-only 與 Recently Played-only 的 real-account evidence 維持原狀，不能以 mock/cache 測試代替。
-- Recently Played 尚缺 real Spotify account acceptance；boundary assertion 已修正，但本次 bounded real-account run 未找到 recent-only reorder case。沒有 playback 或 Library write；下一步是新的 bounded corpus 或明確接受「source slice 完成、real-account gate 未證明」的產品決策。
-- Spotify OAuth callback 曾出現「瀏覽器顯示通用失敗，但 status/token 實際成功保存」的不一致；功能可用，但 UI/root cause 尚未釐清。
-- GitHub hosted CI 尚未建立；目前 source test evidence 主要由本機執行與狀態文件記錄。
+- Spotify OAuth callback behavior once showed a generic browser failure even
+  though status and token storage succeeded; functionality works, but the UI
+  and root cause remain unclarified.
+- Clarification-store bounded-attempt and concurrency hardening is covered by
+  source/unit tests, but a full Siri E2E was not rerun specifically because of
+  that hardening.
+- Spotify quota hardening and personalization cache have source/unit evidence,
+  while real-provider evidence remains constrained by Development Mode quota
+  and provider conditions. Mock/cache evidence is not real Spotify acceptance.
 
-## Current Recommended Order
+### Deferred / guarded work
+
+4. **v1.1 Spotify features**
+   - `spotify_seek`, Spotify device volume, and like/unlike current track are
+     explicitly deferred; they are not missing v1.0 release blockers.
+
+5. **Semantic memory and Local AI**
+   - Phase 1 source and harness evidence remain guarded, but real runtime
+     acceptance is incomplete. Keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false`.
+   - Candidate Recovery Phase 1B and preference memory remain deferred.
+   - Local AI remains off/shadow; the independent promotion review is NO-GO and
+     `LOCAL_AI_FALLBACK_APPROVED=false` must remain unchanged.
+
+6. **Project infrastructure**
+   - Hosted CI is not established; current source evidence remains local and
+     must not be presented as hosted CI evidence.
+
+### Current release-gate order
 
 ```text
-1. Top-Artist-only genuine-ambiguity acceptance (if completing the combined Top gate)
-2. Recently Played real-account acceptance after `user-read-recently-played` reauthorization
-3. determine a provider/account/device explanation for the active-device `SPOTIFY_FORBIDDEN` with sanitized reason `UNKNOWN`; no further resume/continue retry is authorized by the current evidence, stop on 429/`QUOTA_EXCEEDED`, and keep Siri voice acceptance separate
-4. Local Semantic Recovery Phase 1 runtime acceptance
-5. Local AI production-loopback shadow acceptance
-6. sanitized promotion evidence
-7. independent Local AI promotion review
-8. only then consider guarded fallback execution
+1. Preserve docs/SECURITY.md invariants and closed deterministic authority.
+2. Keep the accepted core Windows/Siri/Spotify flows and installed regression
+   evidence intact at the release cut.
+3. Keep spotify_continue as a documented fail-closed known limitation.
+4. Keep semantic memory and Local AI fallback disabled.
+5. Revisit only the explicit v1.1/deferred items through a separately scoped
+   decision; do not add a live Spotify retry to this freeze.
 ```
 
 ## Installed Runtime
