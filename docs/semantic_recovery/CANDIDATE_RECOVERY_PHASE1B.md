@@ -1,11 +1,22 @@
 
 # Candidate Recovery / Phase 1B
 
-Status: **Phase 1B explicitly scheduled; source implementation is in progress on the dedicated branch. Runtime acceptance is not yet proven.**
+Status: **Source implementation merged via PR #35; installed regression and initial trusted playback passed; live bounded continuation acceptance remains blocked/unproven.**
 
-This document records the product/retrieval scope now being implemented after
-the v1.0 acceptance handoff. Installed/runtime acceptance remains a separate
-gate and is not implied by source or unit evidence.
+This document records the product/retrieval scope implemented after the v1.0
+acceptance handoff. The source was merged to `main` by PR #35, with merge
+commit `dde5e07130517dcaa67d9136ad222f748930545f`; the tested current `main`
+is `fcb955a43b0590636f776ffc31e7ca71897114f2`. Installed/runtime acceptance
+remains a separate gate and is not implied by source or unit evidence.
+
+Installed alignment/regression and the initial trusted clarification plus
+explicit playback passed. The live bounded continuation case returned
+`SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without producing a next page or
+rotating the opaque token. This proves only that the selected live fixture did
+not produce another trusted page; it does not prove a source bug. See the
+[runtime acceptance evidence](../SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md)
+for the complete boundary. Siri voice acceptance was not performed, Semantic
+Memory remains disabled, and Local AI fallback remains unapproved.
 
 It does not change the current production authority model and does not authorize
 new automatic playback behavior.
@@ -203,9 +214,9 @@ server-owned trusted candidate
 
 ---
 
-## 7. Proposed bounded recovery ladder
+## 7. Bounded recovery ladder
 
-A future implementation may evaluate this order:
+The Phase 1B authority order is:
 
 ~~~
 Tier 0
@@ -227,14 +238,14 @@ optional future semantic evidence
 → bounded trusted clarification
 ~~~
 
-Phase 1B should prefer deterministic Spotify evidence before adding heavier
+The implementation prefers deterministic Spotify evidence before any heavier
 semantic/vector retrieval.
 
 ---
 
 ## 8. Title-first / track-first recovery
 
-A possible Phase 1B design:
+The implemented Phase 1B path follows this bounded design:
 
 1. Search using the most reliable known track-title span.
 2. Fetch a bounded internal result pool.
@@ -259,7 +270,7 @@ No client-provided URI/track ID may enter this path.
 
 ## 9. "None of these" behavior
 
-A future clarification contract may support a reviewed phrase such as:
+The Phase 1B clarification contract supports reviewed phrases such as:
 
 ~~~
 都不是
@@ -406,9 +417,10 @@ Local AI says candidate is correct
 
 ---
 
-## 14. Tests required before implementation acceptance
+## 14. Regression and acceptance boundaries
 
-At minimum:
+The source/unit implementation covers the following behaviors; installed and
+real-provider acceptance remain separate gates. At minimum:
 
 ### STAY pagination/recovery
 
@@ -518,33 +530,28 @@ candidate-page problem.
 
 ---
 
-## 16. Scheduling recommendation
+## 16. Implementation and acceptance status
 
-This work is deliberately deferred.
+The bounded Phase 1B source implementation was merged to `main` via PR #35.
+The merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`, and the tested
+current `main` is `fcb955a43b0590636f776ffc31e7ca71897114f2`.
 
-When resumed, use a dedicated branch from the then-latest main, for example:
+Installed alignment/regression passed, including 158/158 source-controlled
+file parity, installed focused regressions, full pytest **336 passed**,
+`compileall`, `pip check`, `/health` HTTP 200, and OpenAPI version `1.0.0`.
+The initial trusted clarification and explicit playback also passed.
 
-~~~
-feat/spotify-candidate-recovery-phase1b-<base-sha>
-~~~
+The live bounded continuation gate remains **BLOCKED / NOT ACCEPTED**:
+`都不是` returned `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without a next
+page or opaque-token rotation. The current evidence proves only that the
+selected live fixture did not produce another trusted page; it does not prove
+a source bug or establish provider/result-set insufficiency as the root cause.
+See the [runtime acceptance evidence](../SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
 
-Do not mix it with:
-
-- personalization acceptance;
-- Local AI promotion;
-- Semantic Memory database migrations;
-- unrelated Spotify controls;
-- release cleanup.
-
-Suggested implementation scope:
-
-~~~
-one Phase 1B task
-→ candidate retrieval/recovery
-→ bounded "none of these" continuation
-→ tests
-→ focused Siri/Spotify acceptance
-~~~
+Siri voice acceptance was not performed. Semantic Memory remains disabled and
+Local AI fallback remains unapproved. Candidate recovery remains candidate
+evidence only; explicit selection is still required before playback, and
+successful playback is still required before memory learning.
 
 ---
 
