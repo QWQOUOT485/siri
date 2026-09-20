@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-**v1.1 Candidate Recovery Phase 1B source implementation**
+**v1.1 Candidate Recovery Phase 1B — source merged; continuation runtime gate not accepted**
 
 The v1.0.0 runtime release-cut gate and installed identity acceptance passed for
 the reviewed deterministic scope. The v1.0.0 release commit and annotated tag
@@ -18,9 +18,18 @@ Core Siri → Windows → Spotify playback and clarification are functional. The
 v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
 scope, `spotify_continue` known limitation, proposed blockers, and v1.1
 deferrals remain recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. Candidate
-Recovery Phase 1B is now separately scheduled on the dedicated branch
-`feat/spotify-candidate-recovery-phase1b-ee2cb26`; this branch adds only bounded
-Spotify candidate recovery and server-owned clarification continuation.
+Recovery Phase 1B source implementation was merged to `main` by PR #35
+(`dde5e07130517dcaa67d9136ad222f748930545f`). The tested current `main` is
+`fcb955a43b0590636f776ffc31e7ca71897114f2`.
+
+Installed alignment and regression passed, and the initial real trusted
+clarification plus explicit playback passed. The bounded continuation runtime
+gate remains **BLOCKED / NOT ACCEPTED**: live `都不是` returned
+`SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without a next page or token
+rotation. This does not prove a source bug. Siri voice acceptance was not
+performed; Semantic Memory remains disabled; Local AI fallback remains
+unapproved. The detailed evidence boundary is recorded in
+`docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
 
 ## v1.0.0 Release Identity Cut
 
@@ -50,7 +59,8 @@ Spotify candidate recovery and server-owned clarification continuation.
   evidence, not v1.0 blockers.
 - Defer seek, Spotify device volume, like/unlike, preference memory, and broader
   Local AI authority to a separately approved scope. Candidate Recovery Phase
-  1B is the currently scheduled v1.1 slice on the dedicated branch.
+  1B source is merged via PR #35; its installed/runtime continuation gate is a
+  separate acceptance boundary and remains not accepted.
 - Keep `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
   `LOCAL_AI_FALLBACK_APPROVED=false`.
 
@@ -88,13 +98,18 @@ Spotify candidate recovery and server-owned clarification continuation.
 - `spotify_seek`
 - Spotify device volume
 - `spotify_like_current` / `spotify_unlike_current`
-- Candidate Recovery Phase 1B — **current source implementation**
+- Candidate Recovery Phase 1B — **source merged via PR #35; continuation runtime
+  acceptance BLOCKED / NOT ACCEPTED**
 - preference memory
 - broader Local AI authority or executable fallback
 
 The other listed items require a separately scoped v1.1 decision and branch.
-Phase 1B source/unit work is current, but installed Windows, real Spotify, and
-Siri voice acceptance remain separate gates.
+Phase 1B source/unit work is merged to `main`. Installed alignment/regression
+and the initial trusted clarification plus explicit playback passed, but the
+bounded continuation returned `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED`
+without a next page or token rotation, so continuation remains
+**BLOCKED / NOT ACCEPTED**. Installed/runtime evidence is not Siri voice
+acceptance; Siri voice acceptance was not performed.
 
 ### P2 — Optional evidence, not a v1.0 blocker
 
@@ -114,6 +129,11 @@ candidate evidence only.
 ## Current Acceptance Gaps
 
 - `spotify_continue` is source-tested and implemented, but its only permitted active-device real run failed closed with `SPOTIFY_FORBIDDEN` / sanitized `provider_reason=UNKNOWN`; it remains a v1.0 known limitation and **NOT ACCEPTED**. See `docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`.
+- Candidate Recovery Phase 1B initial trusted clarification and explicit
+  playback passed after installed alignment, but the bounded live continuation
+  returned `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without a next page or
+  token rotation. It remains **BLOCKED / NOT ACCEPTED**; this does not prove a
+  source bug. See `docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
 - Exact Windows volume has installed runtime acceptance but not Siri voice / physical-speaker acceptance.
 - Top-Artist-only and Recently-Played-only real-account ordering cases remain partial/unproven and are not v1.0 blockers.
 - Semantic-memory runtime acceptance is incomplete; keep it disabled.
