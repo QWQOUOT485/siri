@@ -35,9 +35,10 @@ preserved, but their latency, throughput, and memory observations are not
 comparable RX GPU latency/throughput/VRAM evidence. The control retains its
 observed LM Studio loopback description with GPU/offload readback unqualified.
 The two pinned HF checkpoints remain under ignored runtime artifacts; no model
-weights, raw outputs, prompts, or credentials were committed. Focused
-Stage A/harness tests are **24 passed** and full source verification is
-**382 passed** with two existing dependency deprecation warnings; compileall,
+weights, raw outputs, prompts, or credentials were committed. After adding
+strict result-schema coverage for the two typed-intent rate fields, focused
+Stage A/harness tests are **25 passed** and full source verification is
+**383 passed** with two existing dependency deprecation warnings; compileall,
 `pip check`, and diff check passed.
 
 This pilot is research evidence only and does not change production authority:

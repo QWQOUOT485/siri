@@ -148,6 +148,35 @@ def test_result_schema_rejects_missing_unknown_and_authority_fields():
         )
 
 
+def test_result_schema_validates_intent_accuracy_rate_fields():
+    result = harness.aggregate_observations(
+        _metadata(),
+        [_observation("case-1", category="semantic_retry")],
+        model_load_success=True,
+    )
+
+    for field_name, invalid_value in (
+        ("supported_intent_accuracy", "invalid"),
+        ("supported_intent_accuracy", 1.1),
+        ("supported_intent_accuracy", True),
+        ("semantic_retry_intent_accuracy", -0.1),
+        ("semantic_retry_intent_accuracy", "invalid"),
+        ("semantic_retry_intent_accuracy", float("nan")),
+        ("semantic_retry_intent_accuracy", float("inf")),
+    ):
+        payload = result.to_dict()
+        payload[field_name] = invalid_value
+        with pytest.raises(harness.BenchmarkSchemaError, match=field_name):
+            harness.BenchmarkResult.from_mapping(payload)
+
+    valid_payload = result.to_dict()
+    valid_payload["supported_intent_accuracy"] = None
+    valid_payload["semantic_retry_intent_accuracy"] = 1.0
+    restored = harness.BenchmarkResult.from_mapping(valid_payload)
+    assert restored.supported_intent_accuracy is None
+    assert restored.semantic_retry_intent_accuracy == 1.0
+
+
 def test_aggregate_records_safety_language_slots_calibration_and_failures():
     observations = [
         _observation(

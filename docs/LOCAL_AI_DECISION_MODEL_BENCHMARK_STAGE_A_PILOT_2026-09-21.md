@@ -151,9 +151,9 @@ original pilot. The current metrics were recomputed from the preserved raw
 observations without model inference. Raw/local artifacts remain under
 ignored `runtime/ai_poc/stage-a-*`; no prompts, raw model outputs, tokens,
 credentials, Spotify IDs/URIs, or model weights were added to Git. Source
-verification after this semantics fix: focused Stage A/harness tests **24
-passed**, full pytest **382 passed** with two existing dependency deprecation
-warnings; compileall, `pip check`, and `git diff --check` passed.
+verification after the strict result-schema fix: focused Stage A/harness tests
+**25 passed**, full pytest **383 passed** with two existing dependency
+deprecation warnings; compileall, `pip check`, and `git diff --check` passed.
 
 No Windows Agent process, production config, Spotify request/playback, Siri
 voice flow, installed deployment, or executable Local AI fallback acceptance
