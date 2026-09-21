@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage A final synthesis / Stage B gate
+### 2026-09-21 Local AI Stage B adaptation design / Stage B not started
 
 Stage A is complete as an evidence inventory. The control plus all eight fixed
 candidates have a reviewed run, a reviewed historical result, or an explicit
@@ -15,9 +15,11 @@ The formal result is **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**.
 The control remains the only row with complete slot/full-semantic evidence
 (95.24% full semantic, 100% play recall, 100% unknown recall, 0% conditional
 expected-unknown false acceptance). Typed candidates are not equivalent to
-that control. `laya` and `decider` are named only as architecture-only future
-research candidates; neither is a Stage B finalist and no adaptation/training
-has begun.
+that control. `laya` and `decider` remain architecture-only research
+candidates; neither is a Stage B finalist. The separate design/corpus/training
+plan is recorded in
+[`docs/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md`](docs/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md).
+No adaptation, training, fine-tuning, or new model download has begun.
 
 All typed routes expose no track/artist/album slots. `systemone-lite`,
 `eve-rlcd`, `decider`, `Verdict-open-jev`, and
