@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage B corpus infrastructure / corpus not built / compute not authorized
+### 2026-09-21 Stage B pre-corpus gate / Memory RAG roadmap-only / compute not authorized
 
 PR #44, which recorded the Stage B adaptation design, is merged into `main`
 with merge commit `1ba8c335fd082acf891ea288483db543c1bd8b15`. The new
@@ -14,16 +14,26 @@ deterministic normalization, and manifest/hash reporting in
 [`scripts/local_ai_stage_b_corpus.py`](scripts/local_ai_stage_b_corpus.py), with
 focused coverage in
 [`tests/unit/test_local_ai_stage_b_corpus.py`](tests/unit/test_local_ai_stage_b_corpus.py).
-No real 3,000-row corpus has been generated or committed.
+PR #45's reviewed correction was subsequently merged into `main` with merge
+commit `cd53d9f1e5961a8a6246e00a73deea64c13fa452`. No real 3,000-row corpus has
+been generated or committed.
 
-The follow-up hardening in PR #45 keeps this infrastructure offline and
-benchmark-only: every corpus/stage path is lexically checked as a local path
-before I/O, all paths are prevalidated before any split is read, and direct
-`StageBRecord` construction receives the same security/sensitive-value scan as
-mapping input while freezing optional-slot status. The correction evidence is
-51 focused tests and 416 unit tests passed, plus compileall and git diff checks;
-this is source/unit evidence only, not real corpus, compute, production,
-Windows, Spotify, Siri, or model acceptance.
+The new pre-corpus gate freezes the separate authority/review/split/sealing
+protocol, a standard-library character n-gram near-duplicate policy with its
+synthetic calibration fixture and deterministic config hash, and a sanitized
+separate provenance-manifest helper. It remains offline and benchmark-only;
+the real corpus-build protocol is recorded in
+[`docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md`](docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md).
+The new-branch source evidence is **55 focused tests** and **420 unit tests**
+passed, with compileall and git diff checks passing; this remains source/unit
+evidence only, not real corpus, compute, production, Windows, Spotify, Siri, or
+model acceptance.
+
+Memory RAG / Personal RAG is documented as future research in
+[`docs/FUTURE_ROADMAP.md`](docs/FUTURE_ROADMAP.md) and `TASKS.md`. It is not
+implemented; current structured Semantic Memory remains the high-trust layer,
+retrieval remains untrusted evidence, and no vector storage, embeddings, or RAG
+runtime exists.
 
 Stage A is complete as an evidence inventory. The control plus all eight fixed
 candidates have a reviewed run, a reviewed historical result, or an explicit

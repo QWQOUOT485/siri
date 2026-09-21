@@ -1,0 +1,86 @@
+{
+  "fixture_version": 1,
+  "fixture_id": "stage_b_near_duplicate_policy_cases_v1",
+  "source": "synthetic_non_stage_a_policy_calibration",
+  "stage_a_inclusion": "none",
+  "training_use": "forbidden",
+  "pairs": [
+    {
+      "pair_id": "punctuation_only",
+      "left_text": "Play Example Band Blue Comet",
+      "right_text": "Play: Example Band, Blue Comet!",
+      "expected_relation": "duplicate",
+      "rationale": "Punctuation-only variation must collapse to one identity."
+    },
+    {
+      "pair_id": "whitespace_and_case",
+      "left_text": "Play Example Band Blue Comet",
+      "right_text": "PLAY  Example   Band   Blue Comet",
+      "expected_relation": "duplicate",
+      "rationale": "Case and spacing variation must collapse to one identity."
+    },
+    {
+      "pair_id": "fullwidth_nfkc",
+      "left_text": "Ｐｌａｙ Ｅｘａｍｐｌｅ Ｂａｎｄ Ｂｌｕｅ Ｃｏｍｅｔ",
+      "right_text": "Play Example Band Blue Comet",
+      "expected_relation": "duplicate",
+      "rationale": "NFKC/fullwidth variation must collapse to one identity."
+    },
+    {
+      "pair_id": "chinese_punctuation",
+      "left_text": "播放藍色彗星",
+      "right_text": "播放：藍色彗星！",
+      "expected_relation": "duplicate",
+      "rationale": "Chinese punctuation variation must collapse to one identity."
+    },
+    {
+      "pair_id": "mixed_language_spacing",
+      "left_text": "Play 藍色彗星",
+      "right_text": "Ｐｌａｙ藍色彗星",
+      "expected_relation": "duplicate",
+      "rationale": "Mixed Chinese/English spacing and width variation must collapse."
+    },
+    {
+      "pair_id": "asr_spelling_near_duplicate",
+      "left_text": "Play the Example Band Hypothetical Horizon",
+      "right_text": "Play the Example Band Hypothetical Horiz0n",
+      "expected_relation": "near_duplicate",
+      "rationale": "A small ASR-like spelling change keeps the same template/entity."
+    },
+    {
+      "pair_id": "one_character_title_change",
+      "left_text": "Play AB",
+      "right_text": "Play AX",
+      "expected_relation": "distinct",
+      "rationale": "A short one-character title change represents a different title."
+    },
+    {
+      "pair_id": "same_artist_different_track",
+      "left_text": "Play Example Band Blue Comet",
+      "right_text": "Play Example Band Red Planet",
+      "expected_relation": "distinct",
+      "rationale": "The same artist with a different track must not be rejected."
+    },
+    {
+      "pair_id": "different_request_family",
+      "left_text": "Play Example Band Blue Comet",
+      "right_text": "What is the album of Example Band Blue Comet",
+      "expected_relation": "distinct",
+      "rationale": "A materially different request family must remain distinct."
+    },
+    {
+      "pair_id": "partial_chinese_overlap",
+      "left_text": "播放藍色彗星",
+      "right_text": "不要播放藍色彗星",
+      "expected_relation": "distinct",
+      "rationale": "Partial Chinese overlap with a changed request must remain distinct."
+    },
+    {
+      "pair_id": "boilerplate_prefix",
+      "left_text": "Please play the song Blue Comet by Example Band",
+      "right_text": "Please play the song Red Planet by Other Band",
+      "expected_relation": "distinct",
+      "rationale": "A shared boilerplate prefix with different entities is not a duplicate."
+    }
+  ]
+}

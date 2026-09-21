@@ -2,15 +2,24 @@
 
 from __future__ import annotations
 
+import ast
 import copy
+import hashlib
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+NEAR_DUPLICATE_FIXTURE_PATH = (
+    REPO_ROOT / "tests" / "fixtures" / "stage_b_near_duplicate_policy_cases.json"
+)
+EXPECTED_NEAR_DUPLICATE_FIXTURE_SHA256 = (
+    "eadd304a4b6abfab262f2d4395edcd67d6eda9522b3020337517a73720dd6e85"
+)
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import local_ai_stage_b_corpus as corpus  # noqa: E402
@@ -82,10 +91,11 @@ def _unknown_row(
     language_tag: str = "en",
     negative_reason: str | None = "missing_track",
 ) -> dict[str, object]:
+    synthetic_token = hashlib.sha256(case_id.encode("utf-8")).hexdigest()[:12]
     return {
         "case_id": case_id,
         "source_group_id": f"group_{case_id}",
-        "utterance": f"Synthetic unknown request {case_id}",
+        "utterance": f"Synthetic unknown request {synthetic_token}",
         "language_tag": language_tag,
         "language_slice": {
             "zh-Hant": "chinese",
@@ -563,8 +573,141 @@ def test_direct_stage_b_record_acceptance_matches_mapping_and_freezes_slot_statu
     assert direct_result.manifest_json() == mapping_result.manifest_json()
 
 
-def test_near_duplicate_policy_is_explicitly_deferred_without_an_arbitrary_threshold() -> None:
-    result = corpus.inspect_near_duplicates([])
-    assert result.implemented is False
-    assert result.pairs == ()
-    assert "future corpus-build" in result.reason
+def test_near_duplicate_policy_fixture_is_frozen_and_uses_no_stage_a_rows() -> None:
+    payload = json.loads(NEAR_DUPLICATE_FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    assert payload["fixture_id"] == "stage_b_near_duplicate_policy_cases_v1"
+    assert payload["source"] == "synthetic_non_stage_a_policy_calibration"
+    assert payload["stage_a_inclusion"] == "none"
+    assert payload["training_use"] == "forbidden"
+    assert corpus._sha256_json(payload) == EXPECTED_NEAR_DUPLICATE_FIXTURE_SHA256
+    stage_a_utterances = corpus.load_stage_a_utterances()
+    fixture_texts = {
+        pair[field]
+        for pair in payload["pairs"]
+        for field in ("left_text", "right_text")
+    }
+    assert all(
+        corpus.canonicalize_for_comparison(text) not in stage_a_utterances
+        for text in fixture_texts
+    )
+
+    for pair in payload["pairs"]:
+        assert corpus.classify_near_duplicate(
+            pair["left_text"],
+            pair["right_text"],
+        ) == pair["expected_relation"]
+
+
+def test_near_duplicate_policy_is_order_invariant_and_manifest_serialized() -> None:
+    left = _unknown_row("policy_left")
+    right = _unknown_row("policy_right")
+    left["utterance"] = "Play the Example Band Hypothetical Horizon"
+    right["utterance"] = "Play the Example Band Hypothetical Horiz0n"
+    records = [
+        corpus.StageBRecord.from_mapping(left),
+        corpus.StageBRecord.from_mapping(right),
+    ]
+
+    first = corpus.inspect_near_duplicates(records)
+    second = corpus.inspect_near_duplicates(list(reversed(records)))
+
+    assert first.implemented is True
+    assert first.to_dict() == second.to_dict()
+    assert first.pairs == (("policy_left", "policy_right"),)
+    assert first.comparisons[0].relation == "near_duplicate"
+    assert first.config_sha256 == corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
+
+    result = corpus.validate_corpus(
+        {"train": [_unknown_row("manifest_only")]},
+        stage_a_path=None,
+    )
+    policy = result.manifest["near_duplicate_policy"]
+    assert policy["algorithm"] == "char_ngram_jaccard_exact_v1"
+    assert policy["ngram_size"] == 3
+    assert policy["similarity_threshold"] == 0.85
+    assert policy["config_sha256"] == corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
+
+    changed = replace(
+        corpus.DEFAULT_NEAR_DUPLICATE_CONFIG,
+        similarity_threshold=0.86,
+    )
+    assert changed.config_sha256 != corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
+
+
+def test_near_duplicate_policy_rejects_only_cross_split_pairs() -> None:
+    left = _unknown_row("cross_split_left")
+    right = _unknown_row("cross_split_right")
+    left["utterance"] = "Play the Example Band Hypothetical Horizon"
+    right["utterance"] = "Play the Example Band Hypothetical Horiz0n"
+
+    with pytest.raises(corpus.StageBLeakageError, match="near-duplicate"):
+        corpus.validate_corpus(
+            {"train": [left], "test": [right]},
+            stage_a_path=None,
+        )
+
+    same_split = corpus.validate_corpus(
+        {"train": [left, right]},
+        stage_a_path=None,
+    )
+    assert same_split.manifest["total_row_count"] == 2
+
+
+def test_provenance_manifest_is_sanitized_and_derived_from_validation_identity() -> None:
+    result = corpus.validate_corpus(
+        {"train": [_unknown_row("provenance_only")]},
+        stage_a_path=None,
+    )
+
+    provenance = corpus.build_provenance_manifest(
+        result,
+        corpus_protocol_version="stage-b-corpus-build-v1",
+        generator_version="synthetic-policy-v1",
+        generation_source="synthetic_policy_fixture",
+        reviewer_role_id="role:independent-reviewer",
+        review_status="independently_reviewed",
+        review_timestamp_policy="opaque review record id; no personal identity",
+        split_assignment_stage="group-aware-pre-seal",
+        validation_tool_version="local_ai_stage_b_corpus@unit-test",
+    )
+
+    assert provenance["canonical_corpus_sha256"] == result.manifest["corpus_sha256"]
+    assert provenance["final_split_sha256"] == result.manifest["split_sha256"]
+    assert provenance["near_duplicate_config_sha256"] == (
+        corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
+    )
+    assert len(provenance["provenance_sha256"]) == 64
+
+    with pytest.raises(corpus.StageBSchemaError):
+        corpus.build_provenance_manifest(
+            result,
+            corpus_protocol_version="stage-b-corpus-build-v1",
+            generator_version="synthetic-policy-v1",
+            generation_source="https://private.example/log",
+            reviewer_role_id=None,
+            review_status="pending",
+            review_timestamp_policy="opaque review record id",
+            split_assignment_stage="group-aware-pre-seal",
+            validation_tool_version="local_ai_stage_b_corpus@unit-test",
+        )
+
+
+def test_near_duplicate_policy_has_no_external_runtime_dependencies() -> None:
+    module = ast.parse(Path(corpus.__file__).read_text(encoding="utf-8"))
+    imported_roots = {
+        alias.name.split(".", 1)[0]
+        for node in ast.walk(module)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    imported_roots.update(
+        alias.name.split(".", 1)[0]
+        for node in ast.walk(module)
+        if isinstance(node, ast.ImportFrom)
+        and node.module is not None
+        for alias in node.names
+    )
+    assert imported_roots.isdisjoint(
+        {"requests", "httpx", "socket", "subprocess", "torch", "transformers"}
+    )
