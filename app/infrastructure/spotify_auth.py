@@ -9,6 +9,7 @@ import json
 import os
 import secrets
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -113,6 +114,8 @@ class SpotifyAuthManager:
         self.clock = clock
         self._pending_state: str | None = None
         self._pending_verifier: str | None = None
+        self._token_lock = threading.RLock()
+        self._refresh_generation = 0
 
     def begin_authorization(self) -> tuple[str, str]:
         if not self.client_id:
@@ -150,33 +153,76 @@ class SpotifyAuthManager:
             raise
         except Exception as exc:
             raise SpotifyAuthError("SPOTIFY_AUTH_FAILED", "Spotify 授權失敗，請稍後再試。") from exc
-        self.token_store.save(token)
+        with self._token_lock:
+            self.token_store.save(token)
         return token
 
     def get_access_token(self) -> str:
-        token = self.token_store.load()
-        if token is None:
-            raise SpotifyAuthError("SPOTIFY_AUTH_REQUIRED", "請先在 Windows Agent 完成 Spotify 授權。")
-        if token.expires_at > self.clock() + 60:
-            return token.access_token
-        return self.refresh_access_token(existing=token)
+        with self._token_lock:
+            token = self.token_store.load()
+            if token is None:
+                raise SpotifyAuthError("SPOTIFY_AUTH_REQUIRED", "請先在 Windows Agent 完成 Spotify 授權。")
+            if self._is_fresh(token):
+                return token.access_token
+            return self._refresh_access_token_locked(existing=token)
 
     def refresh_access_token(self, *, existing: SpotifyToken | None = None) -> str:
-        token = existing or self.token_store.load()
+        requested_generation = self._refresh_generation
+        with self._token_lock:
+            current = self.token_store.load()
+            if self._refresh_generation != requested_generation and current is not None and self._is_fresh(current):
+                return current.access_token
+            return self._refresh_access_token_locked(existing=existing, force=True)
+
+    def _refresh_access_token_locked(self, *, existing: SpotifyToken | None = None, force: bool = False) -> str:
+        """Refresh once while holding the process-local token lifecycle lock.
+
+        Re-reading the store after acquiring the lock lets a waiter reuse a
+        token saved by the preceding refresh instead of starting a second
+        provider request.  Failure only clears the exact token used for the
+        failed request, so a newer token saved by another lifecycle survives.
+        """
+
+        current = self.token_store.load()
+        if not force and current is not None and self._is_fresh(current):
+            return current.access_token
+        token = current or existing
         if token is None or not token.refresh_token:
-            self.token_store.clear()
+            self._clear_if_current(token)
             raise SpotifyAuthError("SPOTIFY_AUTH_REQUIRED", "Spotify 授權已失效，請重新授權。")
         try:
             response = self.client.refresh_token(self.client_id, token.refresh_token)
             refreshed = SpotifyToken.from_response(response, now=self.clock(), existing_refresh_token=token.refresh_token)
         except Exception as exc:
-            self.token_store.clear()
+            self._clear_if_current(token)
             raise SpotifyAuthError("SPOTIFY_AUTH_REQUIRED", "Spotify 授權已失效，請重新授權。") from exc
         self.token_store.save(refreshed)
+        self._refresh_generation += 1
         return refreshed.access_token
 
-    def safe_status(self) -> dict[str, Any]:
-        token = self.token_store.load()
+    def _is_fresh(self, token: SpotifyToken) -> bool:
+        return token.expires_at > self.clock() + 60
+
+    def _clear_if_current(self, token: SpotifyToken | None) -> None:
         if token is None:
-            return {"authorized": False}
-        return {"authorized": True, "expires_at": token.expires_at, "scope": token.scope}
+            return
+        current = self.token_store.load()
+        if current is not None and self._same_token(current, token):
+            self.token_store.clear()
+
+    @staticmethod
+    def _same_token(left: SpotifyToken, right: SpotifyToken) -> bool:
+        return (
+            left.access_token == right.access_token
+            and left.refresh_token == right.refresh_token
+            and left.expires_at == right.expires_at
+            and left.scope == right.scope
+            and left.token_type == right.token_type
+        )
+
+    def safe_status(self) -> dict[str, Any]:
+        with self._token_lock:
+            token = self.token_store.load()
+            if token is None:
+                return {"authorized": False}
+            return {"authorized": True, "expires_at": token.expires_at, "scope": token.scope}

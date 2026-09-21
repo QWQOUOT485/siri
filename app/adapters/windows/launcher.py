@@ -43,8 +43,8 @@ class WindowsLauncher:
                     return OperationResult(False, "Shell document is not an approved system tool", "INVALID_SYSTEM_TARGET")
                 os.startfile(spec.target)  # type: ignore[attr-defined]
                 return OperationResult(True, "System tool started")
-        except (OSError, PermissionError) as exc:
-            return OperationResult(False, "Windows could not start the application", "LAUNCH_FAILED", {"detail": str(exc)})
+        except (OSError, PermissionError):
+            return OperationResult(False, "Windows could not start the application", "LAUNCH_FAILED")
         return OperationResult(False, "Unsupported launch method", "INVALID_LAUNCH_METHOD")
 
     def _launch_executable(self, spec: LaunchSpec) -> OperationResult:
@@ -80,5 +80,5 @@ class WindowsWebsiteOpener:
         try:
             os.startfile(url)  # type: ignore[attr-defined]
             return OperationResult(True, "Website opened")
-        except OSError as exc:
-            return OperationResult(False, "Windows could not open the website", "WEBSITE_OPEN_FAILED", {"detail": str(exc)})
+        except OSError:
+            return OperationResult(False, "Windows could not open the website", "WEBSITE_OPEN_FAILED")

@@ -236,6 +236,8 @@ def test_lm_studio_adapter_is_loopback_only_and_transport_only():
     assert normalize_loopback_base_url("http://127.0.0.1:1234/v1/") == "http://127.0.0.1:1234/v1"
     for value in (
         "http://192.168.0.199:1234/v1",
+        "http://localhost:1234/v1",
+        "http://[::1]:1234/v1",
         "https://127.0.0.1:1234/v1",
         "http://user:password@127.0.0.1:1234/v1",
         "http://127.0.0.1:1234/v1?remote=true",
@@ -446,6 +448,42 @@ def test_command_shadow_mode_preserves_deterministic_user_behavior(fake_runtime)
     assert response.status_code == 200
     assert response.json()["error_code"] == "INVALID_COMMAND"
     assert calls == ["幫我放晴天"]
+
+
+def test_command_fallback_does_not_reexecute_successful_deterministic_action(fake_runtime):
+    runtime, *_ = fake_runtime
+    spotify_calls = []
+
+    class FakeSpotify:
+        def execute(self, command, *, source_text=None):
+            spotify_calls.append((command, source_text))
+            return OperationResult(True, "已播放。")
+
+    class NoAI:
+        model_id = "test-model"
+
+        def infer(self, _original_text):
+            raise AssertionError("deterministic success must not invoke Local AI")
+
+    runtime.command_service.spotify = FakeSpotify()
+    runtime.local_ai_service = LocalAIService(
+        mode="fallback",
+        fallback_approved=True,
+        adapter=NoAI(),
+    )
+    client = TestClient(create_app(runtime, refresh_on_startup=False, test_mode=True))
+
+    response = client.post(
+        "/command",
+        headers={"X-API-Key": "test-key"},
+        json={"text": "播放晴天"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["action"] == "spotify_play_track"
+    assert len(spotify_calls) == 1
+    assert spotify_calls[0][1] == "播放晴天"
 
 
 def test_command_shadow_retries_on_spotify_resolver_signal_without_executing_ai_action(fake_runtime):

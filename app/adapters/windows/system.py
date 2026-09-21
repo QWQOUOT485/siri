@@ -39,5 +39,5 @@ class WindowsSystemController:
         try:
             subprocess.Popen(["shutdown.exe", "/s", "/t", "0"], shell=False, close_fds=True)
             return OperationResult(True, "已送出關機要求。")
-        except OSError as exc:
-            return OperationResult(False, "Windows 無法執行關機。", "SHUTDOWN_FAILED", {"detail": str(exc)})
+        except OSError:
+            return OperationResult(False, "Windows 無法執行關機。", "SHUTDOWN_FAILED")
