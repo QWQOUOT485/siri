@@ -20,28 +20,26 @@ recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-
 
 目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
 
-## 2026-09-21 Independent Audit Hardening (unmerged)
+## 2026-09-21 Independent Audit Hardening
 
-The dedicated branch `codex/audit-hardening-20260921` contains independent
-audit hardening only. Spotify token lifecycle reads/writes and refreshes are
-serialized per process; concurrent expired-token callers share one provider
-refresh, while an explicit 401 refresh still forces a new provider request and
-an overlapping waiter reuses the completed refresh. Refresh failure clears
-only the token used by that failed request, preserving a newer token saved by
-another lifecycle.
+This source hardening slice serializes the process-local Spotify token
+lifecycle. Concurrent expired-token callers share one provider refresh;
+explicit refresh remains forced unless an overlapping refresh has already
+completed, in which case the waiter reuses it. Refresh failure clears only the
+token used by that failed request, preserving a newer token saved by another
+lifecycle.
 
 Windows launcher, media, shutdown, and volume adapters no longer expose raw OS
-exception details in operation results. Unit coverage also keeps system-app
-close operations away from the process controller. Local AI tests reject
-`localhost` and IPv6 loopback endpoints because production remains restricted
-to configured `127.0.0.1`, and the command route proves a successful
-deterministic action is executed exactly once even when the fallback gate is
-enabled.
+exception details in remote operation results. Unit coverage also keeps
+system-app close operations away from the process controller. Local AI tests
+cover rejection of `localhost` and IPv6 loopback endpoints, and the command
+route proves a successful deterministic action is executed exactly once even
+when the fallback gate is enabled.
 
-Current branch source evidence is **358 passed**; compileall, pip check, and
-git diff check passed. No live Spotify request, Siri voice E2E, Candidate
-Recovery semantic change, Semantic Memory enablement, Local AI promotion,
-installation, deployment, or merge was performed by this audit batch.
+Source evidence recorded for this slice is **358 passed**; compileall, pip
+check, and git diff check passed. No live Spotify calls or Siri voice E2E were
+run. No Candidate Recovery semantics were changed, Semantic Memory was not
+enabled, Local AI was not promoted, and no installed deployment was performed.
 
 ## v1.1 Candidate Recovery Phase 1B
 
