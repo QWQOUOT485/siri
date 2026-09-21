@@ -4,49 +4,40 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage A pilot
+### 2026-09-21 Local AI Stage A Batch 2A
 
-The evaluation-only three-model pilot is complete on branch
-`codex/local-ai-stage-a-benchmark-pilot`. The benchmark-only harness/adapters
-are committed at `928087d4c96fff3ef98549afb430b28f2ff2d4de`; the sanitized
-evidence is in
-[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md).
-The same frozen corpus contained 109 cases: 63 supported, 36
-deterministic-only, and 10 safety-only. Eligibility gating skipped 36/36
-deterministic-only and 10/10 safety-only rows; candidate-model safety
-classification on those rows was not evaluated. The supported distribution
-was 57 expected play and 6 expected unknown. Control, systemone-lite, and laya
-each completed all 109 rows with model load success. The control retained
-available slot evidence and **95.24% full semantic accuracy**; systemone-lite
-reached **90.48% top-level typed-intent accuracy** with 57/57 play recall but
-0/6 unknown recall, so its **100% conditional expected-unknown false-accept
-rate** (historical whole-corpus incidence: 5.50%, 6/109) is a safety
-regression that prevents treating it as an improvement or Stage B promotion
-candidate. It has no released slot extraction path, so true post-grounding
-evidence is unavailable. Laya multilingual reached **53.97% top-level
-typed-intent accuracy** (28/57 play recall, 6/6 unknown recall), also has no
-slot path, and does not support Stage B advancement.
+The evaluation-only Batch 2A run is complete on branch
+`codex/local-ai-stage-a-batch-2a`. Sanitized evidence is in
+[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md).
+Exactly `kev`, `eve-rlcd`, and `Verdict-open-jev` ran against the frozen 109
+case corpus: 63 supported, 36 deterministic-only, and 10 safety-only. Each
+candidate loaded and completed all 63 supported rows through the benchmark
+adapter; all 36 deterministic-only and 10 safety-only rows were eligibility
+gated and not sent to a model. The supported distribution was 57 expected
+play and 6 expected unknown.
 
-The RX 9070 XT / OpenCL/Vulkan hardware was read back, but the released
-systemone/laya Python paths ran CPU-only because this venv has `torch+cpu`, no
-CUDA/MPS, no ROCm tools, and no DirectML package. Their hardware-aligned
-status is `RX_9070_XT_BACKEND_BLOCKED`; the exploratory CPU quality runs are
-preserved, but their latency, throughput, and memory observations are not
-comparable RX GPU latency/throughput/VRAM evidence. The control retains its
-observed LM Studio loopback description with GPU/offload readback unqualified.
-The two pinned HF checkpoints remain under ignored runtime artifacts; no model
-weights, raw outputs, prompts, or credentials were committed. After adding
-strict result-schema coverage for the two typed-intent rate fields, focused
-Stage A/harness tests are **25 passed** and full source verification is
-**383 passed** with two existing dependency deprecation warnings; compileall,
-`pip check`, and diff check passed.
+The quality runs were CPU exploratory only because the RX 9070 XT-compatible
+Python backend remained unavailable (`RX_9070_XT_BACKEND_BLOCKED`). Kev reached
+15.87% typed-intent accuracy (4/57 play recall, 6/6 unknown recall). Eve
+reached 85.71% typed-intent accuracy (54/57 play recall, 0/6 unknown recall),
+and Verdict reached 90.48% (57/57 play recall, 0/6 unknown recall). Eve and
+Verdict therefore each had a 100% conditional expected-unknown false-accept
+rate; neither is a Stage B candidate. None of these typed routes emits
+track/artist/album slots, so full semantic and post-grounding evidence is not
+available. No candidate was selected or promoted.
 
-This pilot is research evidence only and does not change production authority:
-no model is production approved, no Stage B selection has been made,
+Weights, source checkouts, and raw observations remain under ignored runtime
+paths; no weights or raw outputs were committed. The benchmark-only adapter
+seam does not import production `app` and does not alter production authority.
 `LOCAL_AI_MODE` and `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged; no
-Windows, Spotify, Siri, or installed deployment acceptance was run. The
-remaining fixed candidates were intentionally not expanded in this pilot;
-review is required before any Stage B adaptation or candidate expansion.
+Stage B training, remaining-candidate expansion, Windows, Spotify, Siri,
+deployment, or executable fallback acceptance was run. Independent review is
+required before any candidate expansion or Stage B work.
+
+Post-change source verification passed: focused Stage A/harness tests **26
+passed**, full pytest **384 passed** with two existing dependency deprecation
+warnings, compileall passed, `pip check` passed in the evaluation venv, and
+`git diff --check` passed.
 
 **v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only

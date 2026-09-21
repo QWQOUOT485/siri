@@ -23,6 +23,8 @@ class CandidateSpec:
     model_id: str | None = None
     repository_revision: str | None = None
     model_revision: str | None = None
+    base_model: str | None = None
+    base_model_revision: str | None = None
     license: str | None = None
     parameter_count: int | None = None
     model_file_bytes: int | None = None
@@ -68,14 +70,30 @@ FIXED_CANDIDATES: tuple[CandidateSpec, ...] = (
         backbone="Qwen2.5-0.5B",
         inference_route="LoRA + trained pointer/readout decision head",
         upstream_reference="https://github.com/jaredpalmer/kev",
-        expected_backend_compatibility="AMD backend compatibility unverified",
+        expected_backend_compatibility="published CUDA/MPS path; RX 9070 XT compatibility unverified",
+        model_id="jaredpalmer/kev-0.5b",
+        repository_revision="e0bcf50153f1bda4ca6a8be5e12cbd5f9ebbce1c",
+        model_revision="2679c20e6dde32fb3c4f97ecdad2e6e92bb88a06",
+        base_model="Qwen/Qwen2.5-0.5B",
+        base_model_revision="060db6499f32faf8b98477b0a26969ef7d8b9987",
+        license="Apache-2.0 adapter/head; Apache-2.0 Qwen2.5 base",
+        parameter_count=494_032_768,
+        model_file_bytes=37_074_383,
     ),
     CandidateSpec(
         candidate_name="eve-rlcd",
         backbone="Qwen3-0.6B-Base",
         inference_route="supervised warmup + RLCD-style calibrated decision training",
         upstream_reference="https://github.com/anthony-maio/eve-rlcd",
-        expected_backend_compatibility="AMD backend compatibility unverified",
+        expected_backend_compatibility="published CUDA path; RX 9070 XT compatibility blocked in current venv",
+        model_id="anthonym21/qwen3-0.6b-rlcd-decision",
+        repository_revision="57a179b7b1bedc80f65bf42ccda129dd1888272f",
+        model_revision="b327ec5efb5fdbf8bfafa3b369720ac5f6434b05",
+        base_model="Qwen/Qwen3-0.6B-Base",
+        base_model_revision="da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+        license="MIT code; Apache-2.0 Qwen3 weights/base",
+        parameter_count=596_049_920,
+        model_file_bytes=2_384_233_112,
     ),
     CandidateSpec(
         candidate_name="decider",
@@ -109,7 +127,15 @@ FIXED_CANDIDATES: tuple[CandidateSpec, ...] = (
         backbone="ModernBERT ~151M",
         inference_route="very small non-autoregressive encoder decision engine",
         upstream_reference="https://github.com/Heman10x-NGU/Verdict-open-jev",
-        expected_backend_compatibility="AMD encoder backend compatibility unverified",
+        expected_backend_compatibility="documented CPU ONNX path; RX 9070 XT path unverified",
+        model_id="heman10x/rlcd-modernbert-151m",
+        repository_revision="30f15564821626ca5c1ad5b2638c4eb7078787dd",
+        model_revision="8af2496eb63c7fa66d7d234e1f62629380030eb4",
+        base_model="knowledgator/gliclass-modern-base-v2.0 / ModernBERT-base",
+        base_model_revision="9320398ab6ca50946e2edcb9ec89649c0274c978",
+        license="Apache-2.0 license text; GitHub classifier unasserted; HF card Apache-2.0",
+        parameter_count=151_378_176,
+        model_file_bytes=605_529_340,
     ),
     CandidateSpec(
         candidate_name="open-jev-deberta-v3-large",
