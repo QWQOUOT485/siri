@@ -1233,6 +1233,9 @@ def build_provenance_manifest(
 
 NEAR_DUPLICATE_POLICY_VERSION = "stage-b-near-duplicate-v1"
 NEAR_DUPLICATE_NORMALIZATION = "NFKC+casefold+remove-punctuation-and-whitespace"
+FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256 = (
+    "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1306,7 +1309,7 @@ DEFAULT_NEAR_DUPLICATE_CONFIG = NearDuplicateConfig()
 def _require_frozen_protocol_near_duplicate_config(
     config: NearDuplicateConfig,
 ) -> None:
-    if config.config_sha256 != DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256:
+    if config.config_sha256 != FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256:
         raise StageBProtocolError(
             "final protocol validation requires the frozen near-duplicate config hash"
         )

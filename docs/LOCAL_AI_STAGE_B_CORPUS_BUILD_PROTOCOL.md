@@ -116,6 +116,11 @@ near-duplicate configuration hash equals:
 64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7
 ```
 
+The implementation stores this value as the literal
+`FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256`; it is not derived from the
+mutable default configuration. The default configuration is tested separately
+to ensure it still matches this reviewed identity.
+
 This protects every frozen field, including the algorithm, normalization,
 n-gram size, threshold, cross-split mode, and retained SimHash advisory
 metadata. An alternate configuration is not silently replaced. It may be used

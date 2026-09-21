@@ -673,6 +673,14 @@ def test_authoritative_cross_split_comparison_does_not_prune_on_simhash(
 
 
 def test_final_protocol_requires_the_frozen_near_duplicate_config() -> None:
+    assert corpus.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256 == (
+        "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7"
+    )
+    assert (
+        corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
+        == corpus.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256
+    )
+
     alternate_configs = (
         replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, similarity_threshold=0.86),
         replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, ngram_size=4),
