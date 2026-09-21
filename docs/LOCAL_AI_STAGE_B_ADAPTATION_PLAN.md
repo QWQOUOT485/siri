@@ -35,8 +35,8 @@ The reviewed released rows explain why adaptation is research-only:
 
 | Candidate | Pinned identity | Reviewed Stage A limitation relevant to Stage B |
 |---|---|---|
-| `laya` | source `NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527`; model `convaiinnovations/laya-multilingual@052592a15d198d9ad47da779604259b10b47b7aa`; 321,908,998 parameters | 53.97% typed intent, 49.12% play recall, 100% unknown recall, 50.98% Chinese / 50% mixed, no slots, CPU-only exploratory timing, RX 9070 XT backend blocked |
-| `decider` | source `Mapika/decider@c4daaac28af9fea95d627015cffa2dd5a5926ee6`; model `Mapika/decider-2b@b37f7e1ba3fbc9238004cf531fabbee2619973fd`; 1,881,825,088 parameters | 79.37% typed intent, 87.72% play recall, 0% unknown recall, 6/6 conditional false accepts, no slots, CPU P95 836.4 ms, RX 9070 XT backend blocked; exact base-model revision is not declared |
+| `laya` | source [`NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527`](https://github.com/NandhaKishorM/laya/commit/42626c348753fbb17572a813127df2278a1ec527); model `convaiinnovations/laya-multilingual@052592a15d198d9ad47da779604259b10b47b7aa`; 321,908,998 parameters | 53.97% typed intent, 49.12% play recall, 100% unknown recall, 50.98% Chinese / 50% mixed, no slots, CPU-only exploratory timing, RX 9070 XT backend blocked |
+| `decider` | source [`Mapika/decider@c4daaac28af9fea95d627015cffa2dd5a5926ee6`](https://github.com/Mapika/decider/commit/c4daaac28af9fea95d627015cffa2dd5a5926ee6); model `Mapika/decider-2b@b37f7e1ba3fbc9238004cf531fabbee2619973fd`; 1,881,825,088 parameters | 79.37% typed intent, 87.72% play recall, 0% unknown recall, 6/6 conditional false accepts, no slots, CPU P95 836.4 ms, RX 9070 XT backend blocked; exact base-model revision is not declared |
 
 These values are historical Stage A evidence, not a new inference run. See the
 comparison rows and research-candidate rationale in the
@@ -101,13 +101,41 @@ without explicit class weighting, balanced sampling, and class-wise reporting.
 The report must show denominators for every slice; overall accuracy is never a
 gate by itself.
 
-Each split must contain all of the following where applicable, with the test
-set containing at least 100 `zh-Hant` rows and at least 100 mixed
-Chinese/English rows, and each of those slices containing both supported play
-and semantic-unknown examples:
+Each split must contain all of the following where applicable. The corpus
+manifest carries two closed language fields:
 
-- `language_slice`: one of `chinese`, `english`, or `mixed`, using the existing
-  benchmark vocabulary;
+- `language_tag`: exactly one of `zh-Hant`, `zh-Hans`, `en`, or `mixed`;
+- `language_slice`: the existing coarse benchmark field, exactly one of
+  `chinese`, `english`, or `mixed` (`zh-Hant` and `zh-Hans` map to
+  `chinese`; this field is compatibility metadata, not the Traditional/
+  Simplified gate).
+
+The held-out test must contain at least **100 supported rows** with
+`language_tag=zh-Hant` and at least **100 supported rows** with
+`language_tag=mixed`. Each required slice must contain at least 40 supported
+play rows and 40 model-eligible semantic-unknown rows. The Traditional and
+mixed gates use these manifest labels and never infer script from model output,
+free-form reports, or post-hoc text guesses. The report must print exact
+success numerator/denominator for each required slice, over the fixed
+supported rows in that slice.
+
+The held-out supported-play rows must also satisfy this immutable optional-slot
+coverage contract before any corpus is generated:
+
+- `artist` present: at least **150 / 300** supported-play rows;
+- `artist` absent but applicable: at least **100 / 300** supported-play rows;
+- `album` present: at least **100 / 300** supported-play rows;
+- `album` absent but applicable: at least **150 / 300** supported-play rows.
+
+These are minimum denominators, not targets to be reduced after seeing model
+performance. `track` is present and required on all 300 supported-play rows.
+The validator must reject a held-out manifest that does not meet these counts.
+If a future corpus has more than a minimum, all such labeled rows remain in
+the fixed denominator and the pass count is `ceil(0.95 * actual_denominator)`;
+rows may not be sampled out after results are known.
+
+Each split must contain all of the following where applicable:
+
 - named track positives, with track-only, artist-plus-track, and
   artist/album-plus-track forms;
 - semantic unknowns, incomplete requests, and boundary-confusing requests;
@@ -146,17 +174,50 @@ track or catalog target.
 
 Each sanitized record has a stable opaque case ID and no user/account identity:
 
+#### Immutable span-offset convention
+
+Every non-null `track`, `artist`, or `album` span uses **0-based,
+end-exclusive** offsets into the original stored `utterance`. Offsets use
+Unicode Python `str` code-point indexing exactly as Python slicing represents
+it; they are not UTF-8 byte offsets, UTF-16 code-unit offsets, token indices,
+or offsets into normalized text. The required invariant is:
+
+```text
+utterance[start:end] == span["text"]
+```
+
+Annotation offsets are calculated before any Unicode, Traditional/Simplified,
+case, whitespace, punctuation, or other normalization. Normalization may be
+used for comparison and leakage detection only; it must never rewrite the
+stored utterance or alter annotation offsets. The validator must reject:
+
+- negative `start` or `end` values;
+- `end <= start`;
+- `start` or `end` beyond `len(utterance)` under Python code-point indexing;
+- any text mismatch with `utterance[start:end]`;
+- offsets that can only be reproduced from normalized text rather than the
+  original stored utterance;
+- overlapping or otherwise impossible span structures, unless a future
+  schema version explicitly declares that overlap for a particular label.
+
+For this plan's non-overlapping `track` / `artist` / `album` labels, spans
+must be pairwise disjoint and ordered by their original offsets. The example
+below is mechanically checked by
+`tests/unit/test_stage_b_adaptation_plan.py`; the correct values for the
+stored example are `artist=4:14` and `track=17:32`.
+
 ```json
 {
   "case_id": "sb2_group_00421_variant_03",
   "source_group_id": "template_artist_track_00421",
   "utterance": "幫我播 The Weeknd 的 Blinding Lights",
+  "language_tag": "mixed",
   "language_slice": "mixed",
   "ai_scope": "supported",
   "expected": {
     "intent": "spotify_play_track",
-    "track": {"text": "Blinding Lights", "start": 24, "end": 39},
-    "artist": {"text": "The Weeknd", "start": 8, "end": 18},
+    "track": {"text": "Blinding Lights", "start": 17, "end": 32},
+    "artist": {"text": "The Weeknd", "start": 4, "end": 14},
     "album": null
   },
   "negative_reason": null,
@@ -223,9 +284,12 @@ For every candidate, report at least:
 - play recall, unknown recall, balanced accuracy, and conditional
   expected-unknown false acceptance;
 - full semantic accuracy after intent plus all applicable slot boundaries;
-- track, artist, and album accuracy separately, including correct `null`
-  handling and exact boundary recovery;
-- Traditional Chinese and mixed Chinese/English slice accuracy with
+- track presence recall and exact-span/grounding accuracy on all 300 required
+  track rows;
+- for each optional slot, presence recall, exact-span accuracy when present,
+  absence specificity/correct-null rate when absent, and a combined result only
+  as an additional summary;
+- `language_tag=zh-Hant` and `language_tag=mixed` slice accuracy with exact
   denominators;
 - Brier score and ECE for every exposed probability, calibrated without test
   labels;
@@ -234,6 +298,20 @@ For every candidate, report at least:
 - P50/P95 end-to-end latency, model load time, peak VRAM/RAM, and throughput
   only when the backend is qualified;
 - option-order flip rate for typed option heads and span invalidity rate.
+
+The report must print exact numerator/denominator for every gated slot metric,
+not only rounded percentages. For an optional slot, the required form is:
+
+```text
+presence_recall = present_rows_with_any_valid_span / present_rows
+present_exact_span = present_rows_with_exact_text_and_boundaries / present_rows
+absence_specificity = absent_rows_returned_null / absent_rows
+combined_slot_summary = (present_exact_span_count + absent_correct_null_count)
+                         / (present_rows + absent_rows)
+```
+
+`combined_slot_summary` is informative only. A null-heavy model cannot pass by
+compensating for failed presence or exact-span gates with correct nulls.
 
 The evaluator must use the existing benchmark result vocabulary and preserve
 the distinction between `supported`, `deterministic_only`, and `safety_only`.
@@ -245,18 +323,18 @@ No live Spotify or Windows action is part of this evaluation.
 
 The pinned laya implementation builds a sequence with question instructions,
 option markers, and the user state, then records marker positions
-([`common.py`](../runtime/ai_poc/upstream-batch-2b/laya/laya/common.py#L49-L86)).
+([`common.py`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/common.py#L45-L128)).
 Its `DecisionModel` contains the multilingual encoder, optional Transformer
 head, question-type embedding, marker scorer, and action head
-([`common.py`](../runtime/ai_poc/upstream-batch-2b/laya/laya/common.py#L89-L126)).
+([same upstream `common.py`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/common.py#L89-L126)).
 `system_one()` runs typed questions in one parallel forward pass and returns
 choices, probabilities, confidence, and zero output tokens
-([`agent.py`](../runtime/ai_poc/upstream-batch-2b/laya/laya/agent.py#L240-L345)).
+([`agent.py`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L218-L313)).
 
 The Stage B adapter must preserve the released checkpoint's
 `encoder.`, `type_emb.`, `scorer.`, and `act_head.` compatibility prefixes and
 must not silently load a different architecture
-([loader compatibility check](../runtime/ai_poc/upstream-batch-2b/laya/laya/agent.py#L49-L93)).
+([upstream loader compatibility check](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L46-L87)).
 The benchmark-only adapter currently forces `device="cpu"` and exposes only
 the typed intent, with slot evidence explicitly unavailable
 ([laya adapter](../scripts/local_ai_stage_a_adapters.py#L423-L464),
@@ -320,14 +398,17 @@ expose state-token positions and hidden states; it does not modify production
 The pinned decider model runs a causal LM once, selects hidden states at
 answer slots, and projects them through the base LM head onto bounded option
 letters; invalid options are masked
-([`model.py`](../runtime/ai_poc/upstream-batch-2b/decider/decider/model.py#L7-L28)).
-Its inference API returns typed choices and probabilities in one forward pass,
-with an `abstain_below` threshold but no trained guarantee that abstention is
-semantically safe
-([`infer.py`](../runtime/ai_poc/upstream-batch-2b/decider/decider/infer.py#L55-L118)).
+([`model.py`](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/model.py#L5-L24)).
+Its `decide_batch` API returns typed choices and probabilities from one
+batched scoring pass, while its `system_one` interface may split independent
+rows into multiple forward batches. Both surfaces have an `abstain_below`
+threshold but no trained guarantee that abstention is semantically safe
+([typed inference](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L48-L107),
+[system_one chunking](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L130-L165)).
 The released training script currently uses full-model `.cuda()`, CE with an
 optional Brier term, and no Agent-specific slot task
-([`train.py`](../runtime/ai_poc/upstream-batch-2b/decider/decider/train.py#L42-L138)).
+([loss](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/train.py#L38-L47),
+[training path](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/train.py#L49-L130)).
 
 ### 6.2 Proposed structured head
 
@@ -340,7 +421,7 @@ options.
    both on hard unknowns. Do not rely on the literal `none of the above` phrase
    as an abstention feature; the released inference code itself documents that
    earlier training learned that literal string as a special signal
-   ([neutralization](../runtime/ai_poc/upstream-batch-2b/decider/decider/infer.py#L26-L40)).
+   ([neutralization](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L23-L36)).
 2. **Span extraction:** expose the full hidden-state sequence from the single
    base forward pass. Add typed span answer markers for `track`, `artist`, and
    `album`; each marker's hidden state is a query for a pointer-style start and
@@ -371,9 +452,11 @@ required track, slots, and AMD backend all pass the frozen gates.
 
 ### 6.3 decider-specific stop conditions
 
-- The current CUDA-graph engine is not an AMD qualification. If the chosen
-  backend cannot run the one-pass model without an undocumented fallback, stop
-  and record an explicit backend blocker.
+- The released CUDA-graph branch is selected for CUDA devices and imports the
+  project engine ([upstream selection](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L55-L76));
+  it is not an AMD qualification. If the chosen backend cannot run the
+  declared one-pass `decide_batch` path without an undocumented fallback,
+  stop and record an explicit backend blocker.
 - If pointer candidates include prompt text, answer markers, or padding, stop
   before quality evaluation.
 - Any validation unknown false acceptance or null/required-track disagreement
@@ -393,7 +476,7 @@ The recorded environment currently has CPU-only PyTorch; Vulkan/OpenCL probes
 exist, but ROCm tooling and DirectML support were not established. Stage A
 therefore treated all non-control timings as CPU exploratory evidence. Laya's
 loader explicitly falls back to CPU when CUDA/MPS is unavailable or placement
-fails ([laya device fallback](../runtime/ai_poc/upstream-batch-2b/laya/laya/agent.py#L155-L227));
+fails ([laya device fallback](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L140-L207));
 the Stage B harness must disable that behavior for qualification and fail if
 the actual device is CPU.
 
@@ -468,12 +551,17 @@ hardware gate.
 | Supported unknown recall | **100%** on all 240 model-eligible semantic-unknown rows |
 | Conditional expected-unknown false acceptance | **0%**; no model-eligible expected-unknown row accepted as play |
 | Supported play recall | **>=95%** on all 300 supported play rows |
-| Track slot accuracy | **>=95%**, including required presence and exact boundary/grounding behavior |
-| Artist slot accuracy | **>=95%** over evaluated presence and absence cases |
-| Album slot accuracy | **>=95%** over evaluated presence and absence cases where applicable |
+| Track required presence recall | **>=95%**; at least 285 / 300 held-out supported-play rows must return a valid grounded track span |
+| Track exact-span/grounding accuracy | **>=95%**; at least 285 / 300 held-out supported-play rows must match text and boundaries |
+| Artist presence recall | **>=95%** on the fixed artist-present denominator (at least 143 / 150) |
+| Artist exact-span accuracy when present | **>=95%** on the same fixed present denominator (at least 143 / 150) |
+| Artist absence specificity / correct-null rate | **>=95%** on the fixed artist-absent denominator (at least 95 / 100) |
+| Album presence recall | **>=95%** on the fixed album-present denominator (at least 95 / 100) |
+| Album exact-span accuracy when present | **>=95%** on the same fixed present denominator (at least 95 / 100) |
+| Album absence specificity / correct-null rate | **>=95%** on the fixed album-absent denominator (at least 143 / 150) |
 | Full semantic accuracy | **>=95%** after intent plus all applicable slots |
-| Traditional Chinese slice | **>=95%** with the predeclared minimum denominator |
-| Mixed Chinese/English slice | **>=95%** with the predeclared minimum denominator |
+| `language_tag=zh-Hant` slice | **>=95%** over the fixed supported-row denominator |
+| `language_tag=mixed` slice | **>=95%** over the fixed supported-row denominator |
 | Calibration | Brier **<=0.10** and ECE **<=0.05** wherever probabilities are exposed |
 | Deterministic/safety gate | 100% safe-unknown; no gated row reaches the model unexpectedly |
 | Post-grounding false acceptance | **0%** |
@@ -481,9 +569,13 @@ hardware gate.
 | Backend/hardware | Qualified RX 9070 XT 16 GB load/readback, no CPU fallback or backend blocker |
 | Operational latency | P95 **<=250 ms** under the fixed qualified protocol |
 
-For the optional slots, accuracy is computed over both present and absent
-labels; a model cannot obtain a slot pass by always returning null. All metrics
-must include counts and confidence intervals or exact numerator/denominator.
+The optional-slot coverage minima and all numerators/denominators are frozen
+before corpus generation. Every artist and album row above is an independent
+conjunctive gate: a failed presence recall, present exact-span result, or
+absence specificity fails the candidate even if a combined aggregate is high.
+The combined optional-slot summary is reported for context only and cannot
+waive any of those gates. All metrics must include exact counts and, where
+used, confidence intervals; percentages alone are insufficient.
 
 Even a complete Stage B research pass does not change the production gates:
 the deterministic parser, grounding, policy, production-aligned shadow, real
@@ -548,11 +640,12 @@ any separate production task is even considered.
 
 - [Benchmark protocol](LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md#L69-L191)
 - [Stage A final gate and thresholds](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L136-L210)
-- [laya sequence/model](../runtime/ai_poc/upstream-batch-2b/laya/laya/common.py#L49-L126)
-- [laya loader and typed inference](../runtime/ai_poc/upstream-batch-2b/laya/laya/agent.py#L49-L345)
-- [decider model/readout](../runtime/ai_poc/upstream-batch-2b/decider/decider/model.py#L7-L28)
-- [decider typed inference](../runtime/ai_poc/upstream-batch-2b/decider/decider/infer.py#L55-L176)
-- [decider training path](../runtime/ai_poc/upstream-batch-2b/decider/decider/train.py#L42-L138)
+- [laya sequence/model](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/common.py#L45-L128)
+- [laya loader compatibility/device behavior](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L46-L207)
+- [laya typed inference](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L218-L313)
+- [decider model/readout](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/model.py#L5-L24)
+- [decider typed inference and system_one](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L23-L165)
+- [decider training path](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/train.py#L38-L130)
 - [pinned benchmark adapters](../scripts/local_ai_stage_a_adapters.py#L286-L314)
 - [benchmark result schema](../scripts/local_ai_benchmark_harness.py#L191-L253)
 - [security invariants](SECURITY.md#L101-L118)
