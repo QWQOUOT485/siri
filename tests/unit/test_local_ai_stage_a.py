@@ -58,4 +58,3 @@ def test_language_slice_is_bounded_and_non_authoritative():
     assert language_slice("Play 晴天") == "mixed"
     assert language_slice("Play Flowers") == "english"
     assert language_slice("123 / ?") is None
-
