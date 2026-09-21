@@ -92,6 +92,12 @@ def _require_bool(name: str, value: Any) -> bool:
     return value
 
 
+def _require_count(name: str, value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise BenchmarkSchemaError(f"{name} must be a non-negative integer")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class CorpusIdentity:
     relative_path: str
@@ -397,8 +403,21 @@ class BenchmarkResult:
     precision: str
     quantization: str
     hardware_identity: str
+    hardware_alignment_status: str
+    quality_run_status: str
     route: str
     case_count: int
+    supported_case_count: int
+    candidate_model_evaluated_supported_case_count: int
+    supported_expected_play_case_count: int
+    supported_expected_unknown_case_count: int
+    play_true_positive_count: int
+    play_recall: float | None
+    unknown_true_negative_count: int
+    unknown_recall: float | None
+    balanced_intent_accuracy: float | None
+    deterministic_only_cases_not_sent_to_model: int
+    safety_only_cases_not_sent_to_model: int
     model_load_success: bool
     transport_success_rate: float | None
     typed_output_schema_success_rate: float | None
@@ -407,9 +426,12 @@ class BenchmarkResult:
     entity_slot_evaluation_available: bool
     semantic_retry_accuracy: float | None
     semantic_retry_intent_accuracy: float | None
-    deterministic_only_safe_unknown: float | None
-    safety_only_safe_unknown: float | None
+    deterministic_only_eligibility_gate_safe_unknown_rate: float | None
+    safety_only_eligibility_gate_safe_unknown_rate: float | None
     false_execution_rate: float | None
+    expected_unknown_false_accept_count: int
+    expected_unknown_false_accept_rate: float | None
+    expected_unknown_false_acceptance_incidence_rate: float | None
     post_grounding_false_acceptance_rate: float | None
     malformed_output_rate: float | None
     timeout_rate: float | None
@@ -438,11 +460,42 @@ class BenchmarkResult:
             "precision",
             "quantization",
             "hardware_identity",
+            "hardware_alignment_status",
+            "quality_run_status",
             "route",
         ):
             _require_text(name, getattr(self, name))
         if isinstance(self.case_count, bool) or not isinstance(self.case_count, int) or self.case_count < 1:
             raise BenchmarkSchemaError("case_count must be a positive integer")
+        for name in (
+            "supported_case_count",
+            "candidate_model_evaluated_supported_case_count",
+            "supported_expected_play_case_count",
+            "supported_expected_unknown_case_count",
+            "play_true_positive_count",
+            "unknown_true_negative_count",
+            "deterministic_only_cases_not_sent_to_model",
+            "safety_only_cases_not_sent_to_model",
+            "expected_unknown_false_accept_count",
+        ):
+            _require_count(name, getattr(self, name))
+        if self.supported_case_count > self.case_count:
+            raise BenchmarkSchemaError("supported_case_count cannot exceed case_count")
+        if self.candidate_model_evaluated_supported_case_count > self.supported_case_count:
+            raise BenchmarkSchemaError(
+                "candidate_model_evaluated_supported_case_count cannot exceed supported_case_count"
+            )
+        if (
+            self.supported_expected_play_case_count + self.supported_expected_unknown_case_count
+            > self.supported_case_count
+        ):
+            raise BenchmarkSchemaError("supported intent class counts cannot exceed supported_case_count")
+        if self.play_true_positive_count > self.supported_expected_play_case_count:
+            raise BenchmarkSchemaError("play_true_positive_count exceeds expected play count")
+        if self.unknown_true_negative_count > self.supported_expected_unknown_case_count:
+            raise BenchmarkSchemaError("unknown_true_negative_count exceeds expected unknown count")
+        if self.expected_unknown_false_accept_count > self.supported_expected_unknown_case_count:
+            raise BenchmarkSchemaError("expected unknown false accepts exceed expected unknown count")
         _require_bool("model_load_success", self.model_load_success)
         _require_bool("entity_slot_evaluation_available", self.entity_slot_evaluation_available)
         for name in (
@@ -450,9 +503,14 @@ class BenchmarkResult:
             "typed_output_schema_success_rate",
             "supported_semantic_accuracy",
             "semantic_retry_accuracy",
-            "deterministic_only_safe_unknown",
-            "safety_only_safe_unknown",
+            "play_recall",
+            "unknown_recall",
+            "balanced_intent_accuracy",
+            "deterministic_only_eligibility_gate_safe_unknown_rate",
+            "safety_only_eligibility_gate_safe_unknown_rate",
             "false_execution_rate",
+            "expected_unknown_false_accept_rate",
+            "expected_unknown_false_acceptance_incidence_rate",
             "post_grounding_false_acceptance_rate",
             "malformed_output_rate",
             "timeout_rate",
@@ -534,6 +592,8 @@ def aggregate_observations(
         "precision",
         "quantization",
         "hardware_identity",
+        "hardware_alignment_status",
+        "quality_run_status",
         "route",
     )
     for key in required_metadata:
@@ -542,16 +602,54 @@ def aggregate_observations(
     supported = [item for item in observations if item.ai_scope == "supported"]
     semantic_supported = [item for item in supported if item.semantic_evaluated]
     intent_supported = [item for item in supported if item.intent_ok is not None]
+    expected_play = [
+        item for item in supported if item.expected_intent == "spotify_play_track"
+    ]
+    expected_unknown = [item for item in supported if item.expected_intent == "unknown"]
+    play_true_positive_count = sum(item.intent_ok is True for item in expected_play)
+    unknown_true_negative_count = sum(item.intent_ok is True for item in expected_unknown)
+    expected_unknown_false_accept_count = sum(
+        item.intent_ok is not None and item.actual_intent != "unknown"
+        for item in expected_unknown
+    )
     retry = [
         item for item in observations if item.category == "semantic_retry" and item.semantic_evaluated
     ]
     retry_intent = [
         item for item in observations if item.category == "semantic_retry" and item.intent_ok is not None
     ]
-    deterministic = [item for item in observations if item.ai_scope == "deterministic_only"]
-    safety = [item for item in observations if item.ai_scope == "safety_only"]
+    deterministic = [
+        item
+        for item in observations
+        if item.ai_scope == "deterministic_only" and not item.inference_attempted
+    ]
+    safety = [
+        item
+        for item in observations
+        if item.ai_scope == "safety_only" and not item.inference_attempted
+    ]
+    grounding_supported = [
+        item for item in semantic_supported if item.slot_evidence_available
+    ]
     latencies = [item.latency_ms for item in attempted if item.latency_ms is not None]
     brier, ece = _calibration_metrics(observations)
+
+    play_recall = _rate(expected_play, lambda item: item.intent_ok is True)
+    unknown_recall = _rate(expected_unknown, lambda item: item.intent_ok is True)
+    balanced_intent_accuracy = (
+        round((play_recall + unknown_recall) / 2, 4)
+        if play_recall is not None and unknown_recall is not None
+        else None
+    )
+    expected_unknown_false_accept_rate = _rate(
+        expected_unknown,
+        lambda item: item.intent_ok is not None and item.actual_intent != "unknown",
+    )
+    expected_unknown_false_acceptance_incidence_rate = (
+        round(expected_unknown_false_accept_count / len(observations), 4)
+        if observations
+        else None
+    )
 
     language_metrics: dict[str, float] = {}
     for language in sorted({item.language_slice for item in semantic_supported if item.language_slice}):
@@ -573,7 +671,7 @@ def aggregate_observations(
         ("artist", "artist_slot_ok"),
         ("album", "album_slot_ok"),
     ):
-        slot_rows = [item for item in supported if getattr(item, attribute) is not None]
+        slot_rows = [item for item in grounding_supported if getattr(item, attribute) is not None]
         accuracy = _rate(slot_rows, lambda item, attr=attribute: bool(getattr(item, attr)))
         if accuracy is not None:
             slot_metrics[name] = accuracy
@@ -592,27 +690,43 @@ def aggregate_observations(
         precision=str(metadata["precision"]),
         quantization=str(metadata["quantization"]),
         hardware_identity=str(metadata["hardware_identity"]),
+        hardware_alignment_status=str(metadata["hardware_alignment_status"]),
+        quality_run_status=str(metadata["quality_run_status"]),
         route=str(metadata["route"]),
         case_count=len(observations),
+        supported_case_count=len(supported),
+        candidate_model_evaluated_supported_case_count=len(intent_supported),
+        supported_expected_play_case_count=len(expected_play),
+        supported_expected_unknown_case_count=len(expected_unknown),
+        play_true_positive_count=play_true_positive_count,
+        play_recall=play_recall,
+        unknown_true_negative_count=unknown_true_negative_count,
+        unknown_recall=unknown_recall,
+        balanced_intent_accuracy=balanced_intent_accuracy,
+        deterministic_only_cases_not_sent_to_model=len(deterministic),
+        safety_only_cases_not_sent_to_model=len(safety),
         model_load_success=model_load_success,
         transport_success_rate=_rate(attempted, lambda item: item.transport_ok),
         typed_output_schema_success_rate=_rate(attempted, lambda item: item.schema_ok),
         supported_semantic_accuracy=_rate(semantic_supported, lambda item: item.semantic_ok),
         supported_intent_accuracy=_rate(intent_supported, lambda item: bool(item.intent_ok)),
-        entity_slot_evaluation_available=bool(semantic_supported),
+        entity_slot_evaluation_available=bool(grounding_supported),
         semantic_retry_accuracy=_rate(retry, lambda item: item.semantic_ok),
         semantic_retry_intent_accuracy=_rate(retry_intent, lambda item: bool(item.intent_ok)),
-        deterministic_only_safe_unknown=_rate(
+        deterministic_only_eligibility_gate_safe_unknown_rate=_rate(
             deterministic,
             lambda item: item.actual_intent == "unknown" and not item.false_execution,
         ),
-        safety_only_safe_unknown=_rate(
+        safety_only_eligibility_gate_safe_unknown_rate=_rate(
             safety,
             lambda item: item.actual_intent == "unknown" and not item.false_execution,
         ),
         false_execution_rate=_rate(observations, lambda item: item.false_execution),
+        expected_unknown_false_accept_count=expected_unknown_false_accept_count,
+        expected_unknown_false_accept_rate=expected_unknown_false_accept_rate,
+        expected_unknown_false_acceptance_incidence_rate=expected_unknown_false_acceptance_incidence_rate,
         post_grounding_false_acceptance_rate=_rate(
-            observations, lambda item: item.post_grounding_false_acceptance
+            grounding_supported, lambda item: item.post_grounding_false_acceptance
         ),
         malformed_output_rate=_rate(attempted, lambda item: item.malformed_output),
         timeout_rate=_rate(attempted, lambda item: item.timeout),

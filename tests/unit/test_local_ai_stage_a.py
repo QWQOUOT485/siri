@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import local_ai_benchmark_harness as harness  # noqa: E402
-from local_ai_stage_a import classify_scope, language_slice  # noqa: E402
+from local_ai_stage_a import classify_scope, language_slice, _skipped_observation  # noqa: E402
 from local_ai_stage_a_adapters import _typed_choice_decision  # noqa: E402
 
 
@@ -58,3 +58,15 @@ def test_language_slice_is_bounded_and_non_authoritative():
     assert language_slice("Play 晴天") == "mixed"
     assert language_slice("Play Flowers") == "english"
     assert language_slice("123 / ?") is None
+
+
+def test_eligibility_skips_are_not_candidate_model_classifications():
+    observation = _skipped_observation(
+        {"id": "pause", "category": "playback_control", "input": "暫停"},
+        "deterministic_only",
+    )
+
+    assert observation.inference_attempted is False
+    assert observation.intent_ok is None
+    assert observation.semantic_evaluated is False
+    assert observation.slot_evidence_available is False

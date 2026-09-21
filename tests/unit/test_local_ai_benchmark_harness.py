@@ -43,6 +43,22 @@ def _observation(
     )
 
 
+def _metadata(route: str = harness.AdapterRoute.ENCODER_CLASSIFICATION.value) -> dict[str, str]:
+    return {
+        "candidate_name": "candidate",
+        "model_name": "model",
+        "repository_revision": "repo-sha",
+        "model_revision": "model-sha",
+        "backend": "rocm",
+        "precision": "fp16",
+        "quantization": "none",
+        "hardware_identity": "RX 9070 XT",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_USED",
+        "quality_run_status": "aligned GPU quality run completed",
+        "route": route,
+    }
+
+
 def test_manifest_keeps_the_reviewed_fixed_candidate_set():
     candidates = manifest.candidate_manifest()
 
@@ -108,17 +124,7 @@ def test_benchmark_decision_and_adapter_reject_authority_and_invalid_slots():
 def test_result_schema_rejects_missing_unknown_and_authority_fields():
     observation = _observation("case-1", latency_ms=10.0)
     result = harness.aggregate_observations(
-        {
-            "candidate_name": "candidate",
-            "model_name": "model",
-            "repository_revision": "repo-sha",
-            "model_revision": "model-sha",
-            "backend": "rocm",
-            "precision": "fp16",
-            "quantization": "none",
-            "hardware_identity": "RX 9070 XT",
-            "route": harness.AdapterRoute.ENCODER_CLASSIFICATION.value,
-        },
+        _metadata(),
         [observation],
         model_load_success=True,
     )
@@ -136,17 +142,7 @@ def test_result_schema_rejects_missing_unknown_and_authority_fields():
 
     with pytest.raises(harness.BenchmarkSchemaError, match="unique case IDs"):
         harness.aggregate_observations(
-            {
-                "candidate_name": "candidate",
-                "model_name": "model",
-                "repository_revision": "repo-sha",
-                "model_revision": "model-sha",
-                "backend": "rocm",
-                "precision": "fp16",
-                "quantization": "none",
-                "hardware_identity": "RX 9070 XT",
-                "route": harness.AdapterRoute.ENCODER_CLASSIFICATION.value,
-            },
+            _metadata(),
             [observation, observation],
             model_load_success=True,
         )
@@ -215,17 +211,7 @@ def test_aggregate_records_safety_language_slots_calibration_and_failures():
         ),
     ]
     result = harness.aggregate_observations(
-        {
-            "candidate_name": "candidate",
-            "model_name": "model",
-            "repository_revision": "repo-sha",
-            "model_revision": "model-sha",
-            "backend": "rocm",
-            "precision": "fp16",
-            "quantization": "none",
-            "hardware_identity": "RX 9070 XT",
-            "route": harness.AdapterRoute.DECODER_OPTION_SCORING.value,
-        },
+        _metadata(harness.AdapterRoute.DECODER_OPTION_SCORING.value),
         observations,
         model_load_success=True,
         throughput_per_second=12.5,
@@ -239,10 +225,10 @@ def test_aggregate_records_safety_language_slots_calibration_and_failures():
     assert result.typed_output_schema_success_rate == 0.75
     assert result.supported_semantic_accuracy == 0.75
     assert result.semantic_retry_accuracy == 1.0
-    assert result.deterministic_only_safe_unknown == 1.0
-    assert result.safety_only_safe_unknown == 1.0
+    assert result.deterministic_only_eligibility_gate_safe_unknown_rate == 1.0
+    assert result.safety_only_eligibility_gate_safe_unknown_rate == 1.0
     assert result.false_execution_rate == 0.1667
-    assert result.post_grounding_false_acceptance_rate == 0.1667
+    assert result.post_grounding_false_acceptance_rate == 0.25
     assert result.p50_latency_ms == 20.0
     assert result.p95_latency_ms == 29.0
     assert result.brier_score == 0.03
@@ -251,6 +237,153 @@ def test_aggregate_records_safety_language_slots_calibration_and_failures():
     assert result.language_slice_accuracy == {"chinese": 1.0, "english": 0.0, "mixed": 1.0}
     assert result.slot_accuracy == {"artist": 1.0, "track": 0.6667}
     assert result.error_counts == {"backend_failure": 1, "malformed_output": 1, "retry": 1}
+
+
+def test_aggregate_class_metrics_use_supported_expected_class_denominators():
+    observations = [
+        *(
+            _observation(
+                f"play-{index}",
+                expected_intent="spotify_play_track",
+                actual_intent="spotify_play_track",
+                intent_ok=True,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+            )
+            for index in range(57)
+        ),
+        *(
+            _observation(
+                f"unknown-{index}",
+                expected_intent="unknown",
+                actual_intent="spotify_play_track",
+                intent_ok=False,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+                # This mirrors the old raw observation flag.  The route did
+                # not emit slots, so it must not become post-grounding data.
+                post_grounding_false_acceptance=True,
+            )
+            for index in range(6)
+        ),
+        *(
+            _observation(
+                f"deterministic-{index}",
+                category="playback_control",
+                ai_scope="deterministic_only",
+                expected_intent="unknown",
+                actual_intent="unknown",
+                semantic_ok=False,
+                inference_attempted=False,
+                transport_ok=True,
+                schema_ok=False,
+                intent_ok=None,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+            )
+            for index in range(36)
+        ),
+        *(
+            _observation(
+                f"safety-{index}",
+                category="hostile",
+                ai_scope="safety_only",
+                expected_intent="unknown",
+                actual_intent="unknown",
+                semantic_ok=False,
+                inference_attempted=False,
+                transport_ok=True,
+                schema_ok=False,
+                intent_ok=None,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+            )
+            for index in range(10)
+        ),
+    ]
+
+    result = harness.aggregate_observations(
+        _metadata(harness.AdapterRoute.DECODER_OPTION_SCORING.value),
+        observations,
+        model_load_success=True,
+    )
+
+    assert result.case_count == 109
+    assert result.supported_case_count == 63
+    assert result.candidate_model_evaluated_supported_case_count == 63
+    assert result.supported_expected_play_case_count == 57
+    assert result.supported_expected_unknown_case_count == 6
+    assert result.play_true_positive_count == 57
+    assert result.play_recall == 1.0
+    assert result.unknown_true_negative_count == 0
+    assert result.unknown_recall == 0.0
+    assert result.balanced_intent_accuracy == 0.5
+    assert result.supported_intent_accuracy == 0.9048
+    assert result.expected_unknown_false_accept_count == 6
+    assert result.expected_unknown_false_accept_rate == 1.0
+    assert result.expected_unknown_false_acceptance_incidence_rate == 0.055
+    assert result.post_grounding_false_acceptance_rate is None
+    assert result.entity_slot_evaluation_available is False
+    assert result.deterministic_only_cases_not_sent_to_model == 36
+    assert result.safety_only_cases_not_sent_to_model == 10
+    assert result.deterministic_only_eligibility_gate_safe_unknown_rate == 1.0
+    assert result.safety_only_eligibility_gate_safe_unknown_rate == 1.0
+
+
+def test_full_semantic_control_stays_distinct_from_typed_intent_only():
+    control = harness.aggregate_observations(
+        _metadata(harness.AdapterRoute.AUTOREGRESSIVE_STRICT_SCHEMA.value),
+        [
+            _observation(
+                "control-play",
+                intent_ok=True,
+                semantic_ok=True,
+                track_slot_ok=True,
+                artist_slot_ok=True,
+            ),
+            _observation(
+                "control-unknown",
+                expected_intent="unknown",
+                actual_intent="unknown",
+                intent_ok=True,
+                semantic_ok=True,
+                track_slot_ok=True,
+                artist_slot_ok=True,
+            ),
+        ],
+        model_load_success=True,
+    )
+    typed = harness.aggregate_observations(
+        _metadata(harness.AdapterRoute.DECODER_OPTION_SCORING.value),
+        [
+            _observation(
+                "typed-play",
+                intent_ok=True,
+                semantic_ok=True,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+            ),
+            _observation(
+                "typed-unknown",
+                expected_intent="unknown",
+                actual_intent="unknown",
+                intent_ok=True,
+                semantic_ok=True,
+                semantic_evaluated=False,
+                slot_evidence_available=False,
+            ),
+        ],
+        model_load_success=True,
+    )
+
+    assert control.supported_semantic_accuracy == 1.0
+    assert control.supported_intent_accuracy == 1.0
+    assert control.entity_slot_evaluation_available is True
+    assert control.post_grounding_false_acceptance_rate == 0.0
+    assert typed.supported_semantic_accuracy is None
+    assert typed.supported_intent_accuracy == 1.0
+    assert typed.entity_slot_evaluation_available is False
+    assert typed.post_grounding_false_acceptance_rate is None
 
 
 def test_preflight_missing_tools_does_not_execute_any_command():

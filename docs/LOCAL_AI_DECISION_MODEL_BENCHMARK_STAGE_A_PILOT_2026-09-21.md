@@ -19,8 +19,10 @@ authority remains the existing deterministic path / current shadow boundary.
 - Corpus identity: **109 cases**, canonical SHA-256
   `60ebad4bcafeae7821986ac454ff2e730da7661537b11879aba6f725675bee55`.
 - Reviewed eligibility boundary: **63 supported**, **36 deterministic-only**,
-  **10 safety-only**. Deterministic-only and safety-only rows were not sent to
-  a model, matching the existing isolated PoC boundary.
+  **10 safety-only**. Eligibility-gated rows were not sent to a model:
+  **36/36 deterministic-only** and **10/10 safety-only** rows were skipped.
+  Candidate-model safety classification on those skipped rows is **not
+  evaluated**; their safe-unknown values are eligibility-gate evidence only.
 - The common typed-decision question used fixed `play` / `unknown` labels.
   `play` maps only to the benchmark evidence label
   `spotify_play_track`; it is not a production action. The short label avoids
@@ -55,8 +57,10 @@ Downloaded model file readback for the two HF checkpoints:
   `huggingface_hub 0.36.2`, `accelerate 1.15.0`, and `numpy 2.3.5`.
   `torch.cuda.is_available()` and MPS were false.
 - The released systemone and laya Python routes therefore ran on the same
-  machine's CPU. This collected quality evidence but is **not** an RX 9070 XT
-  GPU latency result. The control used the existing LM Studio loopback route;
+  machine's CPU. This collected exploratory quality evidence, but the
+  hardware-aligned Stage A status for both rows is
+  `RX_9070_XT_BACKEND_BLOCKED`; it is **not** an RX 9070 XT GPU latency,
+  throughput, or VRAM result. The control used the existing LM Studio loopback route;
   `lms ps` reported the model as `Local`, but did not expose a sufficient
   backend/offload readback to claim a precise GPU backend.
 - systemone's checkpoint metadata exposed `extra_special_tokens` as a list,
@@ -70,13 +74,36 @@ Downloaded model file readback for the two HF checkpoints:
 Percentages are over the applicable rows. `n/a` means the released route did
 not expose that evidence, not zero. The typed candidates expose top-level
 choice probabilities but do not emit track/artist/album slots, so their full
-semantic accuracy is intentionally not calculated.
+semantic accuracy is intentionally not calculated for them. The metrics below
+were recomputed from the preserved ignored `observations.jsonl` artifacts; no
+model inference was rerun.
 
-| Candidate | Route / backend | Transport / schema | Supported intent | Full semantic / slots | Retry intent | Deterministic safe unknown | Safety safe unknown | False execution | Post-grounding false accept | P50 / P95 ms | Brier / ECE | Load ms |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Control | strict JSON / LM Studio loopback | 100% / 100% | 100% | **95.24% / available** | 100% | 100% | 100% | 0% | 0% | 177.5 / 193.4 | n/a / n/a | 157.0 |
-| systemone-lite | option scoring / Python CPU | 100% / 100% | **90.48%** | n/a / unavailable | 83.33% | 100% | 100% | 0% | **5.50%** | 301.6 / 316.6 | 0.0919 / 0.0762 | 5,101.2 |
-| laya multilingual | encoder classification / Python CPU | 100% / 100% | 53.97% | n/a / unavailable | 66.67% | 100% | 100% | 0% | 0% | **66.2 / 69.6** | 0.2701 / 0.4002 | 16,580.1 |
+### Class and grounding metrics
+
+The supported class distribution is **57 expected `spotify_play_track` / 6
+expected `unknown`**. `expected-unknown false-accept rate` uses only those six
+AI-eligible supported expected-unknown rows as its denominator. The separate
+`corpus incidence` value retains the historical whole-corpus denominator for
+continuity; it is not a conditional safety rate.
+
+| Candidate | Hardware-aligned Stage A status | Quality evidence status | Full semantic / slot evidence | Typed-intent accuracy | Play TP / cases | Play recall | Unknown TN / cases | Unknown recall | Balanced intent accuracy | Expected-unknown false accepts / cases | Conditional rate | Corpus incidence | True post-grounding false acceptance |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Control | `LMSTUDIO_LOCAL_BACKEND_GPU_OFFLOAD_UNQUALIFIED` | control loopback quality run completed | **95.24% / available** | 100% | 57 / 57 | 100% | 6 / 6 | 100% | 100% | 0 / 6 | 0% | 0% | 0% |
+| systemone-lite | `RX_9070_XT_BACKEND_BLOCKED` | exploratory CPU quality run completed | n/a / unavailable | **90.48%** | 57 / 57 | 100% | 0 / 6 | **0%** | **50%** | **6 / 6** | **100%** | 5.50% (6 / 109) | n/a |
+| laya multilingual | `RX_9070_XT_BACKEND_BLOCKED` | exploratory CPU quality run completed | n/a / unavailable | 53.97% | 28 / 57 | 49.12% | 6 / 6 | 100% | 74.56% | 0 / 6 | 0% | 0% | n/a |
+
+### Transport, eligibility-gate, and operational metrics
+
+The two eligibility-gate columns are not candidate-model classifications:
+they record that the listed rows were not sent to a model. `False execution`
+is harness/system evidence only; it is not proof that a candidate model rejects
+hostile input.
+
+| Candidate | Transport / schema | Semantic-retry intent | Deterministic-only gate | Safety-only gate | False execution (harness) | P50 / P95 ms | Brier / ECE | Load ms |
+|---|---:|---:|---|---|---:|---:|---:|---:|
+| Control | 100% / 100% | 100% | 36 / 36 not sent | 10 / 10 not sent | 0% | 177.5 / 193.4 | n/a / n/a | 157.0 |
+| systemone-lite | 100% / 100% | 83.33% | 36 / 36 not sent | 10 / 10 not sent | 0% | 301.6 / 316.6 | 0.0919 / 0.0762 | 5,101.2 |
+| laya multilingual | 100% / 100% | 66.67% | 36 / 36 not sent | 10 / 10 not sent | 0% | 66.2 / 69.6 | 0.2701 / 0.4002 | 16,580.1 |
 
 Language-slice intent accuracy for the 63 supported rows:
 
@@ -91,19 +118,25 @@ Language-slice intent accuracy for the 63 supported rows:
 - The control is the only row with complete entity-slot evidence. It retained
   the prior strict-schema quality boundary in this aligned rerun, with
   **95.24% full semantic accuracy**.
-- systemone-lite is the stronger typed-intent row in this pilot, but it has no
-  released slot extraction path, and its typed-intent accuracy is **90.48%**.
-  Its **5.50% post-grounding false acceptance is a safety regression**; this
-  prevents treating the result as an improvement or as a Stage B promotion
-  candidate. It ran CPU-only and is not a production semantic replacement.
-- laya multilingual is fast on CPU after load, but its unadapted typed-intent
-  accuracy is **53.97%** on this Chinese/mixed corpus and its released route
-  provides no entity-slot output for this Agent task. Its current accuracy and
-  lack of slot extraction do not support Stage B advancement.
-- The systemone-lite and laya candidate runs were CPU-only. Their latency,
-  throughput, and memory observations are therefore **not comparable GPU
-  latency/throughput/VRAM evidence** and must not be used as RX 9070 XT GPU
-  claims.
+- systemone-lite exposes no released slot extraction path and its typed-intent
+  accuracy is **90.48%**, exactly the majority expected-play proportion
+  (**57 / 63**); it is consistent with an always-play majority-class
+  classifier. Its play recall is 100%, but unknown recall is **0%** and its
+  six expected-unknown rows are all falsely accepted: the route-neutral
+  conditional false-accept rate is **100%**. The old **5.50%** value is only
+  the whole-corpus incidence (**6 / 109**). This is a safety regression and
+  makes systemone-lite unsuitable for advancement or Stage B selection; true
+  post-grounding evidence is **n/a** because no slots were supplied.
+- laya multilingual's unadapted typed-intent accuracy is **53.97%**: play
+  recall is 49.12%, unknown recall is 100%, and balanced intent accuracy is
+  74.56%. Its route provides no entity-slot output for this Agent task, so
+  the current accuracy and lack of slot extraction do not support Stage B
+  advancement; true post-grounding evidence is **n/a**.
+- systemone-lite and laya both have the hardware-aligned status
+  `RX_9070_XT_BACKEND_BLOCKED` and separately have exploratory CPU quality
+  runs completed. Their latency, throughput, and memory observations are
+  therefore **not comparable GPU latency/throughput/VRAM evidence** and must
+  not be used as RX 9070 XT GPU claims.
 - This pilot is research evidence only. No model is production approved, no
   Stage B selection has been made, and no finalist is promoted. The remaining
   fixed candidates were not run because this task explicitly stops after the
@@ -113,12 +146,14 @@ Language-slice intent accuracy for the 63 supported rows:
 
 ## Evidence boundary
 
-All three model loads and all 109 sanitized case rows completed. Raw/local
-artifacts remain under ignored `runtime/ai_poc/stage-a-*`; no prompts, raw model
-outputs, tokens, credentials, Spotify IDs/URIs, or model weights were added to
-Git. Source verification after the implementation change was **379 passed**;
-compileall, `pip check`, and `git diff --check` passed, with two existing
-dependency deprecation warnings.
+All three model loads and all 109 sanitized case rows completed in the
+original pilot. The current metrics were recomputed from the preserved raw
+observations without model inference. Raw/local artifacts remain under
+ignored `runtime/ai_poc/stage-a-*`; no prompts, raw model outputs, tokens,
+credentials, Spotify IDs/URIs, or model weights were added to Git. Source
+verification after this semantics fix: focused Stage A/harness tests **24
+passed**, full pytest **382 passed** with two existing dependency deprecation
+warnings; compileall, `pip check`, and `git diff --check` passed.
 
 No Windows Agent process, production config, Spotify request/playback, Siri
 voice flow, installed deployment, or executable Local AI fallback acceptance

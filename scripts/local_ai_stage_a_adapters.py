@@ -85,6 +85,8 @@ STAGE_A_IDENTITIES: dict[str, dict[str, Any]] = {
         "precision": "q4",
         "quantization": "Q4_K_M",
         "backend": "lmstudio-loopback",
+        "hardware_alignment_status": "LMSTUDIO_LOCAL_BACKEND_GPU_OFFLOAD_UNQUALIFIED",
+        "quality_run_status": "control loopback quality run completed",
         "route": AdapterRoute.AUTOREGRESSIVE_STRICT_SCHEMA.value,
     },
     "systemone-lite": {
@@ -97,6 +99,8 @@ STAGE_A_IDENTITIES: dict[str, dict[str, Any]] = {
         "precision": "bfloat16 weights; CPU route uses float32",
         "quantization": "none",
         "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
         "route": AdapterRoute.DECODER_OPTION_SCORING.value,
     },
     "laya": {
@@ -109,6 +113,8 @@ STAGE_A_IDENTITIES: dict[str, dict[str, Any]] = {
         "precision": "float16 weights; CPU route uses float32",
         "quantization": "none",
         "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
         "route": AdapterRoute.ENCODER_CLASSIFICATION.value,
     },
 }

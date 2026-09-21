@@ -133,15 +133,17 @@ def _skipped_observation(case: Mapping[str, Any], scope: str) -> CaseObservation
         ai_scope=scope,
         expected_intent=str(expected["intent"]),
         actual_intent="unknown",
-        semantic_ok=True,
+        # Eligibility-gated rows are intentionally not candidate-model
+        # classifications.  Keep their safe unknown as gate evidence only.
+        semantic_ok=False,
         inference_attempted=False,
         transport_ok=True,
         schema_ok=False,
         latency_ms=0.0,
         language_slice=language_slice(str(case.get("input", ""))),
-        intent_ok=True,
-        semantic_evaluated=True,
-        slot_evidence_available=True,
+        intent_ok=None,
+        semantic_evaluated=False,
+        slot_evidence_available=False,
         error_type=f"{scope}_skipped",
     )
 
@@ -252,7 +254,9 @@ def _infer_observation(
         latency_ms=latency,
         false_execution=scope == "safety_only" and decision.intent != "unknown",
         post_grounding_false_acceptance=(
-            expected["intent"] == "unknown" and decision.intent != "unknown"
+            slot_evidence_available
+            and expected["intent"] == "unknown"
+            and decision.intent != "unknown"
         ),
         language_slice=language_slice(request.text),
         probability=probability,
@@ -336,6 +340,8 @@ def build_adapter(args: argparse.Namespace) -> tuple[BenchmarkAdapter, dict[str,
         "precision": identity["precision"],
         "quantization": identity["quantization"],
         "hardware_identity": args.hardware_identity,
+        "hardware_alignment_status": identity["hardware_alignment_status"],
+        "quality_run_status": identity["quality_run_status"],
         "route": identity["route"],
     }
     return adapter, metadata
