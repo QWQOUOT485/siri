@@ -39,6 +39,10 @@ Stage B training, Windows, Spotify, Siri, deployment, or executable fallback
 acceptance was run. Focused Stage A/harness tests pass (**31**), full pytest
 passes (**389**, two existing dependency deprecation warnings), compileall,
 `pip check`, `git diff --check`, and new-result schema readback pass.
+PR #42 is open for independent review; it is based on the verified main
+commit above and has not been merged. The next safe action is review of the
+sanitized report and evidence boundary, not Stage B training or production
+promotion.
 
 **v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
