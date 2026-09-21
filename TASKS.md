@@ -238,25 +238,40 @@ and entity-boundary recovery separately from top-level action accuracy.
 
 #### Hardware protocol
 
-Primary reproducibility target:
+Use a single benchmark machine / GPU for the entire comparison:
 
-- RTX 3060 12 GB using CUDA, because it has the broadest support across the
-  candidate projects.
+- **RX 9070 XT 16 GB only**
 
-Secondary hardware run:
+All eight candidates, the control baseline, and any optional LitJev-style
+methodology run should use the same RX 9070 XT system whenever technically
+possible. This keeps latency, throughput, VRAM use, load time, and backend
+behavior comparable without mixing NVIDIA/CUDA and AMD results.
 
-- RX 9070 XT 16 GB when the candidate has a stable supported ROCm / Vulkan /
-  other local backend.
+Backend rules:
 
-Do not merge the two GPUs into a fake combined-VRAM result. Record hardware,
-driver/runtime, backend, precision/quantization, context length and batch shape
-with every latency row. Cross-GPU latency is descriptive, not a pure
-model-quality comparison.
+- Prefer a stable backend that actually supports the candidate on RX 9070 XT,
+  such as ROCm, Vulkan, or another project-supported local path.
+- Record the exact driver/runtime, backend, precision/quantization, context
+  length, batch shape, and model revision with every performance result.
+- Do not silently move a failing candidate to the RTX 3060 or another machine.
+- If a candidate cannot run correctly on RX 9070 XT because its released code
+  path is CUDA-only, unsupported, broken, or otherwise incompatible, record an
+  explicit **RX 9070 XT backend blocker** and continue with the remaining
+  candidates.
+- A backend blocker is a valid benchmark result; do not patch away architectural
+  differences merely to make every candidate produce a score.
+- If an officially supported AMD-compatible path exists but requires a small,
+  reviewable compatibility change, document the exact change and keep it
+  separate from model-quality results.
 
-If a released candidate requires hardware beyond the available 12–16 GB VRAM,
-try an officially supported smaller checkpoint / precision only when that
-variant is part of the same project; otherwise record it as a hardware blocker
-instead of inventing an unreviewed substitute.
+If a released candidate requires more than the available 16 GB VRAM, try an
+officially supported smaller checkpoint / precision / quantization only when
+that variant belongs to the same project and preserves the intended method.
+Otherwise record it as a VRAM blocker instead of inventing an unreviewed
+substitute.
+
+Do not combine the RX 9070 XT with the RTX 3060 as pooled VRAM or distributed
+training for this benchmark.
 
 #### Fairness rules
 
