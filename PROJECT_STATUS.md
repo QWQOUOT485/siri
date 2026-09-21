@@ -4,6 +4,35 @@
 
 ## Current Phase
 
+### 2026-09-21 Local AI Stage A pilot
+
+The evaluation-only three-model pilot is complete on branch
+`codex/local-ai-stage-a-benchmark-pilot`. The benchmark-only harness/adapters
+are committed at `928087d7d7cf31054f8c3060ebc8a936b1803f3f`; the sanitized
+evidence is in
+[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md).
+The same frozen corpus contained 109 cases: 63 supported, 36
+deterministic-only, and 10 safety-only. Control, systemone-lite, and laya
+each completed all 109 rows with model load success. The control retained full
+slot evidence at 95.24% supported semantic accuracy; systemone-lite reached
+90.48% top-level typed intent accuracy but has no released slot extraction
+path and recorded 5.50% post-grounding false acceptance; laya multilingual
+reached 53.97% top-level typed intent accuracy and also has no slot path.
+
+The RX 9070 XT / OpenCL/Vulkan hardware was read back, but the released
+systemone/laya Python paths ran CPU-only because this venv has `torch+cpu`, no
+CUDA/MPS, no ROCm tools, and no DirectML package. Their latency is therefore
+not an RX GPU comparison. The two pinned HF checkpoints remain under ignored
+runtime artifacts; no model weights, raw outputs, prompts, or credentials were
+committed. Source verification after this slice is 379 passed, compileall,
+`pip check`, and diff check passed.
+
+This benchmark does not change production authority: `LOCAL_AI_MODE` and
+`LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged; no Windows, Spotify, Siri,
+or installed deployment acceptance was run. The remaining fixed candidates
+were intentionally not expanded in this pilot; review is required before any
+Stage B adaptation or candidate expansion.
+
 **v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
