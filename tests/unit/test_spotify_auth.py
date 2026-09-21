@@ -1,4 +1,5 @@
 import json
+import threading
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -24,6 +25,32 @@ class FakeSpotifyTokenClient:
     def refresh_token(self, client_id, refresh_token):
         self.refresh_calls.append((client_id, refresh_token))
         return {"access_token": "access-refreshed", "expires_in": 3600, "scope": "user-read-playback-state"}
+
+
+class BlockingSpotifyTokenClient(FakeSpotifyTokenClient):
+    def __init__(self):
+        super().__init__()
+        self.refresh_started = threading.Event()
+        self.release_refresh = threading.Event()
+
+    def refresh_token(self, client_id, refresh_token):
+        self.refresh_calls.append((client_id, refresh_token))
+        self.refresh_started.set()
+        assert self.release_refresh.wait(2.0)
+        return {"access_token": "access-refreshed", "expires_in": 3600, "scope": "user-read-playback-state"}
+
+
+class FailingBlockingSpotifyTokenClient(FakeSpotifyTokenClient):
+    def __init__(self):
+        super().__init__()
+        self.refresh_started = threading.Event()
+        self.release_refresh = threading.Event()
+
+    def refresh_token(self, client_id, refresh_token):
+        self.refresh_calls.append((client_id, refresh_token))
+        self.refresh_started.set()
+        assert self.release_refresh.wait(2.0)
+        raise RuntimeError("C:\\Users\\tester\\secret\\refresh-failed.json")
 
 
 def manager(tmp_path, *, now=1_000.0):
@@ -106,3 +133,134 @@ def test_expiring_access_token_refreshes_once_without_exposing_tokens_in_status(
     assert status["authorized"] is True
     assert "access_token" not in json.dumps(status)
     assert "refresh_token" not in json.dumps(status)
+
+
+def _save_expired_token(store):
+    store.save(
+        SpotifyToken(
+            access_token="old-access",
+            refresh_token="refresh-token",
+            expires_at=1_010.0,
+            scope="user-read-playback-state",
+            token_type="Bearer",
+        )
+    )
+
+
+def test_concurrent_expired_get_access_token_refreshes_provider_once_and_shares_token(tmp_path):
+    client = BlockingSpotifyTokenClient()
+    store = SpotifyTokenStore(tmp_path / "spotify_token.json")
+    auth = SpotifyAuthManager(
+        client_id="client-id",
+        redirect_uri="http://127.0.0.1:8000/spotify/callback",
+        token_store=store,
+        client=client,
+        clock=lambda: 1_000.0,
+    )
+    _save_expired_token(store)
+    results = []
+    errors = []
+
+    def worker():
+        try:
+            results.append(auth.get_access_token())
+        except Exception as exc:  # pragma: no cover - assertion below reports unexpected errors
+            errors.append(exc)
+
+    workers = [threading.Thread(target=worker) for _ in range(8)]
+    for thread in workers:
+        thread.start()
+    assert client.refresh_started.wait(1.0)
+    assert len(client.refresh_calls) == 1
+    client.release_refresh.set()
+    for thread in workers:
+        thread.join(timeout=2.0)
+
+    assert errors == []
+    assert results == ["access-refreshed"] * len(workers)
+    assert len(client.refresh_calls) == 1
+
+
+def test_public_refresh_waiter_reuses_successful_get_refresh(tmp_path):
+    client = BlockingSpotifyTokenClient()
+    store = SpotifyTokenStore(tmp_path / "spotify_token.json")
+    auth = SpotifyAuthManager(
+        client_id="client-id",
+        redirect_uri="http://127.0.0.1:8000/spotify/callback",
+        token_store=store,
+        client=client,
+        clock=lambda: 1_000.0,
+    )
+    _save_expired_token(store)
+    results = []
+    errors = []
+
+    first = threading.Thread(target=lambda: results.append(auth.get_access_token()))
+    first.start()
+    assert client.refresh_started.wait(1.0)
+    second = threading.Thread(target=lambda: results.append(auth.refresh_access_token()))
+    second.start()
+    client.release_refresh.set()
+    first.join(timeout=2.0)
+    second.join(timeout=2.0)
+
+    assert errors == []
+    assert sorted(results) == ["access-refreshed", "access-refreshed"]
+    assert len(client.refresh_calls) == 1
+
+
+def test_failing_refresh_does_not_clear_newer_token_saved_by_competing_lifecycle(tmp_path):
+    failing_client = FailingBlockingSpotifyTokenClient()
+    successful_client = FakeSpotifyTokenClient()
+    store = SpotifyTokenStore(tmp_path / "spotify_token.json")
+    failing_auth = SpotifyAuthManager(
+        client_id="client-id",
+        redirect_uri="http://127.0.0.1:8000/spotify/callback",
+        token_store=store,
+        client=failing_client,
+        clock=lambda: 1_000.0,
+    )
+    successful_auth = SpotifyAuthManager(
+        client_id="client-id",
+        redirect_uri="http://127.0.0.1:8000/spotify/callback",
+        token_store=store,
+        client=successful_client,
+        clock=lambda: 1_000.0,
+    )
+    _save_expired_token(store)
+    errors = []
+
+    def failing_worker():
+        try:
+            failing_auth.refresh_access_token()
+        except SpotifyAuthError as exc:
+            errors.append(exc.error_code)
+
+    worker = threading.Thread(target=failing_worker)
+    worker.start()
+    assert failing_client.refresh_started.wait(1.0)
+    assert successful_auth.refresh_access_token() == "access-refreshed"
+    failing_client.release_refresh.set()
+    worker.join(timeout=2.0)
+
+    assert errors == ["SPOTIFY_AUTH_REQUIRED"]
+    assert store.load() is not None
+    assert store.load().access_token == "access-refreshed"
+    assert len(failing_client.refresh_calls) == 1
+    assert len(successful_client.refresh_calls) == 1
+
+
+def test_non_expired_access_token_does_not_refresh(tmp_path):
+    auth, client, store = manager(tmp_path, now=1_000.0)
+    store.save(
+        SpotifyToken(
+            access_token="fresh-access",
+            refresh_token="refresh-token",
+            expires_at=2_000.0,
+            scope="user-read-playback-state",
+            token_type="Bearer",
+        )
+    )
+
+    assert auth.get_access_token() == "fresh-access"
+    assert client.refresh_calls == []

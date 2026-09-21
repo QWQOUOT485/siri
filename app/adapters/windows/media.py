@@ -78,8 +78,8 @@ class WindowsMediaController:
         try:
             self._send_key(self._keys[action])
             return OperationResult(True, "已切換播放狀態。" if action in {"play", "pause", "play_pause"} else "已切換曲目。", best_effort=True)
-        except (OSError, TypeError, ctypes.ArgumentError) as exc:
-            return OperationResult(False, "Windows media control failed", "MEDIA_CONTROL_FAILED", {"detail": str(exc)}, best_effort=True)
+        except (OSError, TypeError, ctypes.ArgumentError):
+            return OperationResult(False, "Windows media control failed", "MEDIA_CONTROL_FAILED", best_effort=True)
 
     @staticmethod
     def _send_key(virtual_key: int) -> None:
