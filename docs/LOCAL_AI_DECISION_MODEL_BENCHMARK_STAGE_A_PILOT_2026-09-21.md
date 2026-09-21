@@ -13,7 +13,7 @@ authority remains the existing deterministic path / current shadow boundary.
 - Pilot candidates: existing `qwen2.5-coder-1.5b-instruct` control,
   `systemone-lite`, and `laya` only.
 - Benchmark-only harness commit:
-  `928087d7d7cf31054f8c3060ebc8a936b1803f3f`.
+  `928087d4c96fff3ef98549afb430b28f2ff2d4de`.
 - Project source base at run start: `08c397fd29a8361ebd0f0b6eb23510630f58f027`.
 - Frozen corpus: `tests/fixtures/ai_intent_cases.json`.
 - Corpus identity: **109 cases**, canonical SHA-256
@@ -115,4 +115,3 @@ No Windows Agent process, production config, Spotify request/playback, Siri
 voice flow, installed deployment, or executable Local AI fallback acceptance
 was run. The result is source/benchmark evidence only, and
 `LOCAL_AI_FALLBACK_APPROVED=false` remains mandatory.
-

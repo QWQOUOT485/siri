@@ -8,7 +8,7 @@
 
 The evaluation-only three-model pilot is complete on branch
 `codex/local-ai-stage-a-benchmark-pilot`. The benchmark-only harness/adapters
-are committed at `928087d7d7cf31054f8c3060ebc8a936b1803f3f`; the sanitized
+are committed at `928087d4c96fff3ef98549afb430b28f2ff2d4de`; the sanitized
 evidence is in
 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md).
 The same frozen corpus contained 109 cases: 63 supported, 36
