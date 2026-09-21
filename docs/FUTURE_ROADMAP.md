@@ -222,6 +222,64 @@ alias 不能直接變成任意 Windows device identifier。
 
 不同 capability 的 alias 可以隔離，避免 Spotify、App、Device 等 entity namespace 互相污染。
 
+## Memory RAG / Personal RAG — future research
+
+目前的 Semantic Memory 是高信任、結構化的 alias/entity retrieval；它不是
+conventional RAG，也不是向量資料庫或可執行的記憶代理。未來若研究 Personal
+RAG，分層邊界應固定為：
+
+~~~text
+User utterance
+    ↓
+Deterministic parser / eligibility
+    ↓
+High-trust structured Semantic Memory
+    ↓
+Optional low-trust semantic/vector retrieval
+    ↓
+Bounded retrieved evidence
+    ↓
+Local AI semantic interpretation
+    ↓
+Grounding
+    ↓
+Policy
+    ↓
+ValidatedAction
+    ↓
+Trusted adapter
+~~~
+
+現有高信任 memory layer 專責：
+
+- confirmed aliases；
+- trusted entity mappings；
+- conflict-aware mappings；
+- provider-validated identity；
+- deterministic exact lookup；
+- bounded fuzzy candidate evidence。
+
+未來低信任 retrieval layer 可以研究：
+
+- embedding/vector retrieval 與 remembered vocabulary 的 semantic recall；
+- 過去確認過的 phrasing、bounded user preferences、context/history summaries；
+- project/entity vocabulary 與 query-rewrite evidence。
+
+Retrieved memory 永遠只是 untrusted evidence。它不能：
+
+- 變成 shell、PowerShell、CMD、executable path 或 arbitrary URL；
+- 以 provider ID 直接授權 execution；
+- bypass deterministic grounding 或 policy；
+- 建立 `ValidatedAction`；
+- enable Local AI fallback；
+- 只靠 vector similarity 自動確認 memory。
+
+Poisoned 或互相衝突的 memory 必須 fail toward clarification。敏感／私人記憶
+預設留在本機；未來仍需要 memory inspection、deletion、disable 等使用者控制。
+本項目前只屬 FUTURE RESEARCH / ROADMAP：不實作 vector storage、embeddings、
+RAG runtime，也不改變 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` 或
+`LOCAL_AI_FALLBACK_APPROVED=false`。
+
 ---
 
 # Horizon 3 — Safer Local AI

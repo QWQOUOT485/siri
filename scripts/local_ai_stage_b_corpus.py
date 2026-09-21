@@ -746,6 +746,7 @@ def _validate_cross_split_boundaries(
     records_by_split: Mapping[str, Sequence[StageBRecord]],
     *,
     stage_a_utterances: set[str] | None,
+    near_duplicate_config: NearDuplicateConfig,
 ) -> None:
     case_ids: dict[str, str] = {}
     groups: dict[str, str] = {}
@@ -778,6 +779,24 @@ def _validate_cross_split_boundaries(
                         "exact canonical entity/intent/template groups may not cross splits"
                     )
                 entity_groups[entity_key] = split
+
+    all_records = [
+        record
+        for split in SPLIT_NAMES
+        for record in records_by_split.get(split, ())
+    ]
+    split_by_case_id = {
+        record.case_id: split
+        for split, records in records_by_split.items()
+        for record in records
+    }
+    near_duplicates = inspect_near_duplicates(
+        all_records,
+        config=near_duplicate_config,
+        split_by_case_id=split_by_case_id,
+    )
+    if near_duplicates.pairs:
+        raise StageBLeakageError("near-duplicate utterances may not cross splits")
 
 
 def _class_counts(records: Sequence[StageBRecord]) -> Counter[str]:
@@ -907,7 +926,11 @@ def _validate_protocol_counts(records_by_split: Mapping[str, Sequence[StageBReco
     )
 
 
-def _build_manifest(records_by_split: Mapping[str, Sequence[StageBRecord]]) -> dict[str, Any]:
+def _build_manifest(
+    records_by_split: Mapping[str, Sequence[StageBRecord]],
+    *,
+    near_duplicate_config: NearDuplicateConfig,
+) -> dict[str, Any]:
     all_records = [record for split in SPLIT_NAMES for record in records_by_split.get(split, ())]
     class_keys = ("supported_play", "supported_unknown", "deterministic_only", "safety_only")
 
@@ -993,6 +1016,10 @@ def _build_manifest(records_by_split: Mapping[str, Sequence[StageBRecord]]) -> d
         "corpus_sha256": corpus_sha256,
         "canonicalization": "NFKC+casefold+punctuation-to-space+whitespace-collapse",
         "traditional_simplified_canonicalization": "not_implemented",
+        "near_duplicate_policy": {
+            **near_duplicate_config.to_dict(),
+            "config_sha256": near_duplicate_config.config_sha256,
+        },
     }
     manifest["manifest_sha256"] = _sha256_json(manifest)
     return manifest
@@ -1017,6 +1044,7 @@ def validate_corpus(
     enforce_protocol_counts: bool = False,
     stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
+    near_duplicate_config: NearDuplicateConfig | None = None,
 ) -> StageBValidationResult:
     """Validate records and return deterministic evidence.
 
@@ -1027,6 +1055,15 @@ def validate_corpus(
     """
 
     records_by_split = _coerce_splits(splits)
+    resolved_near_duplicate_config = (
+        DEFAULT_NEAR_DUPLICATE_CONFIG
+        if near_duplicate_config is None
+        else near_duplicate_config
+    )
+    if not isinstance(resolved_near_duplicate_config, NearDuplicateConfig):
+        raise StageBManifestError("near_duplicate_config must be a NearDuplicateConfig")
+    if enforce_protocol_counts:
+        _require_frozen_protocol_near_duplicate_config(resolved_near_duplicate_config)
     stage_a_utterances = None
     if stage_a_path is not None:
         safe_stage_a_path = validate_local_path(stage_a_path, field="stage_a_path")
@@ -1037,10 +1074,14 @@ def validate_corpus(
     _validate_cross_split_boundaries(
         records_by_split,
         stage_a_utterances=stage_a_utterances,
+        near_duplicate_config=resolved_near_duplicate_config,
     )
     if enforce_protocol_counts:
         _validate_protocol_counts(records_by_split)
-    manifest = _build_manifest(records_by_split)
+    manifest = _build_manifest(
+        records_by_split,
+        near_duplicate_config=resolved_near_duplicate_config,
+    )
     return StageBValidationResult(
         records_by_split=records_by_split,
         manifest=manifest,
@@ -1053,6 +1094,7 @@ def validate_protocol_corpus(
     *,
     stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
+    near_duplicate_config: NearDuplicateConfig | None = None,
 ) -> StageBValidationResult:
     """Validate the exact frozen 3,000-row Stage B protocol."""
 
@@ -1061,6 +1103,7 @@ def validate_protocol_corpus(
         enforce_protocol_counts=True,
         stage_a_path=stage_a_path,
         verify_stage_a_identity=verify_stage_a_identity,
+        near_duplicate_config=near_duplicate_config,
     )
 
 
@@ -1077,6 +1120,7 @@ def validate_corpus_paths(
     enforce_protocol_counts: bool = False,
     stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
+    near_duplicate_config: NearDuplicateConfig | None = None,
 ) -> StageBValidationResult:
     """Load explicit local split files and validate them offline."""
 
@@ -1102,17 +1146,307 @@ def validate_corpus_paths(
         enforce_protocol_counts=enforce_protocol_counts,
         stage_a_path=safe_stage_a_path,
         verify_stage_a_identity=verify_stage_a_identity,
+        near_duplicate_config=near_duplicate_config,
     )
+
+
+PROVENANCE_SCHEMA_VERSION = 1
+PROVENANCE_REVIEW_STATUSES = frozenset(
+    {"pending", "independently_reviewed", "rejected"}
+)
+
+
+def build_provenance_manifest(
+    validation_result: StageBValidationResult,
+    *,
+    corpus_protocol_version: str,
+    generator_version: str,
+    generation_source: str,
+    reviewer_role_id: str | None,
+    review_status: str,
+    review_timestamp_policy: str,
+    split_assignment_stage: str,
+    validation_tool_version: str,
+) -> dict[str, Any]:
+    """Build a sanitized, separate provenance manifest for a future corpus.
+
+    Reviewer identity is represented only by an opaque role/id.  Row text,
+    private logs, account identifiers, and credentials never enter this
+    manifest; record-level source groups and template families remain in the
+    already-reviewed closed Stage B record schema.
+    """
+
+    if not isinstance(validation_result, StageBValidationResult):
+        raise StageBManifestError("validation_result must be a StageBValidationResult")
+    if not isinstance(review_status, str) or review_status not in PROVENANCE_REVIEW_STATUSES:
+        raise StageBManifestError("review_status is outside the closed provenance enum")
+    if review_status == "independently_reviewed" and not reviewer_role_id:
+        raise StageBManifestError("independently reviewed provenance requires an opaque reviewer id")
+
+    text_fields = {
+        "corpus_protocol_version": corpus_protocol_version,
+        "generator_version": generator_version,
+        "generation_source": generation_source,
+        "reviewer_role_id": reviewer_role_id,
+        "review_timestamp_policy": review_timestamp_policy,
+        "split_assignment_stage": split_assignment_stage,
+        "validation_tool_version": validation_tool_version,
+    }
+    for name, value in text_fields.items():
+        if value is not None:
+            _require_text(f"provenance.{name}", value, max_length=200)
+
+    manifest = validation_result.manifest_dict()
+    split_hashes = manifest.get("split_sha256")
+    corpus_hash = manifest.get("corpus_sha256")
+    policy = manifest.get("near_duplicate_policy")
+    if (
+        not isinstance(split_hashes, Mapping)
+        or set(split_hashes) != set(SPLIT_NAMES)
+        or not isinstance(corpus_hash, str)
+        or not isinstance(policy, Mapping)
+        or not isinstance(policy.get("config_sha256"), str)
+    ):
+        raise StageBManifestError("validation result lacks deterministic corpus identity evidence")
+
+    provenance: dict[str, Any] = {
+        "provenance_schema_version": PROVENANCE_SCHEMA_VERSION,
+        "corpus_protocol_version": corpus_protocol_version,
+        "generator_version": generator_version,
+        "generation_source": generation_source,
+        "reviewer_role_id": reviewer_role_id,
+        "review_status": review_status,
+        "review_timestamp_policy": review_timestamp_policy,
+        "split_assignment_stage": split_assignment_stage,
+        "validation_tool_version": validation_tool_version,
+        "canonical_corpus_sha256": corpus_hash,
+        "final_split_sha256": {
+            split: split_hashes[split]
+            for split in SPLIT_NAMES
+        },
+        "near_duplicate_config_sha256": policy["config_sha256"],
+    }
+    _scan_sensitive_values(provenance)
+    provenance["provenance_sha256"] = _sha256_json(provenance)
+    return provenance
+
+
+NEAR_DUPLICATE_POLICY_VERSION = "stage-b-near-duplicate-v1"
+NEAR_DUPLICATE_NORMALIZATION = "NFKC+casefold+remove-punctuation-and-whitespace"
+FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256 = (
+    "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7"
+)
 
 
 @dataclass(frozen=True, slots=True)
 class NearDuplicateConfig:
-    """Explicit placeholder until a corpus-build review freezes an algorithm."""
+    """Frozen standard-library near-duplicate policy for the first corpus build."""
 
-    algorithm: str = "unconfigured"
-    ngram_size: int | None = None
-    similarity_threshold: float | None = None
-    hash_bits: int | None = None
+    policy_version: str = NEAR_DUPLICATE_POLICY_VERSION
+    algorithm: str = "char_ngram_jaccard_exact_v1"
+    normalization: str = NEAR_DUPLICATE_NORMALIZATION
+    ngram_size: int = 3
+    similarity_threshold: float = 0.85
+    cross_split_only: bool = True
+    candidate_filter: str = "simhash64_hamming_v1"
+    hash_bits: int = 64
+    hash_seed: int = 0x53544231
+    candidate_hamming_threshold: int = 12
+
+    def __post_init__(self) -> None:
+        if self.policy_version != NEAR_DUPLICATE_POLICY_VERSION:
+            raise StageBManifestError("near-duplicate policy version is not frozen")
+        if self.algorithm != "char_ngram_jaccard_exact_v1":
+            raise StageBManifestError("near-duplicate algorithm is not frozen")
+        if self.normalization != NEAR_DUPLICATE_NORMALIZATION:
+            raise StageBManifestError("near-duplicate normalization is not frozen")
+        if isinstance(self.ngram_size, bool) or not isinstance(self.ngram_size, int):
+            raise StageBManifestError("near-duplicate ngram_size must be an integer")
+        if self.ngram_size < 2:
+            raise StageBManifestError("near-duplicate ngram_size must be at least 2")
+        if (
+            isinstance(self.similarity_threshold, bool)
+            or not isinstance(self.similarity_threshold, (int, float))
+            or not math.isfinite(float(self.similarity_threshold))
+            or not 0.0 < float(self.similarity_threshold) <= 1.0
+        ):
+            raise StageBManifestError("near-duplicate threshold must be between 0 and 1")
+        if not isinstance(self.cross_split_only, bool):
+            raise StageBManifestError("near-duplicate cross_split_only must be boolean")
+        if self.candidate_filter != "simhash64_hamming_v1":
+            raise StageBManifestError("near-duplicate candidate filter is not frozen")
+        if self.hash_bits != 64 or self.hash_seed != 0x53544231:
+            raise StageBManifestError("near-duplicate candidate hash is not frozen")
+        if (
+            isinstance(self.candidate_hamming_threshold, bool)
+            or not isinstance(self.candidate_hamming_threshold, int)
+            or not 0 <= self.candidate_hamming_threshold <= self.hash_bits
+        ):
+            raise StageBManifestError("near-duplicate candidate Hamming threshold is invalid")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "policy_version": self.policy_version,
+            "algorithm": self.algorithm,
+            "normalization": self.normalization,
+            "ngram_size": self.ngram_size,
+            "similarity_threshold": float(self.similarity_threshold),
+            "cross_split_only": self.cross_split_only,
+            "candidate_filter": self.candidate_filter,
+            "hash_bits": self.hash_bits,
+            "hash_seed": self.hash_seed,
+            "candidate_hamming_threshold": self.candidate_hamming_threshold,
+        }
+
+    @property
+    def config_sha256(self) -> str:
+        return _sha256_json(self.to_dict())
+
+
+DEFAULT_NEAR_DUPLICATE_CONFIG = NearDuplicateConfig()
+
+
+def _require_frozen_protocol_near_duplicate_config(
+    config: NearDuplicateConfig,
+) -> None:
+    if config.config_sha256 != FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256:
+        raise StageBProtocolError(
+            "final protocol validation requires the frozen near-duplicate config hash"
+        )
+
+
+class NearDuplicateRelation(str, Enum):
+    DUPLICATE = "duplicate"
+    NEAR_DUPLICATE = "near_duplicate"
+    DISTINCT = "distinct"
+
+
+def _near_duplicate_normalize(text: str) -> str:
+    if not isinstance(text, str):
+        raise StageBManifestError("near-duplicate comparison text must be text")
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    return "".join(
+        character
+        for character in normalized
+        if not character.isspace() and not unicodedata.category(character).startswith("P")
+    )
+
+
+def _character_ngrams(text: str, ngram_size: int) -> frozenset[str]:
+    if not text:
+        return frozenset()
+    if len(text) < ngram_size:
+        return frozenset({text})
+    return frozenset(
+        text[index : index + ngram_size]
+        for index in range(len(text) - ngram_size + 1)
+    )
+
+
+_SIMHASH_BYTE_CONTRIBUTIONS = tuple(
+    tuple(1 if value & (1 << bit) else -1 for bit in range(8))
+    for value in range(256)
+)
+
+
+def _simhash(ngrams: frozenset[str], *, config: NearDuplicateConfig) -> int:
+    """Return advisory SimHash evidence; never use it to prune exact checks."""
+
+    scores = [0] * config.hash_bits
+    for ngram in ngrams:
+        digest = hashlib.blake2b(
+            f"{config.hash_seed}:{ngram}".encode("utf-8"),
+            digest_size=config.hash_bits // 8,
+        ).digest()
+        for byte_index, value in enumerate(digest):
+            contributions = _SIMHASH_BYTE_CONTRIBUTIONS[value]
+            offset = byte_index * 8
+            for bit, contribution in enumerate(contributions):
+                scores[offset + bit] += contribution
+    fingerprint = 0
+    for bit, score in enumerate(scores):
+        if score >= 0:
+            fingerprint |= 1 << bit
+    return fingerprint
+
+
+def near_duplicate_similarity(
+    left_text: str,
+    right_text: str,
+    *,
+    config: NearDuplicateConfig = DEFAULT_NEAR_DUPLICATE_CONFIG,
+) -> float:
+    """Return exact set-Jaccard similarity over normalized character n-grams."""
+
+    if not isinstance(config, NearDuplicateConfig):
+        raise StageBManifestError("near_duplicate_config must be a NearDuplicateConfig")
+    left = _near_duplicate_normalize(left_text)
+    right = _near_duplicate_normalize(right_text)
+    return _near_duplicate_similarity_normalized(left, right, config.ngram_size)
+
+
+def _near_duplicate_similarity_normalized(
+    left: str,
+    right: str,
+    ngram_size: int,
+) -> float:
+    left_ngrams = _character_ngrams(left, ngram_size)
+    right_ngrams = _character_ngrams(right, ngram_size)
+    return _near_duplicate_similarity_from_ngrams(
+        left,
+        right,
+        left_ngrams,
+        right_ngrams,
+    )
+
+
+def _near_duplicate_similarity_from_ngrams(
+    left: str,
+    right: str,
+    left_ngrams: frozenset[str],
+    right_ngrams: frozenset[str],
+) -> float:
+    if left == right:
+        return 1.0
+    union = left_ngrams | right_ngrams
+    return len(left_ngrams & right_ngrams) / len(union) if union else 1.0
+
+
+def classify_near_duplicate(
+    left_text: str,
+    right_text: str,
+    *,
+    config: NearDuplicateConfig = DEFAULT_NEAR_DUPLICATE_CONFIG,
+) -> str:
+    """Classify two texts using the frozen duplicate policy."""
+
+    if not isinstance(config, NearDuplicateConfig):
+        raise StageBManifestError("near_duplicate_config must be a NearDuplicateConfig")
+    left = _near_duplicate_normalize(left_text)
+    right = _near_duplicate_normalize(right_text)
+    if left == right:
+        return NearDuplicateRelation.DUPLICATE.value
+    if _near_duplicate_similarity_normalized(left, right, config.ngram_size) >= float(
+        config.similarity_threshold
+    ):
+        return NearDuplicateRelation.NEAR_DUPLICATE.value
+    return NearDuplicateRelation.DISTINCT.value
+
+
+@dataclass(frozen=True, slots=True)
+class NearDuplicateComparison:
+    left_case_id: str
+    right_case_id: str
+    relation: str
+    similarity: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "left_case_id": self.left_case_id,
+            "right_case_id": self.right_case_id,
+            "relation": self.relation,
+            "similarity": self.similarity,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -1120,23 +1454,142 @@ class NearDuplicateResult:
     implemented: bool
     pairs: tuple[tuple[str, str], ...]
     reason: str
+    comparisons: tuple[NearDuplicateComparison, ...]
+    config_sha256: str
 
-
-DEFAULT_NEAR_DUPLICATE_CONFIG = NearDuplicateConfig()
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "implemented": self.implemented,
+            "pairs": [list(pair) for pair in self.pairs],
+            "comparisons": [comparison.to_dict() for comparison in self.comparisons],
+            "config_sha256": self.config_sha256,
+            "reason": self.reason,
+        }
 
 
 def inspect_near_duplicates(
     records: Sequence[StageBRecord],
     *,
     config: NearDuplicateConfig = DEFAULT_NEAR_DUPLICATE_CONFIG,
+    split_by_case_id: Mapping[str, str] | None = None,
 ) -> NearDuplicateResult:
-    """Expose the future near-duplicate seam without inventing a threshold."""
+    """Compare records deterministically and return duplicate/near-duplicate pairs.
 
-    del records, config
+    The validator passes ``split_by_case_id`` so only cross-split pairs are
+    rejected.  Omitting it is intentional for the isolated synthetic policy
+    fixture and compares all pairs without reading any external data.
+    """
+
+    if not isinstance(config, NearDuplicateConfig):
+        raise StageBManifestError("near_duplicate_config must be a NearDuplicateConfig")
+    ordered_records = sorted(
+        records,
+        key=lambda record: (record.case_id, record.source_group_id, record.utterance),
+    )
+    if any(not isinstance(record, StageBRecord) for record in ordered_records):
+        raise StageBManifestError("near-duplicate records must be StageBRecord objects")
+    if split_by_case_id is not None:
+        missing = {
+            record.case_id for record in ordered_records if record.case_id not in split_by_case_id
+        }
+        if missing:
+            raise StageBManifestError("split_by_case_id is missing a record case_id")
+
+    prepared = [
+        (
+            record,
+            (normalized := _near_duplicate_normalize(record.utterance)),
+            _character_ngrams(normalized, config.ngram_size),
+        )
+        for record in ordered_records
+    ]
+    comparisons: list[NearDuplicateComparison] = []
+
+    def compare_pair(
+        left_record: StageBRecord,
+        left_text: str,
+        left_ngrams: frozenset[str],
+        right_record: StageBRecord,
+        right_text: str,
+        right_ngrams: frozenset[str],
+    ) -> None:
+        if left_text == right_text:
+            relation = NearDuplicateRelation.DUPLICATE.value
+            similarity = 1.0
+        else:
+            # Exact Jaccard is authoritative.  An advisory SimHash or any
+            # other approximate filter must never suppress this comparison.
+            similarity = _near_duplicate_similarity_from_ngrams(
+                left_text,
+                right_text,
+                left_ngrams,
+                right_ngrams,
+            )
+            relation = (
+                NearDuplicateRelation.NEAR_DUPLICATE.value
+                if similarity >= float(config.similarity_threshold)
+                else NearDuplicateRelation.DISTINCT.value
+            )
+        if relation != NearDuplicateRelation.DISTINCT.value:
+            comparisons.append(
+                NearDuplicateComparison(
+                    left_case_id=left_record.case_id,
+                    right_case_id=right_record.case_id,
+                    relation=relation,
+                    similarity=similarity,
+                )
+            )
+
+    if split_by_case_id is not None and config.cross_split_only:
+        records_by_split: dict[str, list[tuple[StageBRecord, str, frozenset[str]]]] = {}
+        for record, normalized, ngrams in prepared:
+            records_by_split.setdefault(split_by_case_id[record.case_id], []).append(
+                (record, normalized, ngrams)
+            )
+        split_names = sorted(records_by_split)
+        for left_index, left_split in enumerate(split_names):
+            for right_split in split_names[left_index + 1 :]:
+                for left_record, left_text, left_ngrams in records_by_split[left_split]:
+                    for right_record, right_text, right_ngrams in records_by_split[right_split]:
+                        compare_pair(
+                            left_record,
+                            left_text,
+                            left_ngrams,
+                            right_record,
+                            right_text,
+                            right_ngrams,
+                        )
+    else:
+        for index, (left_record, left_text, left_ngrams) in enumerate(prepared):
+            for right_record, right_text, right_ngrams in prepared[index + 1 :]:
+                compare_pair(
+                    left_record,
+                    left_text,
+                    left_ngrams,
+                    right_record,
+                    right_text,
+                    right_ngrams,
+                )
+
+    frozen_comparisons = tuple(
+        sorted(
+            comparisons,
+            key=lambda comparison: (
+                comparison.left_case_id,
+                comparison.right_case_id,
+                comparison.relation,
+            ),
+        )
+    )
     return NearDuplicateResult(
-        implemented=False,
-        pairs=(),
-        reason="near-duplicate algorithm/configuration remains a future corpus-build requirement",
+        implemented=True,
+        pairs=tuple(
+            (comparison.left_case_id, comparison.right_case_id)
+            for comparison in frozen_comparisons
+        ),
+        reason="exact character n-gram policy comparisons completed",
+        comparisons=frozen_comparisons,
+        config_sha256=config.config_sha256,
     )
 
 

@@ -135,6 +135,22 @@ control. Production Local AI authority remains unchanged, and
 - Full candidate set, hardware protocol, metrics, fairness rules, and
   promotion boundary: [dedicated benchmark plan](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
 
+### P2.6 — Memory RAG / Personal RAG (future research)
+
+- Keep current structured Semantic Memory as the high-trust exact/entity layer;
+  it is not conventional RAG.
+- Future vector/semantic retrieval may provide only bounded, local,
+  low-trust evidence for vocabulary, preferences, context summaries, or query
+  rewriting. It must remain downstream of deterministic eligibility and
+  upstream of grounding and policy.
+- Retrieved text/IDs can never become shell, executable paths, arbitrary URLs,
+  execution authority, or `ValidatedAction`; vector similarity cannot confirm a
+  memory or enable Local AI fallback. Conflicts and poisoning fail toward
+  clarification.
+- Roadmap only; do not implement vector storage/embeddings/RAG runtime or
+  enable `LOCAL_SEMANTIC_MEMORY_ENABLED` / `LOCAL_AI_FALLBACK_APPROVED`.
+- Design notes: [Memory RAG / Personal RAG](docs/FUTURE_ROADMAP.md#memory-rag--personal-rag--future-research).
+
 ### P3 — Project infrastructure
 
 - Add hosted CI for unit/security tests if separately scheduled.
