@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
 import unicodedata
 from collections import Counter
@@ -21,6 +22,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 
@@ -194,6 +196,10 @@ class StageBManifestError(StageBCorpusError):
     """A manifest input is not suitable for deterministic identity generation."""
 
 
+class StageBPathError(StageBCorpusError):
+    """A requested corpus path is not an explicitly local filesystem path."""
+
+
 def _canonical_json_bytes(value: Any) -> bytes:
     return json.dumps(
         value,
@@ -207,6 +213,44 @@ def canonical_json(value: Any) -> str:
     """Return the stable UTF-8 JSON representation used for hashing."""
 
     return _canonical_json_bytes(value).decode("utf-8")
+
+
+def validate_local_path(path: str | os.PathLike[str], *, field: str = "path") -> Path:
+    """Validate an explicit local path without resolving or opening it.
+
+    The check is deliberately lexical.  It rejects UNC/device namespaces and
+    URI/scheme forms before any filesystem operation.  It does not probe the
+    network or attempt to determine whether a drive is backed by a remote
+    service.
+    """
+
+    try:
+        raw_path = os.fspath(path)
+    except TypeError as exc:
+        raise StageBPathError(f"{field} must be a local filesystem path") from exc
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise StageBPathError(f"{field} must be a local filesystem path")
+
+    candidate = raw_path.strip()
+    windows_form = candidate.replace("/", "\\")
+    if (
+        candidate.startswith("//")
+        or candidate.startswith("\\\\")
+        or windows_form.startswith("\\\\" + ".\\")
+        or windows_form.startswith("\\\\" + "?\\")
+    ):
+        raise StageBPathError(f"{field} must be a local filesystem path")
+
+    scheme_match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*):(.*)$", candidate)
+    if scheme_match is not None:
+        scheme, remainder = scheme_match.groups()
+        # A one-letter drive prefix is the only accepted scheme-like form.
+        # Drive-relative paths such as D:folder remain local; all other
+        # schemes, including file://, http://, and custom://, are rejected.
+        if len(scheme) != 1 or remainder.startswith(("//", "\\\\")):
+            raise StageBPathError(f"{field} must be a local filesystem path")
+
+    return Path(raw_path)
 
 
 def _key_token(value: str) -> str:
@@ -387,7 +431,15 @@ class StageBRecord:
                     member.value for member in OptionalSlotStatus
                 }:
                     raise StageBSchemaError("optional_slot_status contains an unapproved value")
+            object.__setattr__(
+                self,
+                "optional_slot_status",
+                MappingProxyType(dict(self.optional_slot_status)),
+            )
         _validate_span_relationships(self.utterance, self.expected)
+        canonical_payload = self.to_dict()
+        _scan_forbidden_fields(canonical_payload)
+        _scan_sensitive_values(canonical_payload)
         _validate_record_semantics(self)
 
     @classmethod
@@ -611,16 +663,18 @@ def _coerce_splits(
             raise StageBManifestError("split rows must be an iterable of records")
         records: list[StageBRecord] = []
         for row in raw_records:
-            records.append(row if isinstance(row, StageBRecord) else StageBRecord.from_mapping(row))
+            canonical_row = row.to_dict() if isinstance(row, StageBRecord) else row
+            records.append(StageBRecord.from_mapping(canonical_row))
         normalized[name] = tuple(records)
     if not normalized:
         raise StageBManifestError("at least one split is required")
     return {name: normalized[name] for name in SPLIT_NAMES if name in normalized}
 
 
-def _read_json_array(path: Path) -> list[dict[str, Any]]:
+def _read_json_array(path: str | os.PathLike[str]) -> list[dict[str, Any]]:
+    safe_path = validate_local_path(path, field="corpus_path")
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(safe_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise StageBCorpusError("cannot read corpus JSON") from exc
     if not isinstance(payload, list) or any(not isinstance(row, Mapping) for row in payload):
@@ -628,19 +682,21 @@ def _read_json_array(path: Path) -> list[dict[str, Any]]:
     return list(payload)
 
 
-def stage_a_identity(path: Path = DEFAULT_STAGE_A_CORPUS_PATH) -> dict[str, Any]:
+def stage_a_identity(path: str | os.PathLike[str] = DEFAULT_STAGE_A_CORPUS_PATH) -> dict[str, Any]:
     """Return only the frozen Stage A row count and content hash."""
 
-    payload = _read_json_array(Path(path))
+    safe_path = validate_local_path(path, field="stage_a_path")
+    payload = _read_json_array(safe_path)
     return {"case_count": len(payload), "sha256": _sha256_json(payload)}
 
 
 def _stage_a_utterances(
-    path: Path,
+    path: str | os.PathLike[str],
     *,
     verify_frozen_identity: bool,
 ) -> set[str]:
-    payload = _read_json_array(path)
+    safe_path = validate_local_path(path, field="stage_a_path")
+    payload = _read_json_array(safe_path)
     digest = _sha256_json(payload)
     if verify_frozen_identity and (
         len(payload) != EXPECTED_STAGE_A_CASE_COUNT or digest != EXPECTED_STAGE_A_SHA256
@@ -655,7 +711,7 @@ def _stage_a_utterances(
 
 
 def load_stage_a_utterances(
-    path: Path = DEFAULT_STAGE_A_CORPUS_PATH,
+    path: str | os.PathLike[str] = DEFAULT_STAGE_A_CORPUS_PATH,
     *,
     verify_frozen_identity: bool | None = None,
 ) -> set[str]:
@@ -665,7 +721,8 @@ def load_stage_a_utterances(
     for leakage tests without being treated as the frozen Stage A artifact.
     """
 
-    resolved = Path(path).resolve()
+    safe_path = validate_local_path(path, field="stage_a_path")
+    resolved = safe_path.resolve()
     default_resolved = DEFAULT_STAGE_A_CORPUS_PATH.resolve()
     verify = resolved == default_resolved if verify_frozen_identity is None else verify_frozen_identity
     return _stage_a_utterances(resolved, verify_frozen_identity=verify)
@@ -958,7 +1015,7 @@ def validate_corpus(
     splits: Mapping[str, Sequence[StageBRecord | Mapping[str, Any]]],
     *,
     enforce_protocol_counts: bool = False,
-    stage_a_path: Path | None = DEFAULT_STAGE_A_CORPUS_PATH,
+    stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
 ) -> StageBValidationResult:
     """Validate records and return deterministic evidence.
@@ -972,8 +1029,9 @@ def validate_corpus(
     records_by_split = _coerce_splits(splits)
     stage_a_utterances = None
     if stage_a_path is not None:
+        safe_stage_a_path = validate_local_path(stage_a_path, field="stage_a_path")
         stage_a_utterances = load_stage_a_utterances(
-            stage_a_path,
+            safe_stage_a_path,
             verify_frozen_identity=verify_stage_a_identity,
         )
     _validate_cross_split_boundaries(
@@ -993,7 +1051,7 @@ def validate_corpus(
 def validate_protocol_corpus(
     splits: Mapping[str, Sequence[StageBRecord | Mapping[str, Any]]],
     *,
-    stage_a_path: Path | None = DEFAULT_STAGE_A_CORPUS_PATH,
+    stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
 ) -> StageBValidationResult:
     """Validate the exact frozen 3,000-row Stage B protocol."""
@@ -1006,26 +1064,43 @@ def validate_protocol_corpus(
     )
 
 
-def load_split_records(path: Path) -> tuple[StageBRecord, ...]:
+def load_split_records(path: str | os.PathLike[str]) -> tuple[StageBRecord, ...]:
     """Load one explicit local JSON array without executing any external code."""
 
-    return tuple(StageBRecord.from_mapping(row) for row in _read_json_array(Path(path)))
+    safe_path = validate_local_path(path, field="split_path")
+    return tuple(StageBRecord.from_mapping(row) for row in _read_json_array(safe_path))
 
 
 def validate_corpus_paths(
-    split_paths: Mapping[str, Path],
+    split_paths: Mapping[str, str | os.PathLike[str]],
     *,
     enforce_protocol_counts: bool = False,
-    stage_a_path: Path | None = DEFAULT_STAGE_A_CORPUS_PATH,
+    stage_a_path: str | os.PathLike[str] | None = DEFAULT_STAGE_A_CORPUS_PATH,
     verify_stage_a_identity: bool | None = None,
 ) -> StageBValidationResult:
     """Load explicit local split files and validate them offline."""
 
-    splits = {name: load_split_records(Path(path)) for name, path in split_paths.items()}
+    if not isinstance(split_paths, Mapping):
+        raise StageBManifestError("split_paths must be an object keyed by split name")
+    safe_split_paths: dict[str, Path] = {}
+    for raw_name, path in split_paths.items():
+        name = _normalize_split_name(raw_name)
+        if name in safe_split_paths:
+            raise StageBManifestError("the same canonical split was supplied more than once")
+        safe_split_paths[name] = validate_local_path(path, field=f"{name}_split_path")
+    safe_stage_a_path = (
+        validate_local_path(stage_a_path, field="stage_a_path")
+        if stage_a_path is not None
+        else None
+    )
+    splits = {
+        name: load_split_records(path)
+        for name, path in safe_split_paths.items()
+    }
     return validate_corpus(
         splits,
         enforce_protocol_counts=enforce_protocol_counts,
-        stage_a_path=stage_a_path,
+        stage_a_path=safe_stage_a_path,
         verify_stage_a_identity=verify_stage_a_identity,
     )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 from pathlib import Path
 
@@ -439,6 +440,127 @@ def test_optional_partition_and_pass_count_helpers_are_frozen() -> None:
     assert corpus.required_pass_count(100) == 95
     assert corpus.required_pass_count(170) == 162
     assert corpus.required_pass_count(130) == 124
+
+
+def test_local_path_boundary_rejects_network_device_and_uri_forms_before_reading(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_read(*_args: object, **_kwargs: object) -> str:
+        raise AssertionError("rejected path reached file I/O")
+
+    monkeypatch.setattr(Path, "read_text", fail_read)
+    rejected = (
+        r"\\server\share\file.json",
+        "//server/share/file.json",
+        r"\\.\pipe\stage-b",
+        r"\\?\C:\stage-b.json",
+        r"\\?\UNC\server\share\stage-b.json",
+        "file://C:/stage-b.json",
+        "http://example.invalid/stage-b.json",
+        "https://example.invalid/stage-b.json",
+        "custom+v1://host/stage-b.json",
+    )
+    for path in rejected:
+        with pytest.raises(corpus.StageBPathError) as error:
+            corpus.load_split_records(path)
+        assert str(error.value) == "split_path must be a local filesystem path"
+        with pytest.raises(corpus.StageBPathError):
+            corpus.load_stage_a_utterances(path)
+        with pytest.raises(corpus.StageBPathError):
+            corpus.stage_a_identity(path)
+
+
+def test_validate_corpus_paths_validates_all_paths_before_reading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    safe_path = tmp_path / "safe.json"
+    safe_path.write_text(json.dumps([_unknown_row("safe")]), encoding="utf-8")
+
+    def fail_read(*_args: object, **_kwargs: object) -> str:
+        raise AssertionError("a safe path was read before all paths were checked")
+
+    monkeypatch.setattr(Path, "read_text", fail_read)
+    with pytest.raises(corpus.StageBPathError):
+        corpus.validate_corpus_paths(
+            {"train": safe_path, "test": r"\\server\share\unsafe.json"},
+            stage_a_path=None,
+        )
+
+
+def test_ordinary_local_path_remains_supported(tmp_path: Path) -> None:
+    path = tmp_path / "split.json"
+    path.write_text(json.dumps([_unknown_row("local_path")]), encoding="utf-8")
+
+    records = corpus.load_split_records(path)
+
+    assert len(records) == 1
+    assert records[0].case_id == "local_path"
+
+
+def test_direct_stage_b_record_cannot_bypass_sensitive_structured_value_scan() -> None:
+    uri = "https://evil.example/track"
+    utterance = f"Play {uri}"
+    expected = corpus.StageBExpected(
+        intent="spotify_play_track",
+        track=corpus.StageBSpan(uri, 5, 5 + len(uri)),
+        artist=None,
+        album=None,
+    )
+    direct_kwargs = {
+        "case_id": "direct_sensitive",
+        "source_group_id": "direct_sensitive_group",
+        "utterance": utterance,
+        "language_tag": "en",
+        "language_slice": "english",
+        "ai_scope": "supported",
+        "expected": expected,
+        "optional_slot_status": {"artist": "absent", "album": "absent"},
+        "negative_reason": None,
+        "template_family": "direct_sensitive",
+        "generator_version": "unit-test-v1",
+    }
+    with pytest.raises(corpus.StageBSchemaError):
+        corpus.StageBRecord(**direct_kwargs)
+
+    mapping = _positive_row("mapping_sensitive", artist=None, album=None)
+    mapping["utterance"] = utterance
+    mapping["expected"] = {
+        "intent": "spotify_play_track",
+        "track": {"text": uri, "start": 5, "end": 5 + len(uri)},
+        "artist": None,
+        "album": None,
+    }
+    with pytest.raises(corpus.StageBSchemaError):
+        corpus.StageBRecord.from_mapping(mapping)
+
+
+def test_direct_stage_b_record_acceptance_matches_mapping_and_freezes_slot_status() -> None:
+    row = _positive_row("direct_valid")
+    parsed = corpus.StageBRecord.from_mapping(row)
+    external_status = {"artist": "present", "album": "present"}
+    direct = corpus.StageBRecord(
+        case_id=parsed.case_id,
+        source_group_id=parsed.source_group_id,
+        utterance=parsed.utterance,
+        language_tag=parsed.language_tag,
+        language_slice=parsed.language_slice,
+        ai_scope=parsed.ai_scope,
+        expected=parsed.expected,
+        optional_slot_status=external_status,
+        negative_reason=parsed.negative_reason,
+        template_family=parsed.template_family,
+        generator_version=parsed.generator_version,
+    )
+    external_status["artist"] = "absent"
+
+    mapping_result = corpus.validate_corpus({"train": [row]}, stage_a_path=None)
+    direct_result = corpus.validate_corpus({"train": [direct]}, stage_a_path=None)
+
+    assert direct.optional_slot_status["artist"] == "present"
+    with pytest.raises(TypeError):
+        direct.optional_slot_status["artist"] = "absent"
+    assert direct_result.manifest_json() == mapping_result.manifest_json()
 
 
 def test_near_duplicate_policy_is_explicitly_deferred_without_an_arbitrary_threshold() -> None:

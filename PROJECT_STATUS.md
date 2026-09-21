@@ -16,6 +16,15 @@ focused coverage in
 [`tests/unit/test_local_ai_stage_b_corpus.py`](tests/unit/test_local_ai_stage_b_corpus.py).
 No real 3,000-row corpus has been generated or committed.
 
+The follow-up hardening in PR #45 keeps this infrastructure offline and
+benchmark-only: every corpus/stage path is lexically checked as a local path
+before I/O, all paths are prevalidated before any split is read, and direct
+`StageBRecord` construction receives the same security/sensitive-value scan as
+mapping input while freezing optional-slot status. The correction evidence is
+51 focused tests and 416 unit tests passed, plus compileall and git diff checks;
+this is source/unit evidence only, not real corpus, compute, production,
+Windows, Spotify, Siri, or model acceptance.
+
 Stage A is complete as an evidence inventory. The control plus all eight fixed
 candidates have a reviewed run, a reviewed historical result, or an explicit
 blocker. The final comparison and gate are recorded in
