@@ -35,7 +35,10 @@ class WindowsProcessController:
         deadline = time.monotonic() + 5.0
         remaining = [pid for pid, _ in targets]
         while remaining and time.monotonic() < deadline:
-            remaining = [pid for pid in remaining if self._pid_exists(pid)]
+            # Keep a PID when liveness inspection is inconclusive.  An access
+            # or API failure must never be treated as proof that the process
+            # exited, otherwise graceful close can report a false success.
+            remaining = [pid for pid in remaining if self._pid_exists(pid) is not False]
             if remaining:
                 time.sleep(0.1)
         if remaining:
@@ -97,14 +100,15 @@ class WindowsProcessController:
         return None
 
     @staticmethod
-    def _pid_exists(pid: int) -> bool:
-        handle = ctypes.windll.kernel32.OpenProcess(WindowsProcessController.SYNCHRONIZE, False, pid)
+    def _pid_exists(pid: int) -> bool | None:
+        access = WindowsProcessController.SYNCHRONIZE | WindowsProcessController.PROCESS_QUERY_LIMITED_INFORMATION
+        handle = ctypes.windll.kernel32.OpenProcess(access, False, pid)
         if not handle:
-            return False
+            return None
         try:
             exit_code = wintypes.DWORD()
             if not ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
-                return False
+                return None
             return int(exit_code.value) == 259  # STILL_ACTIVE
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)

@@ -20,11 +20,17 @@ class WindowsSystemController:
         session = wintypes.DWORD()
         ok = bool(ctypes.windll.kernel32.ProcessIdToSessionId(os.getpid(), ctypes.byref(session)))
         session_id = int(session.value) if ok else None
-        active = int(ctypes.windll.kernel32.WTSGetActiveConsoleSessionId())
+        active = self._active_console_session_id()
         system_user = user.casefold() in {"system", "local service", "network service"}
         interactive = bool(ok and not system_user and session_id not in {None, 0} and (active == 0xFFFFFFFF or session_id == active))
         warning = None if interactive else "Agent is not in the current interactive desktop session; GUI launch may be abnormal."
         return {"interactive": interactive, "session_id": session_id, "user": user, "warning": warning}
+
+    @staticmethod
+    def _active_console_session_id() -> int:
+        get_active_session = ctypes.windll.kernel32.WTSGetActiveConsoleSessionId
+        get_active_session.restype = wintypes.DWORD
+        return int(get_active_session())
 
     def lock(self) -> OperationResult:
         if sys.platform != "win32":

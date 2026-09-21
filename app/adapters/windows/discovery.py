@@ -19,7 +19,7 @@ from app.domain.app_models import (
     LaunchSource,
     ProcessSpec,
 )
-from app.domain.matching import aliases_for, normalize_name
+from app.domain.matching import aliases_for, normalize_app_name, normalize_name
 
 from .base import AdapterError
 from .system_apps import stable_app_id, system_app_entries
@@ -125,7 +125,7 @@ def _path_entry(
     return AppEntry(
         app_id=stable_app_id(source, display_name, str(target)),
         display_name=display_name,
-        normalized_name=normalize_name(display_name),
+        normalized_name=normalize_app_name(display_name),
         aliases=aliases_for(display_name, aliases),
         launch_method=LaunchMethod.EXECUTABLE,
         launch_target=str(target),
@@ -159,7 +159,7 @@ class WindowsApplicationDiscovery:
 
     def __init__(self, *, manual_apps: tuple[dict[str, Any], ...] = (), application_aliases: dict[str, tuple[str, ...]] | None = None) -> None:
         self.manual_apps = manual_apps
-        self.application_aliases = {normalize_name(key): tuple(values) for key, values in (application_aliases or {}).items()}
+        self.application_aliases = {normalize_app_name(key): tuple(values) for key, values in (application_aliases or {}).items()}
 
     def _run_fixed_powershell(self, script: str) -> str:
         if not _is_windows():
@@ -287,7 +287,7 @@ class WindowsApplicationDiscovery:
                 AppEntry(
                     app_id=stable_app_id("apps_folder", name, aumid),
                     display_name=name,
-                    normalized_name=normalize_name(name),
+                    normalized_name=normalize_app_name(name),
                     aliases=aliases,
                     launch_method=LaunchMethod.SHELL_URI,
                     launch_target=f"shell:AppsFolder\\{aumid}",
@@ -349,7 +349,7 @@ class WindowsApplicationDiscovery:
                                     AppEntry(
                                         app_id=stable_app_id("registry_uninstall", name, subkey),
                                         display_name=name,
-                                        normalized_name=normalize_name(name),
+                                        normalized_name=normalize_app_name(name),
                                         aliases=aliases_for(name),
                                         source="registry_uninstall",
                                         app_type=AppType.METADATA,
@@ -391,16 +391,49 @@ class WindowsApplicationDiscovery:
         trusted_by_name: dict[str, list[AppEntry]] = {}
         for entry in deduplicated:
             if entry.launch_source in {LaunchSource.TRUSTED, LaunchSource.MANUAL}:
-                trusted_by_name.setdefault(entry.normalized_name, []).append(entry)
-        merged: list[AppEntry] = []
+                trusted_by_name.setdefault(normalize_app_name(entry.normalized_name), []).append(entry)
+
+        metadata_for_trusted: dict[str, dict[str, Any]] = {}
         for entry in deduplicated:
-            trusted = trusted_by_name.get(entry.normalized_name, [])
+            trusted = trusted_by_name.get(normalize_app_name(entry.normalized_name), [])
             if entry.launch_source is LaunchSource.METADATA_ONLY and len(trusted) == 1:
-                trusted_entry = trusted[0]
-                merged_metadata = {**entry.metadata, **trusted_entry.metadata}
-                replacement = trusted_entry.model_copy(update={"metadata": merged_metadata})
-                if replacement not in merged:
-                    merged.append(replacement)
+                target_id = trusted[0].app_id
+                metadata_for_trusted[target_id] = {
+                    **metadata_for_trusted.get(target_id, {}),
+                    **entry.metadata,
+                }
                 continue
-            merged.append(entry)
-        return sorted(merged, key=lambda item: (item.normalized_name, item.source, item.app_id))
+
+        # Use app_id as the final identity boundary.  In particular, a
+        # metadata-only row may be discovered before its trusted counterpart;
+        # it must enrich that counterpart, not append a second model-equal-ID
+        # row after the trusted row is seen.
+        merged_by_app_id: dict[str, AppEntry] = {}
+        for entry in deduplicated:
+            if entry.launch_source is LaunchSource.METADATA_ONLY and len(trusted_by_name.get(normalize_app_name(entry.normalized_name), [])) == 1:
+                continue
+            candidate = entry
+            if entry.launch_source in {LaunchSource.TRUSTED, LaunchSource.MANUAL}:
+                extra_metadata = metadata_for_trusted.get(entry.app_id)
+                if extra_metadata:
+                    candidate = entry.model_copy(update={"metadata": {**extra_metadata, **entry.metadata}})
+
+            existing = merged_by_app_id.get(candidate.app_id)
+            if existing is None:
+                merged_by_app_id[candidate.app_id] = candidate
+                continue
+            if existing.launch_source in {LaunchSource.TRUSTED, LaunchSource.MANUAL}:
+                aliases = tuple(dict.fromkeys((*existing.aliases, *candidate.aliases)))
+                merged_by_app_id[candidate.app_id] = existing.model_copy(
+                    update={"aliases": aliases, "metadata": {**candidate.metadata, **existing.metadata}}
+                )
+            elif candidate.launch_source in {LaunchSource.TRUSTED, LaunchSource.MANUAL}:
+                merged_by_app_id[candidate.app_id] = candidate.model_copy(
+                    update={"metadata": {**existing.metadata, **candidate.metadata}}
+                )
+            else:
+                merged_by_app_id[candidate.app_id] = existing.model_copy(
+                    update={"metadata": {**existing.metadata, **candidate.metadata}}
+                )
+
+        return sorted(merged_by_app_id.values(), key=lambda item: (item.normalized_name, item.source, item.app_id))

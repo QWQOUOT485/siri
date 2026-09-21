@@ -4,6 +4,22 @@
 
 ## Current Phase
 
+### 2026-09-21 Verified runtime bug audit fixes / source evidence only
+
+Branch `codex/verified-runtime-bug-audit-fixes-20260921` contains the six
+reviewed boundary fixes: fail-closed Windows graceful-close liveness,
+context-aware Spotify Live classification, one-row-per-app-id discovery
+metadata merging, explicit WTS DWORD handling, Traditional/Simplified
+application-name comparison, and IPv4-mapped IPv6 LAN allowlist support.
+Focused regressions and the full unit suite pass (**442 passed**, with two
+existing dependency deprecation warnings); compileall and git diff checks also
+pass. This is source/unit evidence only: no Windows, Spotify, Siri, live
+network, deployment, destructive process, model, RAG, or Local AI runtime
+acceptance was run. Spotify previous/resume semantics and force-close
+top-level-window authority were intentionally unchanged. The review PR is to
+remain OPEN for independent review; `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+`LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
+
 ### 2026-09-21 Stage B pre-corpus gate / Memory RAG roadmap-only / compute not authorized
 
 PR #44, which recorded the Stage B adaptation design, is merged into `main`

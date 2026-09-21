@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .app_models import AppEntry, AppType, LaunchMethod, MatchCandidate, MatchResult
+from .chinese import normalize_chinese_text
 
 
 _PUNCTUATION = re.compile(r"[^\w\u3400-\u9fff]+", re.UNICODE)
@@ -23,6 +24,12 @@ def normalize_name(value: str) -> str:
     value = value.replace("_", " ").replace("-", " ")
     value = _PUNCTUATION.sub(" ", value)
     return _WHITESPACE.sub(" ", value).strip()
+
+
+def normalize_app_name(value: str) -> str:
+    """Normalize an application/entity name, including Chinese script variants."""
+
+    return normalize_name(normalize_chinese_text(value or ""))
 
 
 BUILTIN_ALIASES: dict[str, tuple[str, ...]] = {
@@ -45,11 +52,11 @@ BUILTIN_ALIASES: dict[str, tuple[str, ...]] = {
 def aliases_for(display_name: str, aliases: Iterable[str] = ()) -> tuple[str, ...]:
     """Merge configured aliases with stable built-in aliases."""
 
-    values = [*aliases, *BUILTIN_ALIASES.get(normalize_name(display_name), ())]
+    values = [*aliases, *BUILTIN_ALIASES.get(normalize_app_name(display_name), ())]
     seen: set[str] = set()
     result: list[str] = []
     for value in values:
-        normalized = normalize_name(value)
+        normalized = normalize_app_name(value)
         if normalized and normalized not in seen:
             seen.add(normalized)
             result.append(normalized)
@@ -74,8 +81,8 @@ def _launch_preference(entry: AppEntry) -> tuple[int, int, int]:
 
     direct_executable = 0
     if entry.launch_method is LaunchMethod.EXECUTABLE and entry.executable_path:
-        executable_stem = normalize_name(Path(entry.executable_path).stem)
-        if executable_stem == entry.normalized_name:
+        executable_stem = normalize_app_name(Path(entry.executable_path).stem)
+        if executable_stem == normalize_app_name(entry.normalized_name):
             direct_executable = 3
         elif entry.process and entry.process.reliable:
             direct_executable = 1
@@ -85,8 +92,8 @@ def _launch_preference(entry: AppEntry) -> tuple[int, int, int]:
 
 
 def _score(query: str, entry: AppEntry) -> _Scored | None:
-    fields: list[tuple[str, str]] = [(entry.normalized_name, "name")]
-    fields.extend((alias, "alias") for alias in entry.aliases)
+    fields: list[tuple[str, str]] = [(normalize_app_name(entry.normalized_name), "name")]
+    fields.extend((normalize_app_name(alias), "alias") for alias in entry.aliases)
     best: tuple[float, str] | None = None
     query_tokens = query.split()
     for field, kind in fields:
@@ -113,7 +120,7 @@ def _score(query: str, entry: AppEntry) -> _Scored | None:
 
 
 def match_app(query: str, entries: Iterable[AppEntry], *, limit: int = 8) -> MatchResult:
-    normalized = normalize_name(query)
+    normalized = normalize_app_name(query)
     if not normalized:
         return MatchResult(query=query, candidates=[], ambiguous=False)
     scored = [result for entry in entries if (result := _score(normalized, entry))]
@@ -122,7 +129,7 @@ def match_app(query: str, entries: Iterable[AppEntry], *, limit: int = 8) -> Mat
         key=lambda item: (
             -item.score,
             *(-value for value in _launch_preference(item.entry)),
-            normalize_name(item.entry.display_name),
+            normalize_app_name(item.entry.display_name),
             item.entry.app_id,
         )
     )

@@ -678,9 +678,9 @@ class SpotifyCatalog:
 
     @classmethod
     def _classify_version(cls, ref: SpotifyTrackRef) -> str:
-        searchable = f"{ref.track_name} {ref.album_name}"
-        if cls._contains_marker(searchable, cls._LIVE_MARKERS):
+        if cls._contains_live_title_marker(ref.track_name) or cls._contains_marker(ref.album_name, cls._LIVE_MARKERS):
             return "live"
+        searchable = f"{ref.track_name} {ref.album_name}"
         if ref.album_type.casefold() == "compilation" or cls._contains_marker(searchable, cls._SECONDARY_MARKERS):
             return "secondary"
         return "studio"
@@ -704,6 +704,22 @@ class SpotifyCatalog:
         "精選",
         "精选",
     )
+
+    _LIVE_TITLE_PATTERNS = (
+        r"(?:\(|\[|\{)\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance))?\s*(?:\)|\]|\})",
+        r"(?:^|\s)[\-–—:]\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance))?\s*$",
+        r"\b(?:live|concert|tour)\s+(?:version|recording|performance)\b",
+        r"\blive\s+(?:at|from)\b",
+        r"(?:演唱會版|演唱会版|演唱會|演唱会|現場版|现场版|現場|现场)",
+    )
+
+    @classmethod
+    def _contains_live_title_marker(cls, value: str) -> bool:
+        # A bare word in a canonical title is not enough: "Live Forever" and
+        # similar studio titles are common.  Require release/version context
+        # in the title; album metadata remains a separate strong signal.
+        normalized = str(value or "").casefold()
+        return any(re.search(pattern, normalized) for pattern in cls._LIVE_TITLE_PATTERNS)
 
     @classmethod
     def _contains_marker(cls, value: str, markers: tuple[str, ...]) -> bool:

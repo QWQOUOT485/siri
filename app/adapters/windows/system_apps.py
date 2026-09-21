@@ -10,7 +10,7 @@ import hashlib
 import shutil
 
 from app.domain.app_models import AppEntry, AppType, LaunchMethod, LaunchSource, ProcessSpec
-from app.domain.matching import aliases_for, normalize_name
+from app.domain.matching import aliases_for, normalize_app_name
 
 
 SYSTEM_APP_DEFINITIONS: tuple[dict[str, object], ...] = (
@@ -34,7 +34,7 @@ SYSTEM_APP_DEFINITIONS: tuple[dict[str, object], ...] = (
 
 
 def stable_app_id(source: str, display_name: str, target: str | None) -> str:
-    raw = f"{source}|{normalize_name(display_name)}|{target or ''}".encode("utf-8")
+    raw = f"{source}|{normalize_app_name(display_name)}|{target or ''}".encode("utf-8")
     return "app_" + hashlib.sha256(raw).hexdigest()[:24]
 
 
@@ -52,7 +52,7 @@ def system_app_entries() -> list[AppEntry]:
             AppEntry(
                 app_id=stable_app_id("system_apps", name, launch_target),
                 display_name=name,
-                normalized_name=normalize_name(name),
+                normalized_name=normalize_app_name(name),
                 aliases=aliases,
                 launch_method=method,
                 launch_target=launch_target,
