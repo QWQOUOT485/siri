@@ -120,57 +120,195 @@ acceptance; Siri voice acceptance was not performed.
 Keep Spotify relevance/popularity and personalization signals as bounded
 candidate evidence only.
 
-### P2.5 — Local AI decision-head research PoC
+### P2.5 — Open System One / Jev-like local model benchmark
 
-Research a Jev-like / non-generative local decision model using a small Qwen
-backbone. This is an evaluation task only and must not change production Local
-AI authority or set `LOCAL_AI_FALLBACK_APPROVED=true`.
+Build a reproducible local benchmark for open Jev-like / System-One-style
+decision models. This is an evaluation task only. It must not expand Local AI
+authority, enable executable fallback, or set
+`LOCAL_AI_FALLBACK_APPROVED=true`.
 
-Primary references / approaches to investigate:
+The goal is not to find the largest model. The goal is to determine which
+architecture best fits this Agent's narrow Chinese Siri semantic-recovery task
+under the existing deterministic grounding and policy boundary.
 
-- `jaredpalmer/kev`: small Qwen backbone + LoRA + decision/readout head
-- `Mapika/decider`: Qwen-based one-forward-pass probabilistic decision model
-- `LitJev`: logits-based Jev-style decision experiments without full text generation
+#### Control baseline
 
-Initial experiment scope:
+Keep the current generative baseline as the control row:
 
-- Start with approximately 0.5B–2B Qwen-class models; do not assume a larger
-  model is better.
-- Target only the current narrow Local AI domain:
-  `spotify_play_track` vs `unknown`, plus bounded track / artist / album
-  semantic recovery where the architecture safely permits it.
-- Compare the current generative structured-output baseline against a
-  non-generative decision-head approach.
-- Reuse the existing frozen 109-case Local AI benchmark/evaluation harness where
-  possible; do not train on the held-out benchmark answers.
-- Measure at least: strict-schema/typed-output success, supported semantic
-  accuracy, semantic-retry accuracy, safe-unknown behavior, false execution,
-  post-grounding false acceptance, P50/P95 latency, malformed-output rate, and
-  timeout/failure behavior.
-- If a decision head produces probabilities/confidence, evaluate calibration;
-  confidence must remain evidence only and must not become execution authority.
-- Build any training corpus from reviewed/sanitized examples, with separate
-  training/validation/frozen-evaluation splits.
-- Keep secrets, OAuth tokens, private paths, Spotify IDs/URIs, and raw sensitive
-  logs out of training data.
-- Prefer a parameter-efficient experiment (LoRA/QLoRA or similarly bounded
-  tuning) that fits a single consumer GPU in the roughly 12–16 GB VRAM class.
-- Do not introduce mixed-vendor cross-host distributed training for the first
-  PoC.
-- Any candidate that beats the baseline must still pass the existing grounding,
-  policy, fail-closed, shadow, and independent promotion gates before executable
-  fallback can be considered.
+- `qwen2.5-coder-1.5b-instruct` in the existing prompt / strict-schema path.
+- Preserve the current frozen 109-case results as historical evidence; rerun
+  only when the benchmark harness, prompt/schema, model build, or comparison
+  protocol requires an exact aligned run.
 
-Success criteria for the research task:
+#### Fixed eight-candidate set
+
+Benchmark these eight open candidates before adding more. Do not silently
+replace a candidate; if one cannot run, record the exact blocker and continue.
+
+| # | Candidate | Backbone / scale | Route being tested | Why it is in the set |
+|---|---|---|---|---|
+| 1 | [systemone-lite](https://github.com/fritzprix/systemone-lite) | Qwen2.5-0.5B-Instruct | frozen/SFT option-restricted next-token scoring + prefix KV | simplest Qwen System-One baseline; published RTX 3060 12 GB path |
+| 2 | [kev](https://github.com/jaredpalmer/kev) | Qwen2.5-0.5B | LoRA + trained pointer/readout decision head | small trained decoder decision-head design |
+| 3 | [eve-rlcd](https://github.com/anthony-maio/eve-rlcd) | Qwen3-0.6B-Base | supervised warmup + RLCD-style calibrated decision training | tests explicit probability/calibration training rather than plain SFT |
+| 4 | [decider](https://github.com/Mapika/decider) | Qwen3.5-2B-Base | one-pass typed decisions with trained label projection | stronger small decoder model and richer decision-model implementation |
+| 5 | [system-one-open](https://github.com/mithalouni/system-one-open) | Gemma 3 270M first; Gemma 4 E2B only if hardware fit is proven | trained Gemma Jev-style model | non-Qwen decoder family and very small-model comparison |
+| 6 | [laya](https://github.com/NandhaKishorM/laya) | prefer multilingual mmBERT checkpoint (~322M class) | non-autoregressive multilingual encoder + decision head | especially relevant to Traditional-Chinese / mixed-language Siri input |
+| 7 | [Verdict-open-jev](https://github.com/Heman10x-NGU/Verdict-open-jev) | ModernBERT ~151M | very small non-autoregressive encoder decision engine | latency / size floor and encoder-vs-decoder comparison |
+| 8 | [open-jev-deberta-v3-large](https://huggingface.co/com-kotobalabs/open-jev-deberta-v3-large) | DeBERTa-v3-large | encoder + typed option scoring + calibrated probabilities | independent encoder architecture and calibration reference |
+
+Optional methodology reference, not a ninth required model:
+
+- [LitJev](https://github.com/zhengxuyu/litjev) may be used to test
+  logits-only inference on an existing Qwen checkpoint. If used, prefer the
+  current Qwen baseline backbone so the experiment isolates **decision
+  inference vs autoregressive JSON generation** rather than changing both model
+  and inference method at once.
+
+#### Stage A — Run released models / inference methods as-is
+
+Before training anything locally:
+
+1. Pin repository commit / package version / model revision.
+2. Record license, exact model ID, parameter count, quantization/precision,
+   framework/backend, and model file size.
+3. Adapt each candidate behind a benchmark-only interface; do not wire it into
+   executable production fallback.
+4. Run the same frozen Agent evaluation cases without training on their answers.
+5. Keep raw model outputs and machine-specific traces under ignored runtime
+   paths; commit only sanitized aggregate evidence.
+
+A candidate may be English-oriented or poorly matched to Chinese. Do not remove
+it merely for performing badly; that result is useful architecture evidence.
+
+#### Stage B — Agent-specific adaptation of finalists
+
+After Stage A, select at most the strongest 2–3 candidates for local adaptation.
+
+- Build a reviewed/sanitized Siri decision corpus separate from the frozen
+  evaluation set.
+- Use explicit train / validation / frozen-evaluation splits.
+- Prefer LoRA / QLoRA / small decision-head tuning where supported.
+- For encoder candidates, use the project's intended classification/decision
+  head training path rather than forcing an autoregressive JSON objective.
+- Include Traditional Chinese, mixed Chinese/English artist names, colloquial
+  Siri phrasing, ASR-like errors, entity-boundary mistakes, and strong
+  `unknown` negative examples.
+- Do not include secrets, OAuth tokens, private paths, Spotify IDs/URIs, raw
+  sensitive logs, or frozen benchmark answers in training data.
+
+The initial adapted authority remains narrow:
+
+~~~text
+spotify_play_track
+unknown
++ bounded track / artist / album semantic recovery
+~~~
+
+Do not add app control, shutdown, force-close, firewall, arbitrary Windows
+operations, shell text, executable paths, URLs, or client-owned Spotify IDs.
+
+#### Benchmark protocol
+
+Use the existing Local AI frozen corpus as the common starting point and extend
+the harness only when needed to represent non-generative typed decisions.
+Preserve old cases and hashes when changing the harness.
+
+Measure at least:
+
+- transport / model-load success
+- typed-output or strict-schema success
+- supported semantic accuracy
+- semantic-retry accuracy
+- deterministic-only safe-unknown
+- safety-only safe-unknown
+- false execution
+- post-grounding false acceptance
+- P50 / P95 end-to-end model latency
+- throughput where the model supports batched questions
+- peak VRAM and system RAM
+- model/load time
+- malformed-output rate
+- timeout / backend failure behavior
+- probability calibration: Brier score and ECE where probabilities exist
+- option-order sensitivity / flip rate where the architecture scores options
+- Chinese-only, English-only, and mixed-language slice accuracy
+
+For entity extraction models, also record track / artist / album slot accuracy
+and entity-boundary recovery separately from top-level action accuracy.
+
+#### Hardware protocol
+
+Primary reproducibility target:
+
+- RTX 3060 12 GB using CUDA, because it has the broadest support across the
+  candidate projects.
+
+Secondary hardware run:
+
+- RX 9070 XT 16 GB when the candidate has a stable supported ROCm / Vulkan /
+  other local backend.
+
+Do not merge the two GPUs into a fake combined-VRAM result. Record hardware,
+driver/runtime, backend, precision/quantization, context length and batch shape
+with every latency row. Cross-GPU latency is descriptive, not a pure
+model-quality comparison.
+
+If a released candidate requires hardware beyond the available 12–16 GB VRAM,
+try an officially supported smaller checkpoint / precision only when that
+variant is part of the same project; otherwise record it as a hardware blocker
+instead of inventing an unreviewed substitute.
+
+#### Fairness rules
+
+- Same frozen cases for every candidate.
+- Same semantic target and safety expectations.
+- No benchmark-answer leakage into tuning data.
+- No candidate-specific hand-written answer overrides.
+- Do not lower grounding/policy requirements to improve a model's score.
+- Confidence is evidence, not execution authority.
+- A candidate with higher semantic accuracy but worse false acceptance is not
+  considered an improvement.
+- Parameter count alone is never a success criterion.
+- Do not compare latency without recording hardware/backend/precision.
+- Keep source/unit benchmark results separate from Windows / Spotify / Siri
+  real-world acceptance.
+
+#### Output artifact
+
+Produce a sanitized report such as:
+
+`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_<YYYY-MM-DD>.md`
+
+Include:
+
+- exact candidate/model revisions
+- exact benchmark/harness commit
+- frozen corpus hash and case count
+- hardware/backend identity
+- one comparison table for all eight candidates + control
+- per-language slices
+- calibration results where supported
+- failure/blocker notes
+- shortlist rationale based on measured results, without changing production
+  approval state
+
+Raw JSON/CSV can remain under ignored `runtime/ai_poc/` or another existing
+ignored benchmark directory.
+
+#### Research success criteria
 
 ~~~text
 same frozen evaluation corpus
-+ measurable semantic or latency improvement
++ reproducible candidate identity
++ measurable semantic and/or latency gain
++ calibrated confidence where applicable
 + no safety regression
-+ reproducible model / dataset / config identity
++ fits realistic local hardware
 ~~~
 
-A larger parameter count by itself is not a success criterion.
+Only after a finalist passes the existing grounding, policy, fail-closed,
+production-aligned shadow, real Windows/Spotify/Siri acceptance where required,
+and independent promotion review may executable fallback be considered.
 
 ### P3 — Project infrastructure
 
