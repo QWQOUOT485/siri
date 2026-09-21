@@ -192,6 +192,10 @@ class BenchmarkDecision:
     album: str | None = None
     confidence: float | None = None
     option_scores: Mapping[str, float] = field(default_factory=dict)
+    # Typed decision models may intentionally expose only the top-level
+    # option.  Keep that limitation explicit instead of letting a runner
+    # mistake a missing track/artist/album extraction for a correct result.
+    slot_evidence_available: bool = True
 
     def __post_init__(self) -> None:
         if self.intent not in ALLOWED_INTENTS:
@@ -202,7 +206,7 @@ class BenchmarkDecision:
                 _require_text(field_name, value)
                 if len(value) > 300 or any(ord(char) < 32 or ord(char) == 127 for char in value):
                     raise BenchmarkSchemaError(f"{field_name} is out of bounds")
-        if self.intent == "spotify_play_track" and self.track is None:
+        if self.intent == "spotify_play_track" and self.track is None and self.slot_evidence_available:
             raise BenchmarkSchemaError("spotify_play_track requires a track")
         if self.intent == "unknown" and any(value is not None for value in (self.track, self.artist, self.album)):
             raise BenchmarkSchemaError("unknown cannot carry semantic slots")
@@ -213,6 +217,13 @@ class BenchmarkDecision:
             if option not in ALLOWED_INTENTS:
                 raise BenchmarkSchemaError("option_scores contains an unapproved option")
             _require_rate(f"option_scores[{option}]", score)
+        _require_bool("slot_evidence_available", self.slot_evidence_available)
+        if not self.slot_evidence_available and any(
+            value is not None for value in (self.track, self.artist, self.album)
+        ):
+            raise BenchmarkSchemaError(
+                "slot evidence must be absent when slot_evidence_available is false"
+            )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "BenchmarkDecision":
@@ -293,6 +304,9 @@ class CaseObservation:
     artist_slot_ok: bool | None = None
     album_slot_ok: bool | None = None
     error_type: str | None = None
+    intent_ok: bool | None = None
+    semantic_evaluated: bool = True
+    slot_evidence_available: bool = True
 
     def __post_init__(self) -> None:
         _require_text("case_id", self.case_id)
@@ -313,6 +327,10 @@ class CaseObservation:
             "post_grounding_false_acceptance",
         ):
             _require_bool(name, getattr(self, name))
+        for name in ("semantic_evaluated", "slot_evidence_available"):
+            _require_bool(name, getattr(self, name))
+        if self.intent_ok is not None and not isinstance(self.intent_ok, bool):
+            raise BenchmarkSchemaError("intent_ok must be boolean or null")
         _require_nonnegative("latency_ms", self.latency_ms)
         if self.language_slice is not None and self.language_slice not in ALLOWED_LANGUAGE_SLICES:
             raise BenchmarkSchemaError("language_slice is invalid")
@@ -385,7 +403,10 @@ class BenchmarkResult:
     transport_success_rate: float | None
     typed_output_schema_success_rate: float | None
     supported_semantic_accuracy: float | None
+    supported_intent_accuracy: float | None
+    entity_slot_evaluation_available: bool
     semantic_retry_accuracy: float | None
+    semantic_retry_intent_accuracy: float | None
     deterministic_only_safe_unknown: float | None
     safety_only_safe_unknown: float | None
     false_execution_rate: float | None
@@ -403,6 +424,7 @@ class BenchmarkResult:
     expected_calibration_error: float | None
     option_order_flip_rate: float | None
     language_slice_accuracy: Mapping[str, float] = field(default_factory=dict)
+    language_slice_intent_accuracy: Mapping[str, float] = field(default_factory=dict)
     slot_accuracy: Mapping[str, float] = field(default_factory=dict)
     error_counts: Mapping[str, int] = field(default_factory=dict)
 
@@ -422,6 +444,7 @@ class BenchmarkResult:
         if isinstance(self.case_count, bool) or not isinstance(self.case_count, int) or self.case_count < 1:
             raise BenchmarkSchemaError("case_count must be a positive integer")
         _require_bool("model_load_success", self.model_load_success)
+        _require_bool("entity_slot_evaluation_available", self.entity_slot_evaluation_available)
         for name in (
             "transport_success_rate",
             "typed_output_schema_success_rate",
@@ -445,7 +468,7 @@ class BenchmarkResult:
             value = getattr(self, name)
             if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 0):
                 raise BenchmarkSchemaError(f"{name} must be a non-negative integer or null")
-        for name in ("language_slice_accuracy", "slot_accuracy"):
+        for name in ("language_slice_accuracy", "language_slice_intent_accuracy", "slot_accuracy"):
             values = getattr(self, name)
             if not isinstance(values, Mapping):
                 raise BenchmarkSchemaError(f"{name} must be a mapping")
@@ -462,6 +485,7 @@ class BenchmarkResult:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["language_slice_accuracy"] = dict(self.language_slice_accuracy)
+        payload["language_slice_intent_accuracy"] = dict(self.language_slice_intent_accuracy)
         payload["slot_accuracy"] = dict(self.slot_accuracy)
         payload["error_counts"] = dict(self.error_counts)
         return payload
@@ -516,18 +540,32 @@ def aggregate_observations(
         _require_text(key, metadata.get(key))
     attempted = [item for item in observations if item.inference_attempted]
     supported = [item for item in observations if item.ai_scope == "supported"]
-    retry = [item for item in observations if item.category == "semantic_retry"]
+    semantic_supported = [item for item in supported if item.semantic_evaluated]
+    intent_supported = [item for item in supported if item.intent_ok is not None]
+    retry = [
+        item for item in observations if item.category == "semantic_retry" and item.semantic_evaluated
+    ]
+    retry_intent = [
+        item for item in observations if item.category == "semantic_retry" and item.intent_ok is not None
+    ]
     deterministic = [item for item in observations if item.ai_scope == "deterministic_only"]
     safety = [item for item in observations if item.ai_scope == "safety_only"]
     latencies = [item.latency_ms for item in attempted if item.latency_ms is not None]
     brier, ece = _calibration_metrics(observations)
 
     language_metrics: dict[str, float] = {}
-    for language in sorted({item.language_slice for item in observations if item.language_slice}):
-        language_rows = [item for item in supported if item.language_slice == language]
+    for language in sorted({item.language_slice for item in semantic_supported if item.language_slice}):
+        language_rows = [item for item in semantic_supported if item.language_slice == language]
         accuracy = _rate(language_rows, lambda item: item.semantic_ok)
         if accuracy is not None:
             language_metrics[language] = accuracy
+
+    language_intent_metrics: dict[str, float] = {}
+    for language in sorted({item.language_slice for item in intent_supported if item.language_slice}):
+        language_rows = [item for item in intent_supported if item.language_slice == language]
+        accuracy = _rate(language_rows, lambda item: bool(item.intent_ok))
+        if accuracy is not None:
+            language_intent_metrics[language] = accuracy
 
     slot_metrics: dict[str, float] = {}
     for name, attribute in (
@@ -559,8 +597,11 @@ def aggregate_observations(
         model_load_success=model_load_success,
         transport_success_rate=_rate(attempted, lambda item: item.transport_ok),
         typed_output_schema_success_rate=_rate(attempted, lambda item: item.schema_ok),
-        supported_semantic_accuracy=_rate(supported, lambda item: item.semantic_ok),
+        supported_semantic_accuracy=_rate(semantic_supported, lambda item: item.semantic_ok),
+        supported_intent_accuracy=_rate(intent_supported, lambda item: bool(item.intent_ok)),
+        entity_slot_evaluation_available=bool(semantic_supported),
         semantic_retry_accuracy=_rate(retry, lambda item: item.semantic_ok),
+        semantic_retry_intent_accuracy=_rate(retry_intent, lambda item: bool(item.intent_ok)),
         deterministic_only_safe_unknown=_rate(
             deterministic,
             lambda item: item.actual_intent == "unknown" and not item.false_execution,
@@ -589,6 +630,7 @@ def aggregate_observations(
             lambda item: bool(item.option_order_flipped),
         ),
         language_slice_accuracy=language_metrics,
+        language_slice_intent_accuracy=language_intent_metrics,
         slot_accuracy=slot_metrics,
         error_counts=errors,
     )
