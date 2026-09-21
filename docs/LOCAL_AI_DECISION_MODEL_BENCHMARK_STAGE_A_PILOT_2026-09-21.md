@@ -115,3 +115,32 @@ No Windows Agent process, production config, Spotify request/playback, Siri
 voice flow, installed deployment, or executable Local AI fallback acceptance
 was run. The result is source/benchmark evidence only, and
 `LOCAL_AI_FALLBACK_APPROVED=false` remains mandatory.
+
+## Primary-source research addendum — Stage A candidate identities (2026-09-21)
+
+This is a bounded, read-only source verification pass for the same three
+Stage A candidates. It does not select a model, authorize production use, or
+change runtime authority. Only repository pages, raw text/config files, and
+Hugging Face metadata endpoints were read; no model weights were downloaded.
+
+### Upstream source heads and pinned revisions
+
+As checked on 2026-09-21, both upstream GitHub `main` heads equal the pinned
+revisions used by the pilot:
+
+| Candidate | Upstream head / pinned revision | Primary-source finding |
+|---|---|---|
+| systemone-lite | [`fritzprix/systemone-lite@0e3373191d3904a070f96d0ed211e6bea8d9ebf`](https://github.com/fritzprix/systemone-lite/commit/0e3373191d3904a070f96d0ed211e6bea8d9ebf) | The project describes itself as an unofficial local System One-shaped API, using shared-prefix KV caching and batched next-token scoring over option token IDs, not autoregressive JSON generation. Its default is `Qwen/Qwen2.5-0.5B-Instruct`; `dwidlee/systemone-lite-0.5b` is the optional SFT checkpoint. The upstream repository license is MIT. See the pinned [`README.md`](https://github.com/fritzprix/systemone-lite/blob/0e3373191d3904a070f96d0ed211e6bea8d9ebf/README.md) and [`infer.py`](https://github.com/fritzprix/systemone-lite/blob/0e3373191d3904a070f96d0ed211e6bea8d9ebf/src/systemone_lite/infer.py). |
+| laya | [`NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527`](https://github.com/NandhaKishorM/laya/commit/42626c348753fbb17572a813127df2278a1ec527) | The pinned source exposes typed `choice`, `score`, and `noul` questions, scores option markers in one forward pass, and has explicit multilingual routing. The source includes automatic device fallback to CPU when the requested accelerator is unavailable or placement fails. The upstream repository is Apache-2.0. See the pinned [`README.md`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/README.md), [`agent.py`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py), and [`router.py`](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/router.py). |
+
+### Exact Hugging Face checkpoint metadata
+
+The following values are from the official Hugging Face model metadata for
+the exact revisions used by the pilot. The API and file links are revision-
+qualified so that a later `main` update cannot silently change the identity.
+
+| Candidate | Exact HF revision and metadata | Relevant config/model-card facts |
+|---|---|---|
+| systemone-lite | [`dwidlee/systemone-lite-0.5b` API metadata](https://huggingface.co/api/models/dwidlee/systemone-lite-0.5b) reports SHA `06b28ed3c5da1d94a6abc015df566ae6408dc5be`, `lastModified=2026-09-20T13:45:02Z`, `pipeline_tag=text-generation`, and Transformers. Revision-qualified [`README.md`](https://huggingface.co/dwidlee/systemone-lite-0.5b/raw/06b28ed3c5da1d94a6abc015df566ae6408dc5be/README.md). | The card identifies an Apache-2.0 Qwen2.5-0.5B base, mixed SFT data, 43,200 rows / 10,800 per gym, and option-alias next-token scoring. Revision-qualified [`config.json`](https://huggingface.co/dwidlee/systemone-lite-0.5b/raw/06b28ed3c5da1d94a6abc015df566ae6408dc5be/config.json) reports `Qwen2ForCausalLM`, 24 layers, hidden size 896, 14 Q heads / 2 KV heads, vocabulary 151,936, 32,768 maximum positions, tied embeddings, and `bfloat16` dtype. |
+| laya multilingual | [`convaiinnovations/laya-multilingual` API metadata](https://huggingface.co/api/models/convaiinnovations/laya-multilingual) reports SHA `052592a15d198d9ad47da779604259b10b47b7aa`, `lastModified=2026-09-19T09:55:03Z`, `pipeline_tag=text-classification`, Transformers, multilingual language tags, and Apache-2.0. Revision-qualified [`README.md`](https://huggingface.co/convaiinnovations/laya-multilingual/raw/052592a15d198d9ad47da779604259b10b47b7aa/README.md). | The card describes a non-autoregressive multilingual typed-decision model with an mmBERT-base backbone, 100+ language coverage, a 1,024-token budget, and a 256-token question/option head budget. The revision-qualified [`encoder/config.json`](https://huggingface.co/convaiinnovations/laya-multilingual/raw/052592a15d198d9ad47da779604259b10b47b7aa/encoder/config.json) reports `ModernBertForMaskedLM`, 22 layers, hidden size 768, 12 heads, vocabulary 256,000, and 8,192 maximum positions; [`rl_agent_config.json`](https://huggingface.co/convaiinnovations/laya-multilingual/raw/052592a15d198d9ad47da779604259b10b47b7aa/rl_agent_config.json) points to `jhu-clsp/mmBERT-base`, sets `max_len=1024`, `head_max_len=256`, temperature values to `1.0`, and records 15,987 updates / 4 epochs / 4.97 hours. |
+| Qwen2.5-Coder-1.5B-Instruct control | The exact benchmark GGUF repo’s [`alphaduriendur` API metadata](https://huggingface.co/api/models/alphaduriendur/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M-GGUF) reports SHA `9e924818f0f0ccd7869f4bfd7e443c0d94bd4768`, `lastModified=2025-09-25T01:10:02Z`, one GGUF file (`qwen2.5-coder-1.5b-instruct-q4_k_m.gguf`), text-generation, and Apache-2.0. Its revision-qualified [`README.md`](https://huggingface.co/alphaduriendur/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M-GGUF/raw/9e924818f0f0ccd7869f4bfd7e443c0d94bd4768/README.md) states that it was converted from the official Qwen checkpoint using GGUF-my-repo. | The official base model’s [`Qwen` API metadata](https://huggingface.co/api/models/Qwen/Qwen2.5-Coder-1.5B-Instruct) reports SHA `2e1fd397ee46e1388853d2af2c993145b0f1098a` and `lastModified=2025-01-12T02:05:01Z`. Its revision-qualified [`README.md`](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct/raw/2e1fd397ee46e1388853d2af2c993145b0f1098a/README.md) identifies an English 1.54B causal LM with 28 layers, 12 Q heads / 2 KV heads, and 32,768-token context; the matching [`config.json`](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct/raw/2e1fd397ee46e1388853d2af2c993145b0f1098a/config.json) reports hidden size 1,536, vocabulary 151,936, tied embeddings, and `bfloat16`. This is base-model metadata for the exact GGUF candidate, not a claim that the unquantized weights were benchmarked. |

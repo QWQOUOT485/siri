@@ -417,7 +417,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
-2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness 與 read-only hardware/backend preflight。這些工具不 import production `app`、不解析或下載模型、不載入 weights、不執行 benchmark，也不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供，這只是環境證據，不是模型比較或 runtime acceptance。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，benchmark、Windows/Spotify/Siri 與 production promotion 仍未完成。
+2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness 與 read-only hardware/backend preflight。這些工具不 import production `app`、不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供。隨後完成固定三列的 Stage A pilot（control、systemone-lite、laya）：三個 model load 與 109-case rows 均完成，sanitized evidence 見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md)，並補上 pinned upstream/Hugging Face primary-source identities。systemone/laya released Python routes 是 CPU-only；這不是 RX 9070 XT GPU latency 或 production acceptance。其餘五列與 Stage B 未執行。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，Windows/Spotify/Siri 與 production promotion 仍未完成。
 
 ### Promotion gate
 
