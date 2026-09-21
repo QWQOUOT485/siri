@@ -1062,6 +1062,8 @@ def validate_corpus(
     )
     if not isinstance(resolved_near_duplicate_config, NearDuplicateConfig):
         raise StageBManifestError("near_duplicate_config must be a NearDuplicateConfig")
+    if enforce_protocol_counts:
+        _require_frozen_protocol_near_duplicate_config(resolved_near_duplicate_config)
     stage_a_utterances = None
     if stage_a_path is not None:
         safe_stage_a_path = validate_local_path(stage_a_path, field="stage_a_path")
@@ -1301,6 +1303,15 @@ class NearDuplicateConfig:
 DEFAULT_NEAR_DUPLICATE_CONFIG = NearDuplicateConfig()
 
 
+def _require_frozen_protocol_near_duplicate_config(
+    config: NearDuplicateConfig,
+) -> None:
+    if config.config_sha256 != DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256:
+        raise StageBProtocolError(
+            "final protocol validation requires the frozen near-duplicate config hash"
+        )
+
+
 class NearDuplicateRelation(str, Enum):
     DUPLICATE = "duplicate"
     NEAR_DUPLICATE = "near_duplicate"
@@ -1336,6 +1347,8 @@ _SIMHASH_BYTE_CONTRIBUTIONS = tuple(
 
 
 def _simhash(ngrams: frozenset[str], *, config: NearDuplicateConfig) -> int:
+    """Return advisory SimHash evidence; never use it to prune exact checks."""
+
     scores = [0] * config.hash_bits
     for ngram in ngrams:
         digest = hashlib.blake2b(
@@ -1374,10 +1387,24 @@ def _near_duplicate_similarity_normalized(
     right: str,
     ngram_size: int,
 ) -> float:
-    if left == right:
-        return 1.0
     left_ngrams = _character_ngrams(left, ngram_size)
     right_ngrams = _character_ngrams(right, ngram_size)
+    return _near_duplicate_similarity_from_ngrams(
+        left,
+        right,
+        left_ngrams,
+        right_ngrams,
+    )
+
+
+def _near_duplicate_similarity_from_ngrams(
+    left: str,
+    right: str,
+    left_ngrams: frozenset[str],
+    right_ngrams: frozenset[str],
+) -> float:
+    if left == right:
+        return 1.0
     union = left_ngrams | right_ngrams
     return len(left_ngrams & right_ngrams) / len(union) if union else 1.0
 
@@ -1469,8 +1496,7 @@ def inspect_near_duplicates(
         (
             record,
             (normalized := _near_duplicate_normalize(record.utterance)),
-            (ngrams := _character_ngrams(normalized, config.ngram_size)),
-            _simhash(ngrams, config=config),
+            _character_ngrams(normalized, config.ngram_size),
         )
         for record in ordered_records
     ]
@@ -1479,24 +1505,22 @@ def inspect_near_duplicates(
     def compare_pair(
         left_record: StageBRecord,
         left_text: str,
-        left_fingerprint: int,
+        left_ngrams: frozenset[str],
         right_record: StageBRecord,
         right_text: str,
-        right_fingerprint: int,
+        right_ngrams: frozenset[str],
     ) -> None:
         if left_text == right_text:
             relation = NearDuplicateRelation.DUPLICATE.value
             similarity = 1.0
         else:
-            if (
-                (left_fingerprint ^ right_fingerprint).bit_count()
-                > config.candidate_hamming_threshold
-            ):
-                return
-            similarity = _near_duplicate_similarity_normalized(
+            # Exact Jaccard is authoritative.  An advisory SimHash or any
+            # other approximate filter must never suppress this comparison.
+            similarity = _near_duplicate_similarity_from_ngrams(
                 left_text,
                 right_text,
-                config.ngram_size,
+                left_ngrams,
+                right_ngrams,
             )
             relation = (
                 NearDuplicateRelation.NEAR_DUPLICATE.value
@@ -1514,34 +1538,34 @@ def inspect_near_duplicates(
             )
 
     if split_by_case_id is not None and config.cross_split_only:
-        records_by_split: dict[str, list[tuple[StageBRecord, str, int]]] = {}
-        for record, normalized, _ngrams, fingerprint in prepared:
+        records_by_split: dict[str, list[tuple[StageBRecord, str, frozenset[str]]]] = {}
+        for record, normalized, ngrams in prepared:
             records_by_split.setdefault(split_by_case_id[record.case_id], []).append(
-                (record, normalized, fingerprint)
+                (record, normalized, ngrams)
             )
         split_names = sorted(records_by_split)
         for left_index, left_split in enumerate(split_names):
             for right_split in split_names[left_index + 1 :]:
-                for left_record, left_text, left_fingerprint in records_by_split[left_split]:
-                    for right_record, right_text, right_fingerprint in records_by_split[right_split]:
+                for left_record, left_text, left_ngrams in records_by_split[left_split]:
+                    for right_record, right_text, right_ngrams in records_by_split[right_split]:
                         compare_pair(
                             left_record,
                             left_text,
-                            left_fingerprint,
+                            left_ngrams,
                             right_record,
                             right_text,
-                            right_fingerprint,
+                            right_ngrams,
                         )
     else:
-        for index, (left_record, left_text, _left_ngrams, left_fingerprint) in enumerate(prepared):
-            for right_record, right_text, _right_ngrams, right_fingerprint in prepared[index + 1 :]:
+        for index, (left_record, left_text, left_ngrams) in enumerate(prepared):
+            for right_record, right_text, right_ngrams in prepared[index + 1 :]:
                 compare_pair(
                     left_record,
                     left_text,
-                    left_fingerprint,
+                    left_ngrams,
                     right_record,
                     right_text,
-                    right_fingerprint,
+                    right_ngrams,
                 )
 
     frozen_comparisons = tuple(

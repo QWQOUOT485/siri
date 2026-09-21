@@ -21,10 +21,12 @@ been generated or committed.
 The new pre-corpus gate freezes the separate authority/review/split/sealing
 protocol, a standard-library character n-gram near-duplicate policy with its
 synthetic calibration fixture and deterministic config hash, and a sanitized
-separate provenance-manifest helper. It remains offline and benchmark-only;
-the real corpus-build protocol is recorded in
+separate provenance-manifest helper. Authoritative cross-split validation now
+compares every relevant pair with exact Jaccard; retained SimHash metadata is
+advisory only, and final protocol validation requires the frozen config hash.
+It remains offline and benchmark-only; the real corpus-build protocol is recorded in
 [`docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md`](docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md).
-The new-branch source evidence is **55 focused tests** and **420 unit tests**
+The new-branch source evidence is **57 focused tests** and **422 unit tests**
 passed, with compileall and git diff checks passing; this remains source/unit
 evidence only, not real corpus, compute, production, Windows, Spotify, Siri, or
 model acceptance.

@@ -635,6 +635,68 @@ def test_near_duplicate_policy_is_order_invariant_and_manifest_serialized() -> N
     assert changed.config_sha256 != corpus.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256
 
 
+def test_authoritative_cross_split_comparison_does_not_prune_on_simhash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    left = _unknown_row("simhash_far_left")
+    right = _unknown_row("simhash_far_right")
+    left["utterance"] = "Play the Example Band Hypothetical Horizon"
+    right["utterance"] = "Play the Example Band Hypothetical Horiz0n"
+    records = [
+        corpus.StageBRecord.from_mapping(left),
+        corpus.StageBRecord.from_mapping(right),
+    ]
+    config = replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, candidate_hamming_threshold=0)
+
+    def fail_if_simhash_is_used(*args: object, **kwargs: object) -> int:
+        raise AssertionError("SimHash must not prune authoritative comparisons")
+
+    monkeypatch.setattr(corpus, "_simhash", fail_if_simhash_is_used)
+    result = corpus.inspect_near_duplicates(
+        records,
+        config=config,
+        split_by_case_id={
+            "simhash_far_left": "train",
+            "simhash_far_right": "test",
+        },
+    )
+
+    assert corpus.near_duplicate_similarity(
+        left["utterance"],
+        right["utterance"],
+        config=config,
+    ) >= config.similarity_threshold
+    assert {frozenset(pair) for pair in result.pairs} == {
+        frozenset(("simhash_far_left", "simhash_far_right"))
+    }
+    assert result.comparisons[0].relation == "near_duplicate"
+
+
+def test_final_protocol_requires_the_frozen_near_duplicate_config() -> None:
+    alternate_configs = (
+        replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, similarity_threshold=0.86),
+        replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, ngram_size=4),
+        replace(corpus.DEFAULT_NEAR_DUPLICATE_CONFIG, candidate_hamming_threshold=11),
+    )
+    for config in alternate_configs:
+        with pytest.raises(corpus.StageBProtocolError, match="frozen near-duplicate config"):
+            corpus.validate_protocol_corpus(
+                _protocol_splits(),
+                stage_a_path=None,
+                near_duplicate_config=config,
+            )
+
+    compact = corpus.validate_corpus(
+        {"train": [_unknown_row("alternate_config_research")]},
+        stage_a_path=None,
+        near_duplicate_config=alternate_configs[0],
+    )
+    assert compact.protocol_counts_enforced is False
+    assert compact.manifest["near_duplicate_policy"]["config_sha256"] == (
+        alternate_configs[0].config_sha256
+    )
+
+
 def test_near_duplicate_policy_rejects_only_cross_split_pairs() -> None:
     left = _unknown_row("cross_split_left")
     right = _unknown_row("cross_split_right")

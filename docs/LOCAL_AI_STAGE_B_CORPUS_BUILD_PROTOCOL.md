@@ -83,9 +83,14 @@ conversion remains **not implemented** and is not silently introduced by this
 policy.
 
 For the 3,000-row target, pair comparisons are restricted to different splits
-when invoked by corpus validation. The implementation uses a pinned SimHash
-candidate filter to avoid unnecessary exact set work; the filter is not the
-authority for a positive result:
+when invoked by corpus validation. The authoritative validator precomputes the
+normalized text and character n-gram set once per record, then compares every
+relevant cross-split pair with exact set-Jaccard. No approximate filter may
+skip a pair before that exact decision.
+
+The frozen configuration retains the following SimHash fields as
+non-authoritative advisory metadata for diagnostics and future optimization
+research only:
 
 ```text
 candidate_filter: simhash64_hamming_v1
@@ -95,12 +100,29 @@ hash_seed: 0x53544231
 candidate_hamming_threshold: 12
 ```
 
-Pairs inside the candidate band are verified by the exact character n-gram
-Jaccard calculation before they can be rejected. The candidate filter,
+These SimHash values are not consulted to suppress an authoritative
+comparison, and they cannot create a completeness guarantee. Exact Jaccard is
+the only near-duplicate rejection authority. The advisory metadata,
 normalization, n-gram size, similarity threshold, cross-split behavior, and
 configuration hash are serialized in every validation manifest.
 
-### 3.2 Synthetic calibration fixture
+### 3.2 Frozen protocol configuration
+
+`validate_protocol_corpus()` and `validate_corpus(...,
+enforce_protocol_counts=True)` fail closed unless the complete active
+near-duplicate configuration hash equals:
+
+```text
+64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7
+```
+
+This protects every frozen field, including the algorithm, normalization,
+n-gram size, threshold, cross-split mode, and retained SimHash advisory
+metadata. An alternate configuration is not silently replaced. It may be used
+only with compact research/unit validation where protocol counts are not
+enforced.
+
+### 3.3 Synthetic calibration fixture
 
 Threshold selection is frozen from a small synthetic policy fixture only:
 
