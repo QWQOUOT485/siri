@@ -28,9 +28,9 @@ failed play/Chinese quality and slot evidence. `system-one-open` remains
 explicitly blocked because no released trained checkpoint was available.
 
 Runnable non-control timing is CPU exploratory evidence because the RX 9070
-XT backend is blocked. The verified current `main` and `origin/main` are
-`ebdc257d2884649285418018c3d8c7493517bb91`; PR #42 is merged and there are
-no unexpected open PRs. This documentation task does not change production
+XT backend is blocked. PR #42 is merged; this synthesis was prepared from the
+reviewed base `ebdc257d2884649285418018c3d8c7493517bb91` for lineage context,
+not as a current-main assertion. This documentation task does not change production
 `app/`, deploy, run inference, train, download, run Windows/Spotify/Siri, or
 enable Semantic Memory or Local AI fallback. `LOCAL_AI_FALLBACK_APPROVED=false`
 remains mandatory.
