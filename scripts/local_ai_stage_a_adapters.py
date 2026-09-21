@@ -49,6 +49,13 @@ class StageABackendError(StageAAdapterError):
         super().__init__("backend_failure", message)
 
 
+class StageAModelBlockedError(StageAAdapterError):
+    """A reviewed candidate cannot be run because its released checkpoint is unavailable."""
+
+    def __init__(self, message: str = "model_blocked") -> None:
+        super().__init__("model_blocked", message)
+
+
 OPTION_INTENT_QUESTION: dict[str, Any] = {
     "type": "choice",
     "instructions": (
@@ -161,6 +168,56 @@ STAGE_A_IDENTITIES: dict[str, dict[str, Any]] = {
         "parameter_count": 151_378_176,
         "model_file_bytes": 605_529_340,
         "precision": "fp32",
+        "quantization": "none",
+        "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
+        "route": AdapterRoute.ENCODER_CLASSIFICATION.value,
+    },
+    "decider": {
+        "model_id": "Mapika/decider-2b",
+        "repository_revision": "c4daaac28af9fea95d627015cffa2dd5a5926ee6",
+        "model_revision": "b37f7e1ba3fbc9238004cf531fabbee2619973fd",
+        "base_model": "Qwen/Qwen3.5-2B-Base",
+        # The model card does not declare a resolved base snapshot.  Keep the
+        # fact explicit rather than manufacturing a base revision.
+        "base_model_revision": "not declared by the model card",
+        "license": "Apache-2.0",
+        "parameter_count": 1_881_825_088,
+        "model_file_bytes": 3_763_692_048,
+        "precision": "bfloat16 checkpoint; CPU route uses float32",
+        "quantization": "none",
+        "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
+        "route": AdapterRoute.DECODER_OPTION_SCORING.value,
+    },
+    "system-one-open": {
+        "model_id": "mithalouni/system-one-open",
+        "repository_revision": "77f1f7cccf8aa752e0ed7edcc8d2094bac707bdc",
+        "model_revision": "released trained checkpoint unavailable",
+        "base_model": "unsloth/gemma-3-270m-it (recipe reference only)",
+        "base_model_revision": "not applicable; no released trained checkpoint",
+        "license": "MIT",
+        "parameter_count": 270_000_000,
+        "model_file_bytes": None,
+        "precision": "not run",
+        "quantization": "not run",
+        "backend": "not-run-model-blocked",
+        "hardware_alignment_status": "MODEL_BLOCKED",
+        "quality_run_status": "MODEL_BLOCKED: released trained checkpoint unavailable",
+        "route": AdapterRoute.DECODER_OPTION_SCORING.value,
+    },
+    "open-jev-deberta-v3-large": {
+        "model_id": "com-kotobalabs/open-jev-deberta-v3-large",
+        "repository_revision": "bundled typed_decisions source at model revision",
+        "model_revision": "19bf9a64815add579fbf6c907bef584d9277a8e4",
+        "base_model": "microsoft/deberta-v3-large",
+        "base_model_revision": "64a8c8eab3e352a784c658aef62be1662607476f",
+        "license": "Apache-2.0 checkpoint; MIT base model",
+        "parameter_count": 437_159_937,
+        "model_file_bytes": 1_736_094_384,
+        "precision": "fp32 route on CPU",
         "quantization": "none",
         "backend": "python-cpu-fallback-until-amd-backend-proven",
         "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
@@ -625,6 +682,145 @@ class VerdictOpenJevAdapter:
             raise
         except Exception as exc:
             raise StageABackendError("Verdict inference failed") from exc
+
+
+class DeciderAdapter:
+    """Run Mapika's released one-pass typed-decision route on CPU."""
+
+    route = AdapterRoute.DECODER_OPTION_SCORING
+
+    def __init__(self, source_root: Path, model_path: Path) -> None:
+        self.model_name = "Mapika/decider-2b"
+        self._source_root = source_root
+        self._model_path = model_path
+        self._decider: Any | None = None
+
+    def prepare(self) -> None:
+        if self._decider is not None:
+            return
+        try:
+            _prepend_path(self._source_root, ".")
+            import torch
+            from decider.infer import Decider
+
+            # The published default temperature is 1.0.  The reviewed
+            # Batch-2B protocol fixes this candidate at 1.3 for the CPU
+            # quality run, while retaining the released scoring route.
+            self._decider = Decider(
+                str(self._model_path),
+                device="cpu",
+                dtype=torch.float32,
+                temperature=1.3,
+                use_graphs=False,
+            )
+        except StageAAdapterError:
+            raise
+        except (TimeoutError, MemoryError) as exc:
+            raise StageABackendError("decider model load failed") from exc
+        except Exception as exc:
+            raise StageABackendError("decider model load or backend failed") from exc
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        if self._decider is None:
+            self.prepare()
+        try:
+            answer = self._decider.decide(
+                request.text,
+                [
+                    {
+                        "question": OPTION_INTENT_QUESTION["instructions"],
+                        "options": list(OPTION_INTENT_QUESTION["criteria"]),
+                    }
+                ],
+            )[0]
+            if not isinstance(answer, Mapping):
+                raise StageAMalformedOutputError()
+            return _typed_choice_decision(
+                {
+                    "choice": answer.get("choice"),
+                    "confidence": answer.get("confidence"),
+                    "probabilities": answer.get("probs"),
+                }
+            )
+        except StageAAdapterError:
+            raise
+        except Exception as exc:
+            raise StageABackendError("decider inference failed") from exc
+
+
+class OpenJevDebertaAdapter:
+    """Run the bundled open-jev DeBERTa typed option-scoring route."""
+
+    route = AdapterRoute.ENCODER_CLASSIFICATION
+
+    def __init__(self, model_path: Path) -> None:
+        self.model_name = "com-kotobalabs/open-jev-deberta-v3-large"
+        self._model_path = model_path
+        self._model: Any | None = None
+
+    def prepare(self) -> None:
+        if self._model is not None:
+            return
+        try:
+            # The pinned model bundle includes the released typed_decisions
+            # package.  Import it from that bundle only; no production package
+            # or network-backed model lookup is involved.
+            _prepend_path(self._model_path, ".")
+            from typed_decisions.open_jev import OpenJev
+
+            self._model = OpenJev.from_pretrained(str(self._model_path), device="cpu")
+        except StageAAdapterError:
+            raise
+        except (TimeoutError, MemoryError) as exc:
+            raise StageABackendError("open-jev DeBERTa model load failed") from exc
+        except Exception as exc:
+            raise StageABackendError("open-jev DeBERTa model load or backend failed") from exc
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        if self._model is None:
+            self.prepare()
+        try:
+            answer = self._model.decide(
+                request.text,
+                [
+                    {
+                        "type": "choice",
+                        "instructions": OPTION_INTENT_QUESTION["instructions"],
+                        "options": list(OPTION_INTENT_QUESTION["criteria"]),
+                    }
+                ],
+            )[0]
+            if not isinstance(answer, Mapping):
+                raise StageAMalformedOutputError()
+            return _typed_choice_decision(
+                {
+                    "choice": answer.get("choice"),
+                    "confidence": answer.get("confidence"),
+                    "probabilities": answer.get("probabilities"),
+                }
+            )
+        except StageAAdapterError:
+            raise
+        except Exception as exc:
+            raise StageABackendError("open-jev DeBERTa inference failed") from exc
+
+
+class SystemOneOpenBlockedAdapter:
+    """Represent the reviewed checkpoint blocker without running a substitute."""
+
+    route = AdapterRoute.DECODER_OPTION_SCORING
+    model_name = "mithalouni/system-one-open"
+
+    def prepare(self) -> None:
+        raise StageAModelBlockedError(
+            "system-one-open released trained checkpoint is unavailable; no base substitution allowed"
+        )
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        del request
+        raise StageAModelBlockedError(
+            "system-one-open released trained checkpoint is unavailable; no base substitution allowed"
+        )
 
 
 def identity_for(candidate_name: str) -> dict[str, Any]:

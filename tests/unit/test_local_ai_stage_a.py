@@ -10,9 +10,23 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import local_ai_benchmark_harness as harness  # noqa: E402
-from local_ai_stage_a import classify_scope, language_slice, _skipped_observation  # noqa: E402
+from local_ai_model_storage import (  # noqa: E402
+    DEFAULT_MODEL_ROOT,
+    MODEL_ROOT_ENV,
+    resolve_candidate_model_dir,
+    resolve_model_root,
+)
+from local_ai_stage_a import (  # noqa: E402
+    _load_failure_observation,
+    _skipped_observation,
+    build_adapter,
+    classify_scope,
+    language_slice,
+    parse_args,
+)
 from local_ai_stage_a_adapters import (  # noqa: E402
     STAGE_A_IDENTITIES,
+    StageAModelBlockedError,
     _typed_choice_decision,
 )
 
@@ -71,6 +85,99 @@ def test_batch_2a_identities_are_pinned_before_benchmark_loading():
             harness.AdapterRoute.DECODER_OPTION_SCORING.value,
             harness.AdapterRoute.ENCODER_CLASSIFICATION.value,
         }
+
+
+def test_batch_2b_identities_are_pinned_before_benchmark_loading():
+    expected = {
+        "decider": (
+            "Mapika/decider-2b",
+            "c4daaac28af9fea95d627015cffa2dd5a5926ee6",
+            "b37f7e1ba3fbc9238004cf531fabbee2619973fd",
+        ),
+        "open-jev-deberta-v3-large": (
+            "com-kotobalabs/open-jev-deberta-v3-large",
+            "bundled typed_decisions source at model revision",
+            "19bf9a64815add579fbf6c907bef584d9277a8e4",
+        ),
+    }
+
+    for name, (model_id, repo_revision, model_revision) in expected.items():
+        identity = STAGE_A_IDENTITIES[name]
+        assert identity["model_id"] == model_id
+        assert identity["repository_revision"] == repo_revision
+        assert identity["model_revision"] == model_revision
+        assert identity["hardware_alignment_status"] == "RX_9070_XT_BACKEND_BLOCKED"
+
+    assert STAGE_A_IDENTITIES["system-one-open"]["hardware_alignment_status"] == "MODEL_BLOCKED"
+    assert "unavailable" in STAGE_A_IDENTITIES["system-one-open"]["quality_run_status"]
+
+
+def test_common_model_root_prefers_cli_then_environment_then_portable_default(monkeypatch):
+    monkeypatch.delenv(MODEL_ROOT_ENV, raising=False)
+    assert resolve_model_root() == DEFAULT_MODEL_ROOT
+    monkeypatch.setenv(MODEL_ROOT_ENV, r"D:\ai\ai")
+    assert resolve_model_root() == Path(r"D:\ai\ai")
+    assert resolve_model_root(r"E:\models") == Path(r"E:\models")
+
+
+def test_candidate_model_root_layout_and_explicit_override():
+    assert resolve_candidate_model_dir("decider", model_root=Path("models")) == Path("models/decider")
+    assert resolve_candidate_model_dir(
+        "open-jev-deberta-v3-large",
+        model_root=Path("models"),
+        override=Path(r"E:\custom\openjev"),
+    ) == Path(r"E:\custom\openjev")
+
+
+def test_runner_cli_model_root_resolves_new_candidates_without_production_config():
+    args = parse_args(
+        [
+            "--candidate",
+            "decider",
+            "--model-root",
+            r"D:\ai\ai",
+            "--decider-source",
+            "runtime/ai_poc/upstream-batch-2b/decider",
+        ]
+    )
+    adapter, metadata = build_adapter(args)
+    assert metadata["candidate_name"] == "decider"
+    assert adapter._model_path == Path(r"D:\ai\ai\decider")
+
+
+def test_blocked_candidate_is_not_treated_as_inference_failure():
+    observation = _load_failure_observation(
+        {
+            "id": "blocked",
+            "category": "basic_playback",
+            "input": "播放晴天",
+            "expected": {"intent": "spotify_play_track", "track": "晴天"},
+        },
+        "supported",
+        "model_blocked",
+    )
+    assert observation.inference_attempted is False
+    assert observation.error_type == "model_blocked"
+
+    args = parse_args(["--candidate", "system-one-open"])
+    adapter, metadata = build_adapter(args)
+    assert metadata["hardware_alignment_status"] == "MODEL_BLOCKED"
+    with pytest.raises(StageAModelBlockedError):
+        adapter.prepare()
+
+    result = harness.aggregate_observations(
+        metadata,
+        [
+            observation,
+            _skipped_observation(
+                {"id": "gate", "category": "playback_control", "input": "暫停", "expected": {}},
+                "deterministic_only",
+            ),
+        ],
+        model_load_success=False,
+    )
+    assert result.play_recall is None
+    assert result.unknown_recall is None
 
 
 @pytest.mark.parametrize(

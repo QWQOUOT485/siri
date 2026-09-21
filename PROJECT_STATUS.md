@@ -4,40 +4,45 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage A Batch 2A
+### 2026-09-21 Local AI Stage A Batch 2B
 
-The evaluation-only Batch 2A run is complete on branch
-`codex/local-ai-stage-a-batch-2a`. Sanitized evidence is in
-[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md).
-Exactly `kev`, `eve-rlcd`, and `Verdict-open-jev` ran against the frozen 109
-case corpus: 63 supported, 36 deterministic-only, and 10 safety-only. Each
-candidate loaded and completed all 63 supported rows through the benchmark
-adapter; all 36 deterministic-only and 10 safety-only rows were eligibility
-gated and not sent to a model. The supported distribution was 57 expected
-play and 6 expected unknown.
+The evaluation-only Batch 2B run is complete on branch
+`codex/local-ai-stage-a-batch-2b-model-root`, based on the verified latest
+`origin/main` merge commit `025640fb1cd9eb9f35ac50cae54826eb67ae4c5e`.
+Sanitized evidence is in
+[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md).
 
-The quality runs were CPU exploratory only because the RX 9070 XT-compatible
-Python backend remained unavailable (`RX_9070_XT_BACKEND_BLOCKED`). Kev reached
-15.87% typed-intent accuracy (4/57 play recall, 6/6 unknown recall). Eve
-reached 85.71% typed-intent accuracy (54/57 play recall, 0/6 unknown recall),
-and Verdict reached 90.48% (57/57 play recall, 0/6 unknown recall). Eve and
-Verdict therefore each had a 100% conditional expected-unknown false-accept
-rate; neither is a Stage B candidate. None of these typed routes emits
-track/artist/album slots, so full semantic and post-grounding evidence is not
-available. No candidate was selected or promoted.
+The runner now has one common benchmark model root with CLI precedence over
+`LOCAL_AI_BENCHMARK_MODEL_ROOT`, plus explicit per-candidate overrides. The
+old repository-local Batch 2A weight copies were verified byte/SHA-identical
+after migration to `D:\ai\ai\{candidate}` and moved to the recoverable
+`D:\ai\ai\_migration-backup-20260921\` root. No model bytes were discarded
+and no production configuration was changed.
 
-Weights, source checkouts, and raw observations remain under ignored runtime
-paths; no weights or raw outputs were committed. The benchmark-only adapter
-seam does not import production `app` and does not alter production authority.
+`decider` completed one 109-case CPU exploratory run at 79.37% typed-intent
+accuracy (50/57 play, 0/6 unknown; 100% conditional expected-unknown false
+acceptance). `open-jev-deberta-v3-large` completed one run at 90.48% (57/57
+play, 0/6 unknown; 100% conditional expected-unknown false acceptance).
+`system-one-open` is explicitly `MODEL_BLOCKED` because its released trained
+checkpoint was unavailable; no Gemma base substitute was run. All 36
+deterministic-only and 10 safety-only cases were gated before model input.
+Typed routes expose no track/artist/album slots, so full semantic,
+grounding, and post-grounding evidence remains unavailable. No candidate was
+selected or promoted.
+
+The RX 9070 XT-compatible Python backend remains unavailable
+(`RX_9070_XT_BACKEND_BLOCKED`), so runnable Batch 2B timing is CPU
+exploratory evidence only. The benchmark-only seam does not import
+production `app` and does not alter production authority.
 `LOCAL_AI_MODE` and `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged; no
-Stage B training, remaining-candidate expansion, Windows, Spotify, Siri,
-deployment, or executable fallback acceptance was run. Independent review is
-required before any candidate expansion or Stage B work.
-
-Post-change source verification passed: focused Stage A/harness tests **26
-passed**, full pytest **384 passed** with two existing dependency deprecation
-warnings, compileall passed, `pip check` passed in the evaluation venv, and
-`git diff --check` passed.
+Stage B training, Windows, Spotify, Siri, deployment, or executable fallback
+acceptance was run. Focused Stage A/harness tests pass (**31**), full pytest
+passes (**389**, two existing dependency deprecation warnings), compileall,
+`pip check`, `git diff --check`, and new-result schema readback pass.
+PR #42 is open for independent review; it is based on the verified main
+commit above and has not been merged. The next safe action is review of the
+sanitized report and evidence boundary, not Stage B training or production
+promotion.
 
 **v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
@@ -423,7 +428,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
-2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness 與 read-only hardware/backend preflight。這些工具不 import production `app`、不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供。隨後完成固定三列的 Stage A pilot（control、systemone-lite、laya）：原始三個 model load 與 109-case rows 均完成，sanitized evidence 見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md)，本次只從 preserved observations 重算 metrics，沒有重新 inference。control full semantic accuracy 為 95.24%；systemone-lite typed-intent accuracy 為 90.48%，57/57 play recall、0/6 unknown recall、conditional expected-unknown false-accept rate 100%，slot extraction unavailable，硬體狀態 `RX_9070_XT_BACKEND_BLOCKED`，exploratory CPU quality run completed；其 5.50% 是 6/109 whole-corpus incidence，不是 conditional safety rate，且 safety regression 使其不適合 Stage B。laya typed-intent accuracy 為 53.97%，28/57 play recall、6/6 unknown recall，slot extraction unavailable，硬體狀態同為 `RX_9070_XT_BACKEND_BLOCKED`，exploratory CPU quality run completed，現況不支持 Stage B advancement。CPU-only latency/throughput/VRAM observations 不可當 RX 9070 XT GPU evidence；true post-grounding evidence 對兩個 slot-less routes 是 unavailable。這是 research evidence only，沒有 model production approval 或 Stage B selection；其餘五列未執行。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，Windows/Spotify/Siri 與 production promotion 仍未完成。
+2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness、read-only hardware/backend preflight 與 common external model-root resolver。這些工具不 import production `app`、不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供。Stage A pilot 與 Batch 2A 的 evidence 分別見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md) 與 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md)。Batch 2B 的 `decider` 與 `open-jev-deberta-v3-large` 各完成一次 109-case CPU exploratory run；兩者 typed-intent accuracy 為 79.37% / 90.48%，但都對 6/6 supported expected-unknown rows false-accept，conditional rate 100%。`system-one-open` 因 released trained checkpoint unavailable 明確標記 `MODEL_BLOCKED`，沒有以 Gemma base 替代。Batch 2B evidence 見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md)。所有 typed routes 的 slot extraction unavailable；CPU-only latency/throughput/VRAM observations 不可當 RX 9070 XT GPU evidence。這仍是 research evidence only，沒有 model production approval 或 Stage B selection。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，Windows/Spotify/Siri 與 production promotion 仍未完成。
 
 ### Promotion gate
 

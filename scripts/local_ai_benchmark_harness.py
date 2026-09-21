@@ -608,6 +608,8 @@ def aggregate_observations(
         item for item in supported if item.expected_intent == "spotify_play_track"
     ]
     expected_unknown = [item for item in supported if item.expected_intent == "unknown"]
+    evaluated_expected_play = [item for item in expected_play if item.intent_ok is not None]
+    evaluated_expected_unknown = [item for item in expected_unknown if item.intent_ok is not None]
     play_true_positive_count = sum(item.intent_ok is True for item in expected_play)
     unknown_true_negative_count = sum(item.intent_ok is True for item in expected_unknown)
     expected_unknown_false_accept_count = sum(
@@ -636,15 +638,15 @@ def aggregate_observations(
     latencies = [item.latency_ms for item in attempted if item.latency_ms is not None]
     brier, ece = _calibration_metrics(observations)
 
-    play_recall = _rate(expected_play, lambda item: item.intent_ok is True)
-    unknown_recall = _rate(expected_unknown, lambda item: item.intent_ok is True)
+    play_recall = _rate(evaluated_expected_play, lambda item: item.intent_ok is True)
+    unknown_recall = _rate(evaluated_expected_unknown, lambda item: item.intent_ok is True)
     balanced_intent_accuracy = (
         round((play_recall + unknown_recall) / 2, 4)
         if play_recall is not None and unknown_recall is not None
         else None
     )
     expected_unknown_false_accept_rate = _rate(
-        expected_unknown,
+        evaluated_expected_unknown,
         lambda item: item.intent_ok is not None and item.actual_intent != "unknown",
     )
     expected_unknown_false_acceptance_incidence_rate = (

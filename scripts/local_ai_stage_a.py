@@ -29,14 +29,18 @@ from local_ai_benchmark_harness import (
 )
 from local_ai_stage_a_adapters import (
     ControlLMStudioAdapter,
+    DeciderAdapter,
     EveRLCDAdapter,
     KevAdapter,
     LayaMultilingualAdapter,
+    OpenJevDebertaAdapter,
     StageAAdapterError,
+    SystemOneOpenBlockedAdapter,
     SystemOneLiteAdapter,
     VerdictOpenJevAdapter,
     identity_for,
 )
+from local_ai_model_storage import resolve_candidate_model_dir
 
 
 _UNRESOLVED_REFERENCE_PATTERNS = (
@@ -157,6 +161,9 @@ def _load_failure_observation(
     expected = expected_for(case, scope)
     if scope != "supported":
         return _skipped_observation(case, scope)
+    # A reviewed model blocker is not an inference attempt.  Preserve the
+    # distinction from a loaded model that failed during transport/inference.
+    blocked = error_type == "model_blocked"
     return CaseObservation(
         case_id=str(case["id"]),
         category=str(case.get("category", "uncategorized")),
@@ -164,7 +171,7 @@ def _load_failure_observation(
         expected_intent=str(expected["intent"]),
         actual_intent="unknown",
         semantic_ok=False,
-        inference_attempted=True,
+        inference_attempted=not blocked,
         transport_ok=False,
         schema_ok=False,
         backend_failure=error_type == "backend_failure",
@@ -324,22 +331,47 @@ def run_candidate(
 
 def build_adapter(args: argparse.Namespace) -> tuple[BenchmarkAdapter, dict[str, Any]]:
     identity = identity_for(args.candidate)
+    def model_dir(candidate: str, override: Path | None) -> Path:
+        return resolve_candidate_model_dir(
+            candidate,
+            model_root=args.model_root,
+            override=override,
+        )
+
     if args.candidate == "qwen2.5-coder-1.5b-instruct":
         adapter: BenchmarkAdapter = ControlLMStudioAdapter(
             args.base_url, args.control_model, args.timeout
         )
     elif args.candidate == "systemone-lite":
-        adapter = SystemOneLiteAdapter(Path(args.systemone_source), Path(args.systemone_model_dir))
+        adapter = SystemOneLiteAdapter(
+            Path(args.systemone_source), model_dir("systemone-lite", args.systemone_model_dir)
+        )
     elif args.candidate == "laya":
-        adapter = LayaMultilingualAdapter(Path(args.laya_source), Path(args.laya_model_dir))
+        adapter = LayaMultilingualAdapter(
+            Path(args.laya_source), model_dir("laya", args.laya_model_dir)
+        )
     elif args.candidate == "kev":
         adapter = KevAdapter(
-            Path(args.kev_source), Path(args.kev_model_dir), Path(args.kev_base_dir)
+            Path(args.kev_source),
+            model_dir("kev", args.kev_model_dir),
+            model_dir("kev-base", args.kev_base_dir),
         )
     elif args.candidate == "eve-rlcd":
-        adapter = EveRLCDAdapter(Path(args.eve_source), Path(args.eve_model_dir))
+        adapter = EveRLCDAdapter(
+            Path(args.eve_source), model_dir("eve-rlcd", args.eve_model_dir)
+        )
+    elif args.candidate == "decider":
+        adapter = DeciderAdapter(
+            Path(args.decider_source), model_dir("decider", args.decider_model_dir)
+        )
+    elif args.candidate == "system-one-open":
+        adapter = SystemOneOpenBlockedAdapter()
     elif args.candidate == "Verdict-open-jev":
-        adapter = VerdictOpenJevAdapter(Path(args.verdict_source), Path(args.verdict_model_dir))
+        adapter = VerdictOpenJevAdapter(
+            Path(args.verdict_source), model_dir("Verdict-open-jev", args.verdict_model_dir)
+        )
+    elif args.candidate == "open-jev-deberta-v3-large":
+        adapter = OpenJevDebertaAdapter(model_dir("open-jev-deberta-v3-large", args.open_jev_model_dir))
     else:  # argparse choices should make this unreachable
         raise ValueError(f"unsupported candidate {args.candidate}")
     metadata = {
@@ -412,22 +444,44 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "laya",
             "kev",
             "eve-rlcd",
+            "decider",
+            "system-one-open",
             "Verdict-open-jev",
+            "open-jev-deberta-v3-large",
         ),
     )
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--output-dir", type=Path)
+    parser.add_argument(
+        "--model-root",
+        type=Path,
+        help="common benchmark model root (or LOCAL_AI_BENCHMARK_MODEL_ROOT)",
+    )
     parser.add_argument("--base-url", default="http://127.0.0.1:1234/v1")
     parser.add_argument("--control-model", default="qwen2.5-coder-1.5b-instruct")
-    parser.add_argument("--systemone-source", type=Path, default=Path("upstream/systemone-lite"))
-    parser.add_argument("--systemone-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/systemone-lite"))
-    parser.add_argument("--laya-source", type=Path, default=Path("upstream/laya"))
-    parser.add_argument("--laya-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/laya"))
+    parser.add_argument(
+        "--systemone-source",
+        type=Path,
+        default=Path("runtime/ai_poc/upstream-batch-2b/systemone-lite"),
+    )
+    parser.add_argument("--systemone-model-dir", type=Path)
+    parser.add_argument(
+        "--laya-source",
+        type=Path,
+        default=Path("runtime/ai_poc/upstream-batch-2b/laya"),
+    )
+    parser.add_argument("--laya-model-dir", type=Path)
     parser.add_argument("--kev-source", type=Path, default=Path("runtime/ai_poc/upstream-batch-2a/kev"))
-    parser.add_argument("--kev-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/kev"))
-    parser.add_argument("--kev-base-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/kev-base"))
+    parser.add_argument("--kev-model-dir", type=Path)
+    parser.add_argument("--kev-base-dir", type=Path)
     parser.add_argument("--eve-source", type=Path, default=Path("runtime/ai_poc/upstream-batch-2a/eve-rlcd"))
-    parser.add_argument("--eve-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/eve-rlcd"))
+    parser.add_argument("--eve-model-dir", type=Path)
+    parser.add_argument(
+        "--decider-source",
+        type=Path,
+        default=Path("runtime/ai_poc/upstream-batch-2b/decider"),
+    )
+    parser.add_argument("--decider-model-dir", type=Path)
     parser.add_argument(
         "--verdict-source",
         type=Path,
@@ -436,8 +490,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--verdict-model-dir",
         type=Path,
-        default=Path("runtime/ai_poc/stage-a-models/Verdict-open-jev"),
+        default=None,
     )
+    parser.add_argument("--open-jev-model-dir", type=Path)
     parser.add_argument("--timeout", type=float, default=2.0)
     parser.add_argument(
         "--hardware-identity",
