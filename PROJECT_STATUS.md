@@ -4,61 +4,40 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage A Batch 2B
+### 2026-09-21 Local AI Stage A final synthesis / Stage B gate
 
-The evaluation-only Batch 2B run is complete on branch
-`codex/local-ai-stage-a-batch-2b-model-root`, based on the verified latest
-`origin/main` merge commit `025640fb1cd9eb9f35ac50cae54826eb67ae4c5e`.
-Sanitized evidence is in
-[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md).
+Stage A is complete as an evidence inventory. The control plus all eight fixed
+candidates have a reviewed run, a reviewed historical result, or an explicit
+blocker. The final comparison and gate are recorded in
+[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md).
 
-The runner now has one common benchmark model root with CLI precedence over
-`LOCAL_AI_BENCHMARK_MODEL_ROOT`, plus explicit per-candidate overrides. The
-old repository-local Batch 2A weight copies were verified byte/SHA-identical
-after migration to `D:\ai\ai\{candidate}` and moved to the recoverable
-`D:\ai\ai\_migration-backup-20260921\` root. No model bytes were discarded
-and no production configuration was changed.
+The formal result is **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**.
+The control remains the only row with complete slot/full-semantic evidence
+(95.24% full semantic, 100% play recall, 100% unknown recall, 0% conditional
+expected-unknown false acceptance). Typed candidates are not equivalent to
+that control. `laya` and `decider` are named only as architecture-only future
+research candidates; neither is a Stage B finalist and no adaptation/training
+has begun.
 
-`decider` completed one 109-case CPU exploratory run at 79.37% typed-intent
-accuracy (50/57 play, 0/6 unknown; 100% conditional expected-unknown false
-acceptance). `open-jev-deberta-v3-large` completed one run at 90.48% (57/57
-play, 0/6 unknown; 100% conditional expected-unknown false acceptance).
-`system-one-open` is explicitly `MODEL_BLOCKED` because its released trained
-checkpoint was unavailable; no Gemma base substitute was run. All 36
-deterministic-only and 10 safety-only cases were gated before model input.
-Typed routes expose no track/artist/album slots, so full semantic,
-grounding, and post-grounding evidence remains unavailable. No candidate was
-selected or promoted.
+All typed routes expose no track/artist/album slots. `systemone-lite`,
+`eve-rlcd`, `decider`, `Verdict-open-jev`, and
+`open-jev-deberta-v3-large` accepted all 6 supported expected-unknown rows
+(100% conditional false acceptance). `kev` failed supported-play quality.
+`laya` retained 100% unknown recall and 0% conditional false acceptance but
+failed play/Chinese quality and slot evidence. `system-one-open` remains
+explicitly blocked because no released trained checkpoint was available.
 
-The RX 9070 XT-compatible Python backend remains unavailable
-(`RX_9070_XT_BACKEND_BLOCKED`), so runnable Batch 2B timing is CPU
-exploratory evidence only. The benchmark-only seam does not import
-production `app` and does not alter production authority.
-`LOCAL_AI_MODE` and `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged; no
-Stage B training, Windows, Spotify, Siri, deployment, or executable fallback
-acceptance was run. Focused Stage A/harness tests pass (**31**), full pytest
-passes (**389**, two existing dependency deprecation warnings), compileall,
-`pip check`, `git diff --check`, and new-result schema readback pass.
-PR #42 is open for independent review; it is based on the verified main
-commit above and has not been merged. The next safe action is review of the
-sanitized report and evidence boundary, not Stage B training or production
-promotion.
+Runnable non-control timing is CPU exploratory evidence because the RX 9070
+XT backend is blocked. The verified current `main` and `origin/main` are
+`ebdc257d2884649285418018c3d8c7493517bb91`; PR #42 is merged and there are
+no unexpected open PRs. This documentation task does not change production
+`app/`, deploy, run inference, train, download, run Windows/Spotify/Siri, or
+enable Semantic Memory or Local AI fallback. `LOCAL_AI_FALLBACK_APPROVED=false`
+remains mandatory.
 
-**v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
-PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
-PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
-head `8c91c0f95bddf8c8b990de3bd8ffb57cdce924d1`. The source product version
-and installed deployment now report `1.0.0`. The annotated `v1.0.0` tag points
-to the release merge commit and the formal GitHub Release is published. The final
-acceptance evidence is recorded in
-[`docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md`](docs/V1_RELEASE_IDENTITY_INSTALLED_ACCEPTANCE_2026-09-20.md)
-and the release notes preserve the remaining limitations and deferrals. The
-accepted core
-remains the priority; optional Spotify controls, semantic memory, and broader
-Local AI authority are either explicit known limitations or deferred as
-recorded in [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md).
-
-目前 production 行為仍以 deterministic parser / resolver 為主。Local AI 已有 guarded semantic-retry skeleton、shadow benchmark 與 resolver seam，但 **production fallback 尚未批准，`LOCAL_AI_FALLBACK_APPROVED=false` 必須維持不變，直到新的 production-aligned acceptance 與 promotion review 完成。** Semantic memory 也維持 disabled。
+External Stage A weights remain under `D:\ai\ai`; migration SHA verification
+passed; the recoverable backup `D:\ai\ai\_migration-backup-20260921` is kept;
+the LM Studio control remains under its `D:\ai\ai\alphaduriendur\...` path.
 
 ## 2026-09-21 Independent Audit Hardening
 
@@ -428,20 +407,23 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
-2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness、read-only hardware/backend preflight 與 common external model-root resolver。這些工具不 import production `app`、不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供。Stage A pilot 與 Batch 2A 的 evidence 分別見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md) 與 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md)。Batch 2B 的 `decider` 與 `open-jev-deberta-v3-large` 各完成一次 109-case CPU exploratory run；兩者 typed-intent accuracy 為 79.37% / 90.48%，但都對 6/6 supported expected-unknown rows false-accept，conditional rate 100%。`system-one-open` 因 released trained checkpoint unavailable 明確標記 `MODEL_BLOCKED`，沒有以 Gemma base 替代。Batch 2B evidence 見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md)。所有 typed routes 的 slot extraction unavailable；CPU-only latency/throughput/VRAM observations 不可當 RX 9070 XT GPU evidence。這仍是 research evidence only，沒有 model production approval 或 Stage B selection。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，Windows/Spotify/Siri 與 production promotion 仍未完成。
+2026-09-21 Stage A final synthesis is recorded in [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md)。固定八個候選均有 reviewed result 或 explicit blocker，正式 gate 為 **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**。`laya` 與 `decider` 僅列為 architecture-only future research candidates，不是 finalist，沒有開始 adaptation/training。全部 typed routes 沒有 track/artist/album slots；非 control 的 RX 9070 XT backend 仍 blocked，CPU timing 不是 GPU qualification。Summary 使用既有 pilot、Batch 2A、Batch 2B evidence，沒有重跑 inference；`LOCAL_AI_FALLBACK_APPROVED=false`、production app 與 runtime authority 均未改變。
 
 ### Promotion gate
 
-production fallback 仍是 **NO-GO**，直到完成：
+Production fallback 仍是 **NO-GO**。Stage A synthesis is now durable, but it
+does not clear the separate production promotion gates:
 
-1. 完整 current exact commit / model / config 的 production-loopback shadow acceptance（目前 real Agent safe/hostile probes 已部分完成）
-2. durable sanitized benchmark evidence summary（含 commit、fixture、model、LM Studio、prompt/schema/config 與 aggregate metrics）
-3. 完整 source/security regression
-4. real Windows Agent + Spotify safe cases / fail-closed cases（目前 live safe/hostile/clarification 部分完成；transport fault matrix 仍以 unit evidence 為主）
-5. deterministic commands 與 clarification regression（source suite 已通過；Siri voice acceptance仍另計）
-6. separate independent promotion review（2026-09-20 review 已完成但結論為 NO-GO，需先清除列出的 blockers）
+1. current exact commit/model/config production-loopback shadow acceptance;
+2. complete source/security regression and production-aligned fail-closed
+   evidence;
+3. real Windows Agent + Spotify safe/fail-closed cases and Siri voice
+   acceptance where required;
+4. separate independent promotion review with every live blocker cleared.
 
-不得因 benchmark 變好而直接設定 `LOCAL_AI_FALLBACK_APPROVED=true`。
+The Stage B gate is also closed for released candidates. A benchmark score,
+architecture-only research recommendation, or source/unit result must never
+set `LOCAL_AI_FALLBACK_APPROVED=true`.
 
 ## Local Semantic Recovery / Alias Memory
 
