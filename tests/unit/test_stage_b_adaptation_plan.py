@@ -26,12 +26,16 @@ def test_stage_b_example_uses_immutable_original_utterance_spans() -> None:
     assert isinstance(utterance, str)
     assert record["language_tag"] == "mixed"
     assert record["language_slice"] == "mixed"
+    assert record["optional_slot_status"] == {"artist": "present", "album": "absent"}
 
     expected = record["expected"]
     assert isinstance(expected, dict)
     spans = []
     for field in ("track", "artist", "album"):
         span = expected[field]
+        if field in ("artist", "album"):
+            expected_status = "present" if span is not None else "absent"
+            assert record["optional_slot_status"][field] == expected_status
         if span is None:
             continue
         assert isinstance(span, dict)
@@ -72,6 +76,17 @@ def test_stage_b_plan_freezes_offset_language_and_slot_invariants() -> None:
         "artist` absent but applicable: at least **100 / 300**",
         "album` present: at least **100 / 300**",
         "album` absent but applicable: at least **150 / 300**",
+        "exactly one `present` or `absent` classification",
+        "`artist_present_rows + artist_absent_rows == 300`",
+        "`album_present_rows + album_absent_rows == 300`",
+        "`optional_slot_status`",
+        "no `N/A`, `ignored`, `excluded`, or `unscored` state",
+        "missing or dual classification",
+        "null-present",
+        "non-null-absent",
+        "partition sum not equal to 300",
+        "`ceil(0.95 * actual_denominator)`",
+        "must not be filtered, sampled out, excluded, or left unscored after",
         "presence recall",
         "exact-span accuracy when present",
         "absence specificity/correct-null rate",

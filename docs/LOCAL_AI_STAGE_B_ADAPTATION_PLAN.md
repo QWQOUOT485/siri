@@ -130,9 +130,26 @@ coverage contract before any corpus is generated:
 These are minimum denominators, not targets to be reduced after seeing model
 performance. `track` is present and required on all 300 supported-play rows.
 The validator must reject a held-out manifest that does not meet these counts.
-If a future corpus has more than a minimum, all such labeled rows remain in
-the fixed denominator and the pass count is `ceil(0.95 * actual_denominator)`;
-rows may not be sampled out after results are known.
+For the frozen 300 supported `spotify_play_track` rows, these labels are an
+exhaustive, disjoint partition for each optional slot:
+
+- `artist_present_rows + artist_absent_rows == 300`;
+- `album_present_rows + album_absent_rows == 300`.
+
+Every supported-play row has exactly one `present` or `absent` classification
+for `artist` and exactly one for `album`. `absent` means absent-but-applicable;
+there is no `N/A`, `ignored`, `excluded`, or `unscored` state. The manifest
+records these classifications in the closed `optional_slot_status` object, and
+the annotation must agree: `present` requires a non-null span, while `absent`
+requires a null span. The validator must reject a missing or dual
+classification, a null-present label, a non-null-absent label, or either
+partition sum not equal to 300 before evaluation.
+
+If a future corpus has more than a minimum in any category while retaining the
+frozen 300-row supported-play partition, all such labeled rows remain in the
+fixed denominator. The gate pass count is `ceil(0.95 * actual_denominator)`;
+Rows must not be filtered, sampled out, excluded, or left unscored after
+results are known.
 
 Each split must contain all of the following where applicable:
 
@@ -214,6 +231,7 @@ stored example are `artist=4:14` and `track=17:32`.
   "language_tag": "mixed",
   "language_slice": "mixed",
   "ai_scope": "supported",
+  "optional_slot_status": {"artist": "present", "album": "absent"},
   "expected": {
     "intent": "spotify_play_track",
     "track": {"text": "Blinding Lights", "start": 17, "end": 32},
@@ -232,6 +250,11 @@ Required label rules:
 - `track`, `artist`, and `album` are either `null` or a reviewed raw-text
   character span plus its exact source offsets. Positive play rows require a
   track span. Artist and album are optional.
+- On supported `spotify_play_track` rows, `optional_slot_status` is required
+  with exactly one value, `present` or `absent`, for each of `artist` and
+  `album`; it must agree with the corresponding expected span. Unknown,
+  deterministic-only, and safety-only rows do not enter this partition and
+  retain all three output slots as `null`.
 - The canonical label text is the bounded text from the utterance after the
   repository's documented normalization only; it is not a Spotify catalog
   name. Simplified/Traditional variants remain traceable to their raw span.
@@ -312,6 +335,8 @@ combined_slot_summary = (present_exact_span_count + absent_correct_null_count)
 
 `combined_slot_summary` is informative only. A null-heavy model cannot pass by
 compensating for failed presence or exact-span gates with correct nulls.
+For every optional slot, `present_rows + absent_rows == 300`; the denominator
+is the complete frozen partition, and every row is scored exactly once.
 
 The evaluator must use the existing benchmark result vocabulary and preserve
 the distinction between `supported`, `deterministic_only`, and `safety_only`.
@@ -551,14 +576,14 @@ hardware gate.
 | Supported unknown recall | **100%** on all 240 model-eligible semantic-unknown rows |
 | Conditional expected-unknown false acceptance | **0%**; no model-eligible expected-unknown row accepted as play |
 | Supported play recall | **>=95%** on all 300 supported play rows |
-| Track required presence recall | **>=95%**; at least 285 / 300 held-out supported-play rows must return a valid grounded track span |
-| Track exact-span/grounding accuracy | **>=95%**; at least 285 / 300 held-out supported-play rows must match text and boundaries |
-| Artist presence recall | **>=95%** on the fixed artist-present denominator (at least 143 / 150) |
-| Artist exact-span accuracy when present | **>=95%** on the same fixed present denominator (at least 143 / 150) |
-| Artist absence specificity / correct-null rate | **>=95%** on the fixed artist-absent denominator (at least 95 / 100) |
-| Album presence recall | **>=95%** on the fixed album-present denominator (at least 95 / 100) |
-| Album exact-span accuracy when present | **>=95%** on the same fixed present denominator (at least 95 / 100) |
-| Album absence specificity / correct-null rate | **>=95%** on the fixed album-absent denominator (at least 143 / 150) |
+| Track required presence recall | **>=95%** over the frozen 300-row required-track denominator; pass count `ceil(0.95 * actual_denominator)` = 285 |
+| Track exact-span/grounding accuracy | **>=95%** over the same frozen denominator; pass count `ceil(0.95 * actual_denominator)` = 285 |
+| Artist presence recall | **>=95%** over all frozen `artist_present_rows` (minimum 150); pass count `ceil(0.95 * actual_denominator)` |
+| Artist exact-span accuracy when present | **>=95%** over the same frozen present denominator; pass count `ceil(0.95 * actual_denominator)` |
+| Artist absence specificity / correct-null rate | **>=95%** over all frozen `artist_absent_rows` (minimum 100); pass count `ceil(0.95 * actual_denominator)` |
+| Album presence recall | **>=95%** over all frozen `album_present_rows` (minimum 100); pass count `ceil(0.95 * actual_denominator)` |
+| Album exact-span accuracy when present | **>=95%** over the same frozen present denominator; pass count `ceil(0.95 * actual_denominator)` |
+| Album absence specificity / correct-null rate | **>=95%** over all frozen `album_absent_rows` (minimum 150); pass count `ceil(0.95 * actual_denominator)` |
 | Full semantic accuracy | **>=95%** after intent plus all applicable slots |
 | `language_tag=zh-Hant` slice | **>=95%** over the fixed supported-row denominator |
 | `language_tag=mixed` slice | **>=95%** over the fixed supported-row denominator |
@@ -570,9 +595,13 @@ hardware gate.
 | Operational latency | P95 **<=250 ms** under the fixed qualified protocol |
 
 The optional-slot coverage minima and all numerators/denominators are frozen
-before corpus generation. Every artist and album row above is an independent
-conjunctive gate: a failed presence recall, present exact-span result, or
-absence specificity fails the candidate even if a combined aggregate is high.
+before corpus generation. For every `>=95%` gate, the evaluator computes the
+integer requirement as `ceil(0.95 * actual_denominator)` from that frozen
+manifest denominator and scores the complete denominator. It must not filter,
+sample, exclude, or otherwise change the denominator after seeing results.
+Every artist and album row above is an independent conjunctive gate: a failed
+presence recall, present exact-span result, or absence specificity fails the
+candidate even if a combined aggregate is high.
 The combined optional-slot summary is reported for context only and cannot
 waive any of those gates. All metrics must include exact counts and, where
 used, confidence intervals; percentages alone are insufficient.
