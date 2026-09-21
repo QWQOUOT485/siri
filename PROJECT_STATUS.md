@@ -4,7 +4,17 @@
 
 ## Current Phase
 
-### 2026-09-21 Local AI Stage B adaptation design / Stage B not started
+### 2026-09-21 Local AI Stage B corpus infrastructure / corpus not built / compute not authorized
+
+PR #44, which recorded the Stage B adaptation design, is merged into `main`
+with merge commit `1ba8c335fd082acf891ea288483db543c1bd8b15`. The new
+benchmark-only corpus infrastructure defines the closed Stage B record schema,
+immutable span and optional-slot partition validation, split/leakage checks,
+deterministic normalization, and manifest/hash reporting in
+[`scripts/local_ai_stage_b_corpus.py`](scripts/local_ai_stage_b_corpus.py), with
+focused coverage in
+[`tests/unit/test_local_ai_stage_b_corpus.py`](tests/unit/test_local_ai_stage_b_corpus.py).
+No real 3,000-row corpus has been generated or committed.
 
 Stage A is complete as an evidence inventory. The control plus all eight fixed
 candidates have a reviewed run, a reviewed historical result, or an explicit
@@ -32,10 +42,12 @@ explicitly blocked because no released trained checkpoint was available.
 Runnable non-control timing is CPU exploratory evidence because the RX 9070
 XT backend is blocked. PR #42 is merged; this synthesis was prepared from the
 reviewed base `ebdc257d2884649285418018c3d8c7493517bb91` for lineage context,
-not as a current-main assertion. This documentation task does not change production
-`app/`, deploy, run inference, train, download, run Windows/Spotify/Siri, or
-enable Semantic Memory or Local AI fallback. `LOCAL_AI_FALLBACK_APPROVED=false`
-remains mandatory.
+not as a current-main assertion. This infrastructure task does not change
+production `app/`, deploy, run inference, train, download, run
+Windows/Spotify/Siri, enable Semantic Memory, or enable Local AI fallback.
+No compute authorization is granted; `LOCAL_AI_FALLBACK_APPROVED=false` remains
+mandatory. laya and decider remain architecture-only research candidates, and
+no Stage B finalist exists.
 
 External Stage A weights remain under `D:\ai\ai`; migration SHA verification
 passed; the recoverable backup `D:\ai\ai\_migration-backup-20260921` is kept;
