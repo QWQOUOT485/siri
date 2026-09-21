@@ -20,6 +20,12 @@ class CandidateSpec:
     upstream_reference: str
     stage_a_status: str = "not_run"
     expected_backend_compatibility: str = "unverified; check on RX 9070 XT during preflight"
+    model_id: str | None = None
+    repository_revision: str | None = None
+    model_revision: str | None = None
+    license: str | None = None
+    parameter_count: int | None = None
+    model_file_bytes: int | None = None
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -31,6 +37,15 @@ CONTROL_BASELINE = CandidateSpec(
     inference_route="autoregressive strict-schema JSON",
     upstream_reference="existing local AI control configuration",
     expected_backend_compatibility="existing control path; exact backend must be recorded before comparison",
+    model_id="qwen2.5-coder-1.5b-instruct",
+    repository_revision="local-lmstudio-catalog",
+    model_revision=(
+        "alphaduriendur/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M-GGUF/"
+        "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
+    ),
+    license="Apache-2.0 (Qwen base; local GGUF catalog entry)",
+    parameter_count=1_500_000_000,
+    model_file_bytes=986_048_576,
 )
 
 
@@ -41,6 +56,12 @@ FIXED_CANDIDATES: tuple[CandidateSpec, ...] = (
         inference_route="frozen/SFT option-restricted next-token scoring + prefix KV",
         upstream_reference="https://github.com/fritzprix/systemone-lite",
         expected_backend_compatibility="published RTX 3060 path; RX 9070 XT compatibility unverified",
+        model_id="dwidlee/systemone-lite-0.5b",
+        repository_revision="0e3373191d3904a070f96d0ed211e6bea8d9ebf6",
+        model_revision="06b28ed3c5da1d94a6abc015df566ae6408dc5be",
+        license="Apache-2.0",
+        parameter_count=494_032_768,
+        model_file_bytes=988_097_824,
     ),
     CandidateSpec(
         candidate_name="kev",
@@ -76,6 +97,12 @@ FIXED_CANDIDATES: tuple[CandidateSpec, ...] = (
         inference_route="non-autoregressive multilingual encoder + decision head",
         upstream_reference="https://github.com/NandhaKishorM/laya",
         expected_backend_compatibility="AMD encoder backend compatibility unverified",
+        model_id="convaiinnovations/laya-multilingual",
+        repository_revision="42626c348753fbb17572a813127df2278a1ec527",
+        model_revision="052592a15d198d9ad47da779604259b10b47b7aa",
+        license="Apache-2.0",
+        parameter_count=321_908_998,
+        model_file_bytes=643_835_514,
     ),
     CandidateSpec(
         candidate_name="Verdict-open-jev",

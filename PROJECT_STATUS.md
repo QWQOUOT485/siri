@@ -4,6 +4,50 @@
 
 ## Current Phase
 
+### 2026-09-21 Local AI Stage A pilot
+
+The evaluation-only three-model pilot is complete on branch
+`codex/local-ai-stage-a-benchmark-pilot`. The benchmark-only harness/adapters
+are committed at `928087d4c96fff3ef98549afb430b28f2ff2d4de`; the sanitized
+evidence is in
+[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md).
+The same frozen corpus contained 109 cases: 63 supported, 36
+deterministic-only, and 10 safety-only. Eligibility gating skipped 36/36
+deterministic-only and 10/10 safety-only rows; candidate-model safety
+classification on those rows was not evaluated. The supported distribution
+was 57 expected play and 6 expected unknown. Control, systemone-lite, and laya
+each completed all 109 rows with model load success. The control retained
+available slot evidence and **95.24% full semantic accuracy**; systemone-lite
+reached **90.48% top-level typed-intent accuracy** with 57/57 play recall but
+0/6 unknown recall, so its **100% conditional expected-unknown false-accept
+rate** (historical whole-corpus incidence: 5.50%, 6/109) is a safety
+regression that prevents treating it as an improvement or Stage B promotion
+candidate. It has no released slot extraction path, so true post-grounding
+evidence is unavailable. Laya multilingual reached **53.97% top-level
+typed-intent accuracy** (28/57 play recall, 6/6 unknown recall), also has no
+slot path, and does not support Stage B advancement.
+
+The RX 9070 XT / OpenCL/Vulkan hardware was read back, but the released
+systemone/laya Python paths ran CPU-only because this venv has `torch+cpu`, no
+CUDA/MPS, no ROCm tools, and no DirectML package. Their hardware-aligned
+status is `RX_9070_XT_BACKEND_BLOCKED`; the exploratory CPU quality runs are
+preserved, but their latency, throughput, and memory observations are not
+comparable RX GPU latency/throughput/VRAM evidence. The control retains its
+observed LM Studio loopback description with GPU/offload readback unqualified.
+The two pinned HF checkpoints remain under ignored runtime artifacts; no model
+weights, raw outputs, prompts, or credentials were committed. After adding
+strict result-schema coverage for the two typed-intent rate fields, focused
+Stage A/harness tests are **25 passed** and full source verification is
+**383 passed** with two existing dependency deprecation warnings; compileall,
+`pip check`, and diff check passed.
+
+This pilot is research evidence only and does not change production authority:
+no model is production approved, no Stage B selection has been made,
+`LOCAL_AI_MODE` and `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged; no
+Windows, Spotify, Siri, or installed deployment acceptance was run. The
+remaining fixed candidates were intentionally not expanded in this pilot;
+review is required before any Stage B adaptation or candidate expansion.
+
 **v1.1 Candidate Recovery Phase 1B source implementation is merged to `main` via PR #35.** The reviewed PR head was `9e9fa551095cddc70e1ea907d44dc6ab2b06eac7`, and the merge commit is `dde5e07130517dcaa67d9136ad222f748930545f`. The local and remote `main` now include that merge commit plus the docs-only status handoff. The installed Windows Agent was aligned for the 2026-09-20 runtime gate; installed regression passed, the initial clarification/playback path passed, and continuation recovery is blocked/unproven.
 PR #32 is merged as `71eb1bb74365cf69a88ae84239b4fa7d14f06f33`; evidence-only
 PR #33 is merged as `f1c201ddc2e9866ae46befd279c04c61921ad586` from reviewed
@@ -388,7 +432,7 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
-2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness 與 read-only hardware/backend preflight。這些工具不 import production `app`、不解析或下載模型、不載入 weights、不執行 benchmark，也不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供，這只是環境證據，不是模型比較或 runtime acceptance。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，benchmark、Windows/Spotify/Siri 與 production promotion 仍未完成。
+2026-09-21 新增 evaluation-only 的固定候選 manifest、109-case frozen-corpus/result-schema/metric harness 與 read-only hardware/backend preflight。這些工具不 import production `app`、不建立 executable authority。Local preflight readback 找到 RX 9070 XT、Vulkan/OpenCL tooling；ROCm/AMD-SMI CLI 與 Python model packages 在該環境未提供。隨後完成固定三列的 Stage A pilot（control、systemone-lite、laya）：原始三個 model load 與 109-case rows 均完成，sanitized evidence 見 [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md)，本次只從 preserved observations 重算 metrics，沒有重新 inference。control full semantic accuracy 為 95.24%；systemone-lite typed-intent accuracy 為 90.48%，57/57 play recall、0/6 unknown recall、conditional expected-unknown false-accept rate 100%，slot extraction unavailable，硬體狀態 `RX_9070_XT_BACKEND_BLOCKED`，exploratory CPU quality run completed；其 5.50% 是 6/109 whole-corpus incidence，不是 conditional safety rate，且 safety regression 使其不適合 Stage B。laya typed-intent accuracy 為 53.97%，28/57 play recall、6/6 unknown recall，slot extraction unavailable，硬體狀態同為 `RX_9070_XT_BACKEND_BLOCKED`，exploratory CPU quality run completed，現況不支持 Stage B advancement。CPU-only latency/throughput/VRAM observations 不可當 RX 9070 XT GPU evidence；true post-grounding evidence 對兩個 slot-less routes 是 unavailable。這是 research evidence only，沒有 model production approval 或 Stage B selection；其餘五列未執行。`LOCAL_AI_FALLBACK_APPROVED=false` 維持不變，Windows/Spotify/Siri 與 production promotion 仍未完成。
 
 ### Promotion gate
 
