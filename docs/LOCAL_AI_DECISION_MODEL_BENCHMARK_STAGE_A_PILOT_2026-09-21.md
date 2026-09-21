@@ -89,18 +89,27 @@ Language-slice intent accuracy for the 63 supported rows:
 ## Interpretation and stop line
 
 - The control is the only row with complete entity-slot evidence. It retained
-  the prior strict-schema quality boundary in this aligned rerun.
+  the prior strict-schema quality boundary in this aligned rerun, with
+  **95.24% full semantic accuracy**.
 - systemone-lite is the stronger typed-intent row in this pilot, but it has no
-  released slot extraction path, showed 5.50% post-grounding false acceptance
-  on the supported corpus, and ran CPU-only. It is not a production semantic
-  replacement.
+  released slot extraction path, and its typed-intent accuracy is **90.48%**.
+  Its **5.50% post-grounding false acceptance is a safety regression**; this
+  prevents treating the result as an improvement or as a Stage B promotion
+  candidate. It ran CPU-only and is not a production semantic replacement.
 - laya multilingual is fast on CPU after load, but its unadapted typed-intent
-  result and calibration are materially weaker on this Chinese/mixed corpus;
-  its released route also has no entity-slot output for this Agent task.
-- No finalist is promoted or selected. The remaining fixed candidates were not
-  run because this task explicitly stops after the three-model Stage A pilot.
-  Stage B adaptation, if later authorized, requires a separate reviewed corpus,
-  held-out split, entity-slot design, and independent promotion review.
+  accuracy is **53.97%** on this Chinese/mixed corpus and its released route
+  provides no entity-slot output for this Agent task. Its current accuracy and
+  lack of slot extraction do not support Stage B advancement.
+- The systemone-lite and laya candidate runs were CPU-only. Their latency,
+  throughput, and memory observations are therefore **not comparable GPU
+  latency/throughput/VRAM evidence** and must not be used as RX 9070 XT GPU
+  claims.
+- This pilot is research evidence only. No model is production approved, no
+  Stage B selection has been made, and no finalist is promoted. The remaining
+  fixed candidates were not run because this task explicitly stops after the
+  three-model Stage A pilot. Any later Stage B work requires a separate
+  reviewed corpus, held-out split, entity-slot design, and independent
+  promotion review.
 
 ## Evidence boundary
 
