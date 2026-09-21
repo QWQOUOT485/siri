@@ -259,6 +259,7 @@ def test_preflight_missing_tools_does_not_execute_any_command():
     assert all(not probe.available for probe in report.probes)
     assert report.gpu_match is None
     assert report.vram_bytes is None
+    assert report.vram_source == "unknown"
     assert report.benchmark_execution == "not_attempted"
     assert report.model_weight_access == "not_attempted"
     assert report.backend_availability == {
@@ -277,7 +278,18 @@ def test_preflight_uses_only_fixed_no_shell_commands_and_parses_gpu_inventory():
         calls.append({"command": command, **kwargs})
         if command[0].endswith("powershell.exe"):
             stdout = json.dumps(
-                [{"Name": "AMD Radeon RX 9070 XT", "DriverVersion": "1.2.3", "AdapterRAM": 16 * 1024**3}]
+                [
+                    {
+                        "Name": "AMD Radeon RX 9070 XT",
+                        "DriverVersion": "1.2.3",
+                        "AdapterRAM": 16 * 1024**3,
+                    },
+                    {
+                        "Name": "AMD Radeon(TM) Graphics",
+                        "DriverVersion": "1.2.3",
+                        "AdapterRAM": 64 * 1024**3,
+                    },
+                ]
             )
             return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr="")
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
@@ -287,14 +299,18 @@ def test_preflight_uses_only_fixed_no_shell_commands_and_parses_gpu_inventory():
         runner=fake_runner,
     )
 
-    assert report.gpu_names == ("AMD Radeon RX 9070 XT",)
+    assert report.gpu_names == ("AMD Radeon RX 9070 XT", "AMD Radeon(TM) Graphics")
     assert report.gpu_match is True
     assert report.vram_bytes == 16 * 1024**3
+    assert report.vram_source == "wmi"
     assert len(calls) == len(preflight.COMMAND_SPECS)
     assert all(call["shell"] is False for call in calls)
     assert all(call["timeout"] == preflight.DEFAULT_COMMAND_TIMEOUT_SECONDS for call in calls)
     assert all(isinstance(call["command"], list) for call in calls)
     assert all(not any("cmd /c" in str(part).lower() for part in call["command"]) for call in calls)
+    clinfo_spec = next(spec for spec in preflight.COMMAND_SPECS if spec.name == "clinfo")
+    assert clinfo_spec.arguments == ()
+    assert all("-l" not in call["command"] for call in calls)
 
 
 def test_preflight_timeout_is_reported_without_raising():
@@ -312,6 +328,15 @@ def test_preflight_timeout_is_reported_without_raising():
     assert probe.return_code is None
     assert probe.stdout == "partial"
     assert probe.stderr == "timed out"
+
+
+def test_preflight_rejects_commands_outside_the_fixed_probe_set():
+    with pytest.raises(ValueError, match="fixed preflight command set"):
+        preflight.run_probe(
+            preflight.CommandSpec("arbitrary", ("cmd.exe",), ("/c", "whoami"), "unsafe"),
+            which=lambda _name: "cmd.exe",
+            runner=lambda *_args, **_kwargs: pytest.fail("ran"),
+        )
 
 
 def test_preflight_prefers_discrete_gpu_memory_when_wmi_is_truncated():
@@ -348,4 +373,105 @@ def test_preflight_prefers_discrete_gpu_memory_when_wmi_is_truncated():
         ),
     )
 
-    assert preflight._extract_vram_bytes(probes) == 17_095_983_104
+    assert preflight._extract_vram_evidence(probes) == (17_095_983_104, "opencl")
+
+
+def test_preflight_list_only_opencl_output_cannot_produce_vram():
+    probes = (
+        preflight.CommandProbe(
+            name="windows_gpu_inventory",
+            category="gpu_driver",
+            executable="powershell.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout=json.dumps(
+                [
+                    {"Name": "AMD Radeon RX 9070 XT", "AdapterRAM": 4_293_918_720},
+                    {"Name": "AMD Radeon(TM) Graphics", "AdapterRAM": 64 * 1024**3},
+                ]
+            ),
+            stderr="",
+        ),
+        preflight.CommandProbe(
+            name="clinfo",
+            category="opencl",
+            executable="clinfo.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout="Platform Name: AMD Accelerated Parallel Processing\nBoard name: AMD Radeon RX 9070 XT\n",
+            stderr="",
+        ),
+    )
+
+    assert preflight._extract_vram_evidence(probes) == (None, "unknown")
+
+
+def test_preflight_accepts_target_specific_opencl_memory_over_larger_integrated_memory():
+    probes = (
+        preflight.CommandProbe(
+            name="windows_gpu_inventory",
+            category="gpu_driver",
+            executable="powershell.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout=json.dumps(
+                [
+                    {"Name": "AMD Radeon RX 9070 XT", "AdapterRAM": 4_293_918_720},
+                    {"Name": "AMD Radeon(TM) Graphics", "AdapterRAM": 64 * 1024**3},
+                ]
+            ),
+            stderr="",
+        ),
+        preflight.CommandProbe(
+            name="clinfo",
+            category="opencl",
+            executable="clinfo.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout=(
+                "Board name: AMD Radeon(TM) Graphics\n"
+                "Global memory size: 68719476736\n"
+                "Board name: AMD Radeon RX 9070 XT\n"
+                "Global memory size: 17095983104\n"
+            ),
+            stderr="",
+        ),
+    )
+
+    assert preflight._extract_vram_evidence(probes) == (17_095_983_104, "opencl")
+
+
+def test_preflight_unreliable_wmi_without_target_secondary_fails_closed():
+    probes = (
+        preflight.CommandProbe(
+            name="windows_gpu_inventory",
+            category="gpu_driver",
+            executable="powershell.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout=json.dumps(
+                [
+                    {"Name": "AMD Radeon RX 9070 XT", "AdapterRAM": 4_293_918_720},
+                    {"Name": "AMD Radeon(TM) Graphics", "AdapterRAM": 128 * 1024**3},
+                ]
+            ),
+            stderr="",
+        ),
+        preflight.CommandProbe(
+            name="clinfo",
+            category="opencl",
+            executable="clinfo.exe",
+            available=True,
+            return_code=0,
+            timed_out=False,
+            stdout="Platform Name: AMD Accelerated Parallel Processing\n",
+            stderr="",
+        ),
+    )
+
+    assert preflight._extract_vram_evidence(probes) == (None, "unknown")

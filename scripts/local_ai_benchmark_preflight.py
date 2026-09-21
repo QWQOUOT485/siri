@@ -24,6 +24,8 @@ from typing import Any, Callable, Mapping, Sequence
 EXPECTED_GPU_NAME = "AMD Radeon RX 9070 XT"
 MAX_PROBE_OUTPUT_CHARS = 12_000
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 8.0
+_TARGET_GPU_PATTERN = re.compile(r"\brx\s*9070\s*xt\b", re.IGNORECASE)
+_WMI_UINT32_MAX = 0xFFFFFFFF
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +63,7 @@ class PreflightReport:
     gpu_names: tuple[str, ...]
     gpu_match: bool | None
     vram_bytes: int | None
+    vram_source: str
     python_packages: Mapping[str, str | None]
     backend_availability: Mapping[str, bool]
     probes: tuple[CommandProbe, ...]
@@ -129,7 +132,10 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec(
         name="clinfo",
         executables=("clinfo.exe", "clinfo"),
-        arguments=("-l",),
+        # The default clinfo mode emits per-device properties, including
+        # Global memory size.  ``clinfo -l`` is list-only on supported builds
+        # and is deliberately not used for VRAM evidence.
+        arguments=(),
         category="opencl",
     ),
 )
@@ -176,6 +182,8 @@ def run_probe(
 ) -> CommandProbe:
     """Run one fixed, bounded, local probe without invoking a shell."""
 
+    if spec not in COMMAND_SPECS:
+        raise ValueError("probe is not in the fixed preflight command set")
     executable = _resolve_executable(spec, which)
     if executable is None:
         return CommandProbe(
@@ -273,42 +281,86 @@ def _gpu_names(probes: Sequence[CommandProbe]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(names))
 
 
-def _extract_vram_bytes(probes: Sequence[CommandProbe]) -> int | None:
-    # WMI AdapterRAM is useful when it is complete, but some Windows drivers
-    # expose a 32-bit-truncated value there.  Collect all bounded observations
-    # and prefer the largest value associated with the discrete GPU instead of
-    # reporting a misleading 4 GiB value for a 16 GiB card.
-    candidates: list[int] = []
+def _is_target_gpu_name(value: Any) -> bool:
+    return isinstance(value, str) and bool(_TARGET_GPU_PATTERN.search(value))
+
+
+def _positive_integer(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if isinstance(value, float) and not value.is_integer():
+        return None
+    value = int(value)
+    return value if value > 0 else None
+
+
+def _wmi_target_vram_bytes(probes: Sequence[CommandProbe]) -> int | None:
+    """Return only a reliable AdapterRAM value attached to the target name.
+
+    Win32_VideoController.AdapterRAM is commonly exposed as a 32-bit field.
+    A value within that range cannot reliably describe this 16-GiB-class
+    target, so it is rejected rather than treated as an inferred capacity.
+    """
+
+    target_values: list[int] = []
     inventory = next((probe for probe in probes if probe.name == "windows_gpu_inventory"), None)
-    if inventory is not None:
-        for record in _json_records(inventory.stdout):
-            value = record.get("AdapterRAM")
-            if isinstance(value, (int, float)) and value >= 0:
-                candidates.append(int(value))
-    patterns = (
-        r"(?:vram[^\d]{0,40})(\d+(?:\.\d+)?)\s*(gb|gib|mb|mib|bytes?)\b",
-        r"(\d+(?:\.\d+)?)\s*(gb|gib|mb|mib|bytes?)\s*(?:vram|memory)",
+    if inventory is None:
+        return None
+    for record in _json_records(inventory.stdout):
+        if not _is_target_gpu_name(record.get("Name")):
+            continue
+        value = _positive_integer(record.get("AdapterRAM"))
+        if value is not None and value > _WMI_UINT32_MAX:
+            target_values.append(value)
+    if target_values and len(set(target_values)) == 1:
+        return target_values[0]
+    return None
+
+
+def _opencl_target_vram_bytes(probes: Sequence[CommandProbe]) -> int | None:
+    """Parse Global memory size only from a target-named clinfo device block."""
+
+    block_pattern = re.compile(
+        r"^\s*(?:Board name|Device name|deviceName)\s*[:=]\s*(?P<name>[^\r\n]+)"
+        r"(?P<body>.*?)(?=^\s*(?:Board name|Device name|deviceName)\s*[:=]|\Z)",
+        re.IGNORECASE | re.MULTILINE | re.DOTALL,
     )
-    multipliers = {"gb": 1_000_000_000, "gib": 1024**3, "mb": 1_000_000, "mib": 1024**2, "byte": 1, "bytes": 1}
+    target_values: list[int] = []
     for probe in probes:
-        text = f"{probe.stdout}\n{probe.stderr}"
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                candidates.append(int(float(match.group(1)) * multipliers[match.group(2).lower()]))
-        # OpenCL's global-memory field is a useful fallback on Windows when
-        # the WMI adapter-memory field is truncated.  Only inspect the block
-        # that names the reviewed discrete GPU; do not confuse the integrated
-        # adapter's smaller shared-memory value with VRAM.
-        for match in re.finditer(
-            r"(?:Board name|deviceName)\s*:\s*[^\r\n]*RX\s+9070\s+XT(?P<body>.*?)(?=(?:Board name|deviceName)\s*:|\Z)",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        ):
-            memory = re.search(r"Global memory size\s*:\s*(\d+)", match.group("body"), re.IGNORECASE)
-            if memory:
-                candidates.append(int(memory.group(1)))
-    return max(candidates) if candidates else None
+        if probe.name != "clinfo":
+            continue
+        for match in block_pattern.finditer(probe.stdout):
+            if not _is_target_gpu_name(match.group("name")):
+                continue
+            memory_values = [
+                int(raw)
+                for raw in re.findall(
+                    r"^\s*Global memory size\s*:\s*(\d+)\s*$",
+                    match.group("body"),
+                    re.IGNORECASE | re.MULTILINE,
+                )
+            ]
+            if len(memory_values) == 1 and memory_values[0] > 0:
+                target_values.append(memory_values[0])
+    if target_values and len(set(target_values)) == 1:
+        return target_values[0]
+    return None
+
+
+def _extract_vram_evidence(probes: Sequence[CommandProbe]) -> tuple[int | None, str]:
+    wmi_value = _wmi_target_vram_bytes(probes)
+    if wmi_value is not None:
+        return wmi_value, "wmi"
+    opencl_value = _opencl_target_vram_bytes(probes)
+    if opencl_value is not None:
+        return opencl_value, "opencl"
+    return None, "unknown"
+
+
+def _extract_vram_bytes(probes: Sequence[CommandProbe]) -> int | None:
+    """Compatibility helper returning only the target-specific byte value."""
+
+    return _extract_vram_evidence(probes)[0]
 
 
 def _backend_availability(
@@ -337,8 +389,8 @@ def collect_preflight(
         for spec in COMMAND_SPECS
     )
     names = _gpu_names(probes)
-    normalized_names = " ".join(names).casefold()
-    gpu_match: bool | None = None if not names else "rx 9070 xt" in normalized_names
+    gpu_match: bool | None = None if not names else any(_is_target_gpu_name(name) for name in names)
+    vram_bytes, vram_source = _extract_vram_evidence(probes)
     packages = _package_versions()
     return PreflightReport(
         generated_by="local_ai_benchmark_preflight",
@@ -348,7 +400,8 @@ def collect_preflight(
         expected_gpu=EXPECTED_GPU_NAME,
         gpu_names=names,
         gpu_match=gpu_match,
-        vram_bytes=_extract_vram_bytes(probes),
+        vram_bytes=vram_bytes,
+        vram_source=vram_source,
         python_packages=packages,
         backend_availability=_backend_availability(probes, packages),
         probes=probes,
