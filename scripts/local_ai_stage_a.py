@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one of the three fixed Local AI Stage A pilot adapters.
+"""Run one of the fixed Local AI Stage A benchmark adapters.
 
 This command is evaluation-only.  It loads the frozen 109-case corpus, skips
 the same deterministic-only and safety-only rows that are ineligible for the
@@ -29,9 +29,12 @@ from local_ai_benchmark_harness import (
 )
 from local_ai_stage_a_adapters import (
     ControlLMStudioAdapter,
+    EveRLCDAdapter,
+    KevAdapter,
     LayaMultilingualAdapter,
     StageAAdapterError,
     SystemOneLiteAdapter,
+    VerdictOpenJevAdapter,
     identity_for,
 )
 
@@ -329,6 +332,14 @@ def build_adapter(args: argparse.Namespace) -> tuple[BenchmarkAdapter, dict[str,
         adapter = SystemOneLiteAdapter(Path(args.systemone_source), Path(args.systemone_model_dir))
     elif args.candidate == "laya":
         adapter = LayaMultilingualAdapter(Path(args.laya_source), Path(args.laya_model_dir))
+    elif args.candidate == "kev":
+        adapter = KevAdapter(
+            Path(args.kev_source), Path(args.kev_model_dir), Path(args.kev_base_dir)
+        )
+    elif args.candidate == "eve-rlcd":
+        adapter = EveRLCDAdapter(Path(args.eve_source), Path(args.eve_model_dir))
+    elif args.candidate == "Verdict-open-jev":
+        adapter = VerdictOpenJevAdapter(Path(args.verdict_source), Path(args.verdict_model_dir))
     else:  # argparse choices should make this unreachable
         raise ValueError(f"unsupported candidate {args.candidate}")
     metadata = {
@@ -343,6 +354,11 @@ def build_adapter(args: argparse.Namespace) -> tuple[BenchmarkAdapter, dict[str,
         "hardware_alignment_status": identity["hardware_alignment_status"],
         "quality_run_status": identity["quality_run_status"],
         "route": identity["route"],
+        "license": identity.get("license"),
+        "base_model": identity.get("base_model"),
+        "base_model_revision": identity.get("base_model_revision"),
+        "parameter_count": identity.get("parameter_count"),
+        "model_file_bytes": identity.get("model_file_bytes"),
     }
     return adapter, metadata
 
@@ -390,7 +406,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--candidate",
         required=True,
-        choices=("qwen2.5-coder-1.5b-instruct", "systemone-lite", "laya"),
+        choices=(
+            "qwen2.5-coder-1.5b-instruct",
+            "systemone-lite",
+            "laya",
+            "kev",
+            "eve-rlcd",
+            "Verdict-open-jev",
+        ),
     )
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--output-dir", type=Path)
@@ -400,6 +423,21 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--systemone-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/systemone-lite"))
     parser.add_argument("--laya-source", type=Path, default=Path("upstream/laya"))
     parser.add_argument("--laya-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/laya"))
+    parser.add_argument("--kev-source", type=Path, default=Path("runtime/ai_poc/upstream-batch-2a/kev"))
+    parser.add_argument("--kev-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/kev"))
+    parser.add_argument("--kev-base-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/kev-base"))
+    parser.add_argument("--eve-source", type=Path, default=Path("runtime/ai_poc/upstream-batch-2a/eve-rlcd"))
+    parser.add_argument("--eve-model-dir", type=Path, default=Path("runtime/ai_poc/stage-a-models/eve-rlcd"))
+    parser.add_argument(
+        "--verdict-source",
+        type=Path,
+        default=Path("runtime/ai_poc/upstream-batch-2a/Verdict-open-jev"),
+    )
+    parser.add_argument(
+        "--verdict-model-dir",
+        type=Path,
+        default=Path("runtime/ai_poc/stage-a-models/Verdict-open-jev"),
+    )
     parser.add_argument("--timeout", type=float, default=2.0)
     parser.add_argument(
         "--hardware-identity",

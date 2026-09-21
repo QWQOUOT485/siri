@@ -1,4 +1,4 @@
-"""Benchmark-only adapters for the three-model Local AI Stage A pilot.
+"""Benchmark-only adapters for the fixed Local AI Stage A pilots.
 
 The adapters expose only untrusted semantic evidence through the common
 benchmark schema.  They do not import ``app`` and never return a
@@ -111,6 +111,56 @@ STAGE_A_IDENTITIES: dict[str, dict[str, Any]] = {
         "parameter_count": 321_908_998,
         "model_file_bytes": 643_835_514,
         "precision": "float16 weights; CPU route uses float32",
+        "quantization": "none",
+        "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
+        "route": AdapterRoute.ENCODER_CLASSIFICATION.value,
+    },
+    "kev": {
+        "model_id": "jaredpalmer/kev-0.5b",
+        "repository_revision": "e0bcf50153f1bda4ca6a8be5e12cbd5f9ebbce1c",
+        "model_revision": "2679c20e6dde32fb3c4f97ecdad2e6e92bb88a06",
+        "base_model": "Qwen/Qwen2.5-0.5B",
+        "base_model_revision": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+        "license": "Apache-2.0 adapter/head; Apache-2.0 Qwen2.5 base",
+        "parameter_count": 494_032_768,
+        # The Hub checkpoint contains the adapter/head only; the Qwen base is
+        # a separate download and is intentionally called out in the report.
+        "model_file_bytes": 37_074_383,
+        "precision": "fp32",
+        "quantization": "none",
+        "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
+        "route": AdapterRoute.DECODER_OPTION_SCORING.value,
+    },
+    "eve-rlcd": {
+        "model_id": "anthonym21/qwen3-0.6b-rlcd-decision",
+        "repository_revision": "57a179b7b1bedc80f65bf42ccda129dd1888272f",
+        "model_revision": "b327ec5efb5fdbf8bfafa3b369720ac5f6434b05",
+        "base_model": "Qwen/Qwen3-0.6B-Base",
+        "base_model_revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+        "license": "MIT code; Apache-2.0 Qwen3 weights/base",
+        "parameter_count": 596_049_920,
+        "model_file_bytes": 2_384_233_112,
+        "precision": "fp32",
+        "quantization": "none",
+        "backend": "python-cpu-fallback-until-amd-backend-proven",
+        "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
+        "quality_run_status": "exploratory CPU quality run completed",
+        "route": AdapterRoute.DECODER_OPTION_SCORING.value,
+    },
+    "Verdict-open-jev": {
+        "model_id": "heman10x/rlcd-modernbert-151m",
+        "repository_revision": "30f15564821626ca5c1ad5b2638c4eb7078787dd",
+        "model_revision": "8af2496eb63c7fa66d7d234e1f62629380030eb4",
+        "base_model": "knowledgator/gliclass-modern-base-v2.0 / ModernBERT-base",
+        "base_model_revision": "9320398ab6ca50946e2edcb9ec89649c0274c978",
+        "license": "Apache-2.0 license text; GitHub classifier unasserted; HF card Apache-2.0",
+        "parameter_count": 151_378_176,
+        "model_file_bytes": 605_529_340,
+        "precision": "fp32",
         "quantization": "none",
         "backend": "python-cpu-fallback-until-amd-backend-proven",
         "hardware_alignment_status": "RX_9070_XT_BACKEND_BLOCKED",
@@ -355,6 +405,226 @@ class LayaMultilingualAdapter:
             raise
         except Exception as exc:
             raise StageABackendError("laya inference failed") from exc
+
+
+class KevAdapter:
+    """Run the pinned original Kev-0.5B pointer-head checkpoint."""
+
+    route = AdapterRoute.DECODER_OPTION_SCORING
+
+    def __init__(self, source_root: Path, model_path: Path, base_path: Path) -> None:
+        self.model_name = "jaredpalmer/kev-0.5b"
+        self._source_root = source_root
+        self._model_path = model_path
+        self._base_path = base_path
+        self._tokenizer: Any | None = None
+        self._model: Any | None = None
+
+    def prepare(self) -> None:
+        if self._model is not None:
+            return
+        try:
+            _prepend_path(self._source_root, ".")
+            # Import the released model implementation directly.  The
+            # upstream evaluate module imports its optional dataset package at
+            # module import time, even though the inference loader does not
+            # need datasets; the direct path keeps this benchmark dependency
+            # narrow while retaining the released model/mask implementation.
+            from kev.model import DecisionModel, load_tokenizer
+            from peft import PeftModel
+            import torch
+
+            head = torch.load(
+                self._model_path / "head.pt", map_location="cpu", weights_only=False
+            )
+            self._tokenizer = load_tokenizer(str(self._base_path))
+            self._model = DecisionModel(
+                str(self._base_path),
+                self._tokenizer,
+                "cpu",
+                lora=None,
+                revision=None,
+                head_dim=int(head.get("head_dim", 256)),
+                option_isolation=bool(head.get("option_isolation", False)),
+                dtype=torch.float32,
+            )
+            self._model.lm = PeftModel.from_pretrained(
+                self._model.lm, str(self._model_path)
+            ).to("cpu")
+            self._model.lm = self._model.lm.merge_and_unload()
+            self._model.head.load_state_dict(head["head"])
+            self._model.eval()
+        except StageAAdapterError:
+            raise
+        except (TimeoutError, MemoryError) as exc:
+            raise StageABackendError("kev model load failed") from exc
+        except Exception as exc:
+            raise StageABackendError("kev model load or backend failed") from exc
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        if self._model is None:
+            self.prepare()
+        try:
+            record = {
+                "state": request.text,
+                "questions": [
+                    {
+                        "instr": OPTION_INTENT_QUESTION["instructions"],
+                        "options": list(OPTION_INTENT_QUESTION["criteria"]),
+                        "label": 0,
+                    }
+                ],
+            }
+            encoded = self._model.encode(self._tokenizer, record, strict=True)
+            probabilities = self._model.probs(encoded)[0].tolist()
+            answer = "play" if probabilities[0] >= probabilities[1] else "unknown"
+            return _typed_choice_decision(
+                {
+                    "choice": answer,
+                    "confidence": max(probabilities[0], probabilities[1]),
+                    "probabilities": {
+                        "play": probabilities[0],
+                        "unknown": probabilities[1],
+                    },
+                }
+            )
+        except StageAAdapterError:
+            raise
+        except Exception as exc:
+            raise StageABackendError("kev inference failed") from exc
+
+
+class EveRLCDAdapter:
+    """Run the pinned Eve RLCD decision-only export as a typed classifier."""
+
+    route = AdapterRoute.DECODER_OPTION_SCORING
+
+    def __init__(self, source_root: Path, model_path: Path) -> None:
+        self.model_name = "anthonym21/qwen3-0.6b-rlcd-decision"
+        self._source_root = source_root
+        self._model_path = model_path
+        self._decider: Any | None = None
+
+    def prepare(self) -> None:
+        if self._decider is not None:
+            return
+        try:
+            _prepend_path(self._source_root, ".")
+            from rlcd.decide import Decider
+
+            self._decider = Decider.load(str(self._model_path), device="cpu", fast=False)
+        except StageAAdapterError:
+            raise
+        except (TimeoutError, MemoryError) as exc:
+            raise StageABackendError("eve-rlcd model load failed") from exc
+        except Exception as exc:
+            raise StageABackendError("eve-rlcd model load or backend failed") from exc
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        if self._decider is None:
+            self.prepare()
+        try:
+            from rlcd.decide import ChoiceQ
+
+            answer = self._decider.ask(
+                request.text,
+                [
+                    ChoiceQ(
+                        question=OPTION_INTENT_QUESTION["instructions"],
+                        options=list(OPTION_INTENT_QUESTION["criteria"]),
+                    )
+                ],
+                batch_size=1,
+                fast=False,
+            )[0]
+            probabilities = answer.get("probs") if isinstance(answer, Mapping) else None
+            value = answer.get("value") if isinstance(answer, Mapping) else None
+            if not isinstance(probabilities, Mapping) or value not in {"play", "unknown"}:
+                raise StageAMalformedOutputError()
+            return _typed_choice_decision(
+                {
+                    "choice": value,
+                    "confidence": answer.get("confidence"),
+                    "probabilities": {
+                        "play": probabilities.get("play"),
+                        "unknown": probabilities.get("unknown"),
+                    },
+                }
+            )
+        except StageAAdapterError:
+            raise
+        except Exception as exc:
+            raise StageABackendError("eve-rlcd inference failed") from exc
+
+
+class VerdictOpenJevAdapter:
+    """Run Verdict's released ModernBERT/GLiClass choice path."""
+
+    route = AdapterRoute.ENCODER_CLASSIFICATION
+
+    def __init__(self, source_root: Path, model_path: Path) -> None:
+        self.model_name = "heman10x/rlcd-modernbert-151m"
+        self._source_root = source_root
+        self._model_path = model_path
+        self._engine: Any | None = None
+
+    def prepare(self) -> None:
+        if self._engine is not None:
+            return
+        try:
+            _prepend_path(self._source_root, ".")
+            from core.engine_encoder import DecisionEngine
+
+            self._engine = DecisionEngine(model_name_or_path=str(self._model_path), device="cpu")
+        except StageAAdapterError:
+            raise
+        except (TimeoutError, MemoryError) as exc:
+            raise StageABackendError("Verdict model load failed") from exc
+        except Exception as exc:
+            raise StageABackendError("Verdict model load or backend failed") from exc
+
+    def infer(self, request: BenchmarkRequest) -> BenchmarkDecision:
+        if self._engine is None:
+            self.prepare()
+        try:
+            from core.primitives import Choice, Option
+
+            query = Choice(
+                id="intent",
+                question=OPTION_INTENT_QUESTION["instructions"],
+                options=(
+                    Option(
+                        id="play",
+                        description=OPTION_INTENT_QUESTION["criteria"]["play"],
+                    ),
+                    Option(
+                        id="unknown",
+                        description=OPTION_INTENT_QUESTION["criteria"]["unknown"],
+                    ),
+                ),
+            )
+            result = self._engine.evaluate(request.text, [query]).results[0]
+            raw = result.probabilities
+            play = float(raw.get("play", 0.0))
+            unknown = float(raw.get("unknown", 0.0)) + float(
+                raw.get("__insufficient_evidence__", 0.0)
+            )
+            total = play + unknown
+            if total <= 0.0:
+                raise StageAMalformedOutputError()
+            probabilities = {"play": play / total, "unknown": unknown / total}
+            choice = "play" if result.selected_id == "play" else "unknown"
+            return _typed_choice_decision(
+                {
+                    "choice": choice,
+                    "confidence": probabilities[choice],
+                    "probabilities": probabilities,
+                }
+            )
+        except StageAAdapterError:
+            raise
+        except Exception as exc:
+            raise StageABackendError("Verdict inference failed") from exc
 
 
 def identity_for(candidate_name: str) -> dict[str, Any]:
