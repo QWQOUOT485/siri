@@ -120,6 +120,58 @@ acceptance; Siri voice acceptance was not performed.
 Keep Spotify relevance/popularity and personalization signals as bounded
 candidate evidence only.
 
+### P2.5 — Local AI decision-head research PoC
+
+Research a Jev-like / non-generative local decision model using a small Qwen
+backbone. This is an evaluation task only and must not change production Local
+AI authority or set `LOCAL_AI_FALLBACK_APPROVED=true`.
+
+Primary references / approaches to investigate:
+
+- `jaredpalmer/kev`: small Qwen backbone + LoRA + decision/readout head
+- `Mapika/decider`: Qwen-based one-forward-pass probabilistic decision model
+- `LitJev`: logits-based Jev-style decision experiments without full text generation
+
+Initial experiment scope:
+
+- Start with approximately 0.5B–2B Qwen-class models; do not assume a larger
+  model is better.
+- Target only the current narrow Local AI domain:
+  `spotify_play_track` vs `unknown`, plus bounded track / artist / album
+  semantic recovery where the architecture safely permits it.
+- Compare the current generative structured-output baseline against a
+  non-generative decision-head approach.
+- Reuse the existing frozen 109-case Local AI benchmark/evaluation harness where
+  possible; do not train on the held-out benchmark answers.
+- Measure at least: strict-schema/typed-output success, supported semantic
+  accuracy, semantic-retry accuracy, safe-unknown behavior, false execution,
+  post-grounding false acceptance, P50/P95 latency, malformed-output rate, and
+  timeout/failure behavior.
+- If a decision head produces probabilities/confidence, evaluate calibration;
+  confidence must remain evidence only and must not become execution authority.
+- Build any training corpus from reviewed/sanitized examples, with separate
+  training/validation/frozen-evaluation splits.
+- Keep secrets, OAuth tokens, private paths, Spotify IDs/URIs, and raw sensitive
+  logs out of training data.
+- Prefer a parameter-efficient experiment (LoRA/QLoRA or similarly bounded
+  tuning) that fits a single consumer GPU in the roughly 12–16 GB VRAM class.
+- Do not introduce mixed-vendor cross-host distributed training for the first
+  PoC.
+- Any candidate that beats the baseline must still pass the existing grounding,
+  policy, fail-closed, shadow, and independent promotion gates before executable
+  fallback can be considered.
+
+Success criteria for the research task:
+
+~~~text
+same frozen evaluation corpus
++ measurable semantic or latency improvement
++ no safety regression
++ reproducible model / dataset / config identity
+~~~
+
+A larger parameter count by itself is not a success criterion.
+
 ### P3 — Project infrastructure
 
 - Add hosted CI for unit/security tests if separately scheduled.
