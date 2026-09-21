@@ -17,6 +17,9 @@ class WindowsProcessController:
     PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     PROCESS_TERMINATE = 0x0001
     SYNCHRONIZE = 0x00100000
+    WAIT_OBJECT_0 = 0x00000000
+    WAIT_TIMEOUT = 0x00000102
+    WAIT_FAILED = 0xFFFFFFFF
 
     def close(self, process: ProcessSpec, *, force: bool = False) -> OperationResult:
         if not process.reliable or not process.executable_names:
@@ -26,24 +29,71 @@ class WindowsProcessController:
         targets = self._find_windowed_processes(process)
         if not targets:
             return OperationResult(False, "目前找不到這個應用程式的可關閉視窗。", "APP_NOT_RUNNING")
+        unique_pids = list(dict.fromkeys(pid for pid, _ in targets))
         if force:
-            unique_pids = list(dict.fromkeys(pid for pid, _ in targets))
             closed = sum(1 for pid in unique_pids if self._terminate(pid))
             return OperationResult(bool(closed), "已嘗試強制結束程序。" if closed else "無法強制結束程序。", None if closed else "FORCE_CLOSE_FAILED", {"count": closed})
-        for _, hwnd in targets:
-            ctypes.windll.user32.PostMessageW(hwnd, self.WM_CLOSE, 0, 0)
-        deadline = time.monotonic() + 5.0
-        remaining = [pid for pid, _ in targets]
-        while remaining and time.monotonic() < deadline:
-            # Keep a PID when liveness inspection is inconclusive.  An access
-            # or API failure must never be treated as proof that the process
-            # exited, otherwise graceful close can report a false success.
-            remaining = [pid for pid in remaining if self._pid_exists(pid) is not False]
+
+        kernel32 = ctypes.windll.kernel32
+        handles: dict[int, int] = {}
+        try:
+            # Keep one synchronization handle per verified PID.  Reopening by
+            # numeric PID after WM_CLOSE cannot distinguish an exited process
+            # from an access/inspection failure and is vulnerable to PID reuse.
+            for pid in unique_pids:
+                handle = kernel32.OpenProcess(self.SYNCHRONIZE, False, pid)
+                if not handle:
+                    return OperationResult(
+                        False,
+                        "無法可靠檢查程式狀態，未送出正常關閉要求。",
+                        "GRACEFUL_CLOSE_INSPECTION_FAILED",
+                        {"remaining": len(unique_pids)},
+                    )
+                handles[pid] = handle
+
+            remaining = set(unique_pids)
+            for pid in tuple(remaining):
+                status = self._wait_status(kernel32, handles[pid])
+                if status == self.WAIT_OBJECT_0:
+                    remaining.discard(pid)
+                elif status == self.WAIT_TIMEOUT:
+                    continue
+                else:
+                    return OperationResult(
+                        False,
+                        "無法可靠檢查程式狀態，未回報正常關閉成功。",
+                        "GRACEFUL_CLOSE_INSPECTION_FAILED",
+                        {"remaining": len(remaining)},
+                    )
+
+            user32 = ctypes.windll.user32
+            for pid, hwnd in targets:
+                if pid in remaining:
+                    user32.PostMessageW(hwnd, self.WM_CLOSE, 0, 0)
+
+            deadline = time.monotonic() + 5.0
+            while remaining and time.monotonic() < deadline:
+                for pid in tuple(remaining):
+                    status = self._wait_status(kernel32, handles[pid])
+                    if status == self.WAIT_OBJECT_0:
+                        remaining.discard(pid)
+                    elif status == self.WAIT_TIMEOUT:
+                        continue
+                    else:
+                        return OperationResult(
+                            False,
+                            "無法可靠檢查程式狀態，未回報正常關閉成功。",
+                            "GRACEFUL_CLOSE_INSPECTION_FAILED",
+                            {"remaining": len(remaining)},
+                        )
+                if remaining:
+                    time.sleep(0.1)
             if remaining:
-                time.sleep(0.1)
-        if remaining:
-            return OperationResult(False, "已送出正常關閉要求，但程式仍在執行。", "GRACEFUL_CLOSE_TIMEOUT", {"remaining": len(remaining)})
-        return OperationResult(True, "已正常關閉程式。", data={"count": len(targets)})
+                return OperationResult(False, "已送出正常關閉要求，但程式仍在執行。", "GRACEFUL_CLOSE_TIMEOUT", {"remaining": len(remaining)})
+            return OperationResult(True, "已正常關閉程式。", data={"count": len(unique_pids)})
+        finally:
+            for handle in handles.values():
+                kernel32.CloseHandle(handle)
 
     def _find_windowed_processes(self, process: ProcessSpec) -> list[tuple[int, int]]:
         if sys.platform != "win32":
@@ -100,18 +150,12 @@ class WindowsProcessController:
         return None
 
     @staticmethod
-    def _pid_exists(pid: int) -> bool | None:
-        access = WindowsProcessController.SYNCHRONIZE | WindowsProcessController.PROCESS_QUERY_LIMITED_INFORMATION
-        handle = ctypes.windll.kernel32.OpenProcess(access, False, pid)
-        if not handle:
-            return None
-        try:
-            exit_code = wintypes.DWORD()
-            if not ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
-                return None
-            return int(exit_code.value) == 259  # STILL_ACTIVE
-        finally:
-            ctypes.windll.kernel32.CloseHandle(handle)
+    def _wait_status(kernel32, handle: int) -> int:
+        """Return a normalized WaitForSingleObject status for a process handle."""
+
+        # WaitForSingleObject returns a DWORD; masking also handles a test
+        # double or an untyped ctypes binding that exposes WAIT_FAILED as -1.
+        return int(kernel32.WaitForSingleObject(handle, 0)) & 0xFFFFFFFF
 
     def _terminate(self, pid: int) -> bool:
         handle = ctypes.windll.kernel32.OpenProcess(self.PROCESS_TERMINATE | self.SYNCHRONIZE, False, pid)

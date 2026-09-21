@@ -44,81 +44,150 @@ def test_force_close_terminates_each_pid_only_once(monkeypatch):
     assert result.data == {"count": 2}
 
 
-def test_pid_liveness_requests_query_and_synchronize_rights(monkeypatch):
-    class FakeKernel32:
-        def __init__(self):
-            self.access = None
+class _FakeKernel32:
+    WAIT_OBJECT_0 = 0
+    WAIT_TIMEOUT = 0x102
+    WAIT_FAILED = 0xFFFFFFFF
 
-        def OpenProcess(self, access, _inherit, _pid):
-            self.access = access
-            return 100
+    def __init__(self, *, wait_sequences=None, open_fail_for=()):
+        self.wait_sequences = {pid: list(sequence) for pid, sequence in (wait_sequences or {}).items()}
+        self.open_fail_for = set(open_fail_for)
+        self.open_calls = []
+        self.wait_calls = []
+        self.closed_handles = []
+        self.events = []
+        self.handles = {}
+        self._next_handle = 100
 
-        @staticmethod
-        def GetExitCodeProcess(_handle, output):
-            output._obj.value = 259
-            return 1
+    def OpenProcess(self, access, _inherit, pid):
+        self.open_calls.append((access, pid))
+        self.events.append(("open", pid))
+        if pid in self.open_fail_for:
+            return 0
+        handle = self._next_handle
+        self._next_handle += 1
+        self.handles[handle] = pid
+        return handle
 
-        @staticmethod
-        def CloseHandle(_handle):
-            return 1
+    def WaitForSingleObject(self, handle, timeout):
+        pid = self.handles[handle]
+        self.wait_calls.append((handle, pid, timeout))
+        self.events.append(("wait", pid))
+        sequence = self.wait_sequences[pid]
+        return sequence.pop(0) if len(sequence) > 1 else sequence[0]
 
-    kernel32 = FakeKernel32()
-    monkeypatch.setattr(process_module.ctypes, "windll", SimpleNamespace(kernel32=kernel32), raising=False)
-
-    assert WindowsProcessController._pid_exists(123) is True
-    assert kernel32.access == WindowsProcessController.SYNCHRONIZE | WindowsProcessController.PROCESS_QUERY_LIMITED_INFORMATION
-
-
-def test_pid_liveness_removes_a_confirmed_exited_pid(monkeypatch):
-    class FakeKernel32:
-        @staticmethod
-        def OpenProcess(_access, _inherit, _pid):
-            return 100
-
-        @staticmethod
-        def GetExitCodeProcess(_handle, output):
-            output._obj.value = 0
-            return 1
-
-        @staticmethod
-        def CloseHandle(_handle):
-            return 1
-
-    monkeypatch.setattr(process_module.ctypes, "windll", SimpleNamespace(kernel32=FakeKernel32()), raising=False)
-    assert WindowsProcessController._pid_exists(123) is False
+    def CloseHandle(self, handle):
+        self.closed_handles.append(handle)
+        self.events.append(("close", handle))
+        return 1
 
 
-def _run_graceful_close_with_liveness(monkeypatch, liveness):
+def _run_graceful_close_with_wait(
+    monkeypatch,
+    *,
+    targets=((123, 1001),),
+    wait_sequences=None,
+    open_fail_for=(),
+    clock=(0.0, 0.0, 6.0),
+):
     controller = WindowsProcessController()
+    kernel32 = _FakeKernel32(wait_sequences=wait_sequences, open_fail_for=open_fail_for)
     monkeypatch.setattr(process_module.sys, "platform", "win32")
-    monkeypatch.setattr(controller, "_find_windowed_processes", lambda _process: [(123, 1001)])
+    monkeypatch.setattr(controller, "_find_windowed_processes", lambda _process: list(targets))
+
+    def post_message(_hwnd, *_args):
+        kernel32.events.append(("post", _hwnd))
+        return 1
+
     monkeypatch.setattr(
         process_module.ctypes,
         "windll",
-        SimpleNamespace(user32=SimpleNamespace(PostMessageW=lambda *_args: 1)),
+        SimpleNamespace(user32=SimpleNamespace(PostMessageW=post_message), kernel32=kernel32),
         raising=False,
     )
-    clock = iter((0.0, 0.0, 6.0))
-    monkeypatch.setattr(process_module.time, "monotonic", lambda: next(clock))
+    times = iter(clock)
+    monkeypatch.setattr(process_module.time, "monotonic", lambda: next(times))
     monkeypatch.setattr(process_module.time, "sleep", lambda _seconds: None)
-    monkeypatch.setattr(controller, "_pid_exists", lambda _pid: liveness)
-    return controller.close(ProcessSpec(executable_names=("app.exe",), reliable=True))
+    result = controller.close(ProcessSpec(executable_names=("app.exe",), reliable=True))
+    return result, kernel32
 
 
-def test_graceful_close_removes_exited_pid(monkeypatch):
-    result = _run_graceful_close_with_liveness(monkeypatch, False)
+def test_graceful_close_checks_alive_target_before_sending_wm_close_and_closes_handle(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT, _FakeKernel32.WAIT_OBJECT_0]},
+        clock=(0.0, 0.0),
+    )
     assert result.success is True
     assert result.error_code is None
+    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE, 123)]
+    assert len(kernel32.wait_calls) == 2
+    assert kernel32.events.index(("wait", 123)) < kernel32.events.index(("post", 1001))
+    assert kernel32.closed_handles == [100]
 
 
-def test_graceful_close_keeps_live_pid_and_returns_timeout(monkeypatch):
-    result = _run_graceful_close_with_liveness(monkeypatch, True)
+def test_graceful_close_returns_success_when_process_becomes_signaled(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT, _FakeKernel32.WAIT_OBJECT_0]},
+        clock=(0.0, 0.0),
+    )
+    assert result.success is True
+    assert kernel32.closed_handles == [100]
+
+
+def test_graceful_close_times_out_when_process_remains_alive(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT, _FakeKernel32.WAIT_TIMEOUT]},
+    )
     assert result.success is False
     assert result.error_code == "GRACEFUL_CLOSE_TIMEOUT"
     assert result.data == {"remaining": 1}
+    assert kernel32.closed_handles == [100]
 
 
-def test_graceful_close_inspection_failure_is_not_false_success(monkeypatch):
-    result = _run_graceful_close_with_liveness(monkeypatch, None)
+def test_graceful_close_wait_failure_never_reports_success(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT, _FakeKernel32.WAIT_FAILED]},
+        clock=(0.0, 0.0),
+    )
     assert result.success is False
-    assert result.error_code == "GRACEFUL_CLOSE_TIMEOUT"
+    assert result.error_code == "GRACEFUL_CLOSE_INSPECTION_FAILED"
+    assert kernel32.closed_handles == [100]
+
+
+def test_graceful_close_open_failure_never_sends_wm_close_or_reports_success(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(monkeypatch, open_fail_for=(123,))
+
+    assert result.success is False
+    assert result.error_code == "GRACEFUL_CLOSE_INSPECTION_FAILED"
+    assert kernel32.wait_calls == []
+    assert kernel32.closed_handles == []
+
+
+def test_graceful_close_closes_handles_already_acquired_before_later_open_failure(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        targets=((123, 1001), (456, 1002)),
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT]},
+        open_fail_for=(456,),
+    )
+
+    assert result.success is False
+    assert result.error_code == "GRACEFUL_CLOSE_INSPECTION_FAILED"
+    assert kernel32.closed_handles == [100]
+
+
+def test_graceful_close_opens_one_wait_handle_for_multiple_windows_of_one_pid(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch,
+        targets=((123, 1001), (123, 1002)),
+        wait_sequences={123: [_FakeKernel32.WAIT_TIMEOUT, _FakeKernel32.WAIT_OBJECT_0]},
+        clock=(0.0, 0.0),
+    )
+
+    assert result.success is True
+    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE, 123)]
+    assert kernel32.closed_handles == [100]

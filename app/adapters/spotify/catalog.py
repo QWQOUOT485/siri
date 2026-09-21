@@ -678,14 +678,13 @@ class SpotifyCatalog:
 
     @classmethod
     def _classify_version(cls, ref: SpotifyTrackRef) -> str:
-        if cls._contains_live_title_marker(ref.track_name) or cls._contains_marker(ref.album_name, cls._LIVE_MARKERS):
+        if cls._contains_live_context(ref.track_name) or cls._contains_live_context(ref.album_name, allow_bare_release_terms=True):
             return "live"
         searchable = f"{ref.track_name} {ref.album_name}"
         if ref.album_type.casefold() == "compilation" or cls._contains_marker(searchable, cls._SECONDARY_MARKERS):
             return "secondary"
         return "studio"
 
-    _LIVE_MARKERS = ("live", "concert", "tour", "演唱會", "演唱会", "現場", "现场")
     _SECONDARY_MARKERS = (
         "acoustic",
         "remix",
@@ -705,21 +704,27 @@ class SpotifyCatalog:
         "精选",
     )
 
-    _LIVE_TITLE_PATTERNS = (
-        r"(?:\(|\[|\{)\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance))?\s*(?:\)|\]|\})",
-        r"(?:^|\s)[\-–—:]\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance))?\s*$",
-        r"\b(?:live|concert|tour)\s+(?:version|recording|performance)\b",
+    _LIVE_CONTEXT_PATTERNS = (
+        r"(?:\(|\[|\{)\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance|album))?\s*(?:\)|\]|\})",
+        r"(?:^|\s)[\-–—:]\s*(?:live|concert|tour)(?:\s+(?:version|recording|performance|album))?\s*$",
+        r"\b(?:live|concert|tour)\s+(?:version|recording|performance|album)\b",
         r"\blive\s+(?:at|from)\b",
         r"(?:演唱會版|演唱会版|演唱會|演唱会|現場版|现场版|現場|现场)",
     )
 
     @classmethod
-    def _contains_live_title_marker(cls, value: str) -> bool:
-        # A bare word in a canonical title is not enough: "Live Forever" and
-        # similar studio titles are common.  Require release/version context
-        # in the title; album metadata remains a separate strong signal.
-        normalized = str(value or "").casefold()
-        return any(re.search(pattern, normalized) for pattern in cls._LIVE_TITLE_PATTERNS)
+    def _contains_live_context(cls, value: str, *, allow_bare_release_terms: bool = False) -> bool:
+        # A bare word in a canonical title or album is not enough:
+        # "Live Forever" and "Live Through This" are ordinary names.  Exact
+        # "Live", version phrases, release context, and Chinese concert
+        # wording remain strong evidence.  Album-only concert/tour wording is
+        # also treated as release metadata; title-side matching stays stricter.
+        normalized = str(value or "").strip().casefold()
+        if normalized == "live":
+            return True
+        if any(re.search(pattern, normalized) for pattern in cls._LIVE_CONTEXT_PATTERNS):
+            return True
+        return allow_bare_release_terms and bool(re.search(r"\b(?:concert|tour)\b", normalized))
 
     @classmethod
     def _contains_marker(cls, value: str, markers: tuple[str, ...]) -> bool:
