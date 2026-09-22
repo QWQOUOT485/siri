@@ -22,6 +22,32 @@ import local_ai_stage_b_candidate_corpus as candidate  # noqa: E402
 
 CJK_RE = re.compile(r"[\u3400-\u9fff]")
 ASCII_LETTER_RE = re.compile(r"[A-Za-z]")
+EXPECTED_HANS_SURFACE_TRANSLATIONS = {
+    "們": "们",
+    "嗎": "吗",
+    "園": "园",
+    "塵": "尘",
+    "屬": "属",
+    "屜": "屉",
+    "帶": "带",
+    "憶": "忆",
+    "條": "条",
+    "沒": "没",
+    "溫": "温",
+    "滅": "灭",
+    "當": "当",
+    "終": "终",
+    "緣": "缘",
+    "續": "续",
+    "舊": "旧",
+    "裡": "里",
+    "請": "请",
+    "錯": "错",
+    "鐘": "钟",
+    "頂": "顶",
+    "顆": "颗",
+    "飛": "飞",
+}
 
 
 def _variant_index(row: candidate.StageBCandidateRecord) -> int:
@@ -336,6 +362,29 @@ def test_entity_catalog_preserves_chinese_script_and_exact_punctuation_spans() -
                 punctuation_rows += 1
     assert digit_rows > 0
     assert punctuation_rows > 0
+
+
+def test_simplified_entity_surfaces_are_exact_local_conversions() -> None:
+    assert {
+        traditional: candidate._simplified_surface(traditional)
+        for traditional in EXPECTED_HANS_SURFACE_TRANSLATIONS
+    } == EXPECTED_HANS_SURFACE_TRANSLATIONS
+
+    hans_entity_count = sum(
+        counts["zh-Hans"] for counts in candidate.LANGUAGE_GROUP_COUNTS.values()
+    )
+
+    for ordinal in range(hans_entity_count):
+        hant_surfaces = candidate._entity_words("zh-Hant", ordinal)
+        hans_surfaces = candidate._entity_words("zh-Hans", ordinal)
+        assert hans_surfaces == tuple(
+            candidate._simplified_surface(surface) for surface in hant_surfaces
+        )
+        assert all(
+            character not in EXPECTED_HANS_SURFACE_TRANSLATIONS
+            for surface in hans_surfaces
+            for character in surface
+        )
 
 
 def test_asr_noise_changes_at_most_one_present_entity_surface() -> None:

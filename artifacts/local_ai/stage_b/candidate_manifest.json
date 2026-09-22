@@ -6,7 +6,7 @@
     "supported": 3060
   },
   "artifact_total_size_bytes": 3156504,
-  "candidate_corpus_sha256": "635bc53f0c043f52bb2e117badf9551862eb122554984f710700d81cfbc7a4c0",
+  "candidate_corpus_sha256": "c7e0a44b69d4033c960a8a1af20b0f4c71ad5674ece4b9a44953a1bea40e68d2",
   "candidate_corpus_version": "stage-b-candidate-corpus-v1",
   "candidate_manifest_version": 1,
   "candidate_pool_split_status": "unsplit",
@@ -35,7 +35,7 @@
     }
   },
   "english_with_cjk_count": 0,
-  "entity_catalog_sha256": "e036d4b852e3d1c1ad8df3b00532558781961427eaeeec1ec9a12226fedaa9ab",
+  "entity_catalog_sha256": "5deb5bd5a5c7d02b0f2eb864d0bfc4063161c62697d19fc2363f9d3e458b502a",
   "entity_morphology": {
     "en": {
       "album_word_count_buckets": {
@@ -700,7 +700,7 @@
     "mixed": 1140
   },
   "local_ai_fallback_approved": false,
-  "manifest_sha256": "42b72557b883c9ef2de6b753e925d87482de2cf2c92a7c2e20dcfa8280d0b85d",
+  "manifest_sha256": "a2ceef6205a3bf1a92c31a6ad12d34ac5a1d9aee467ace101532ba9ddfae074f",
   "mixed_without_ascii_letter_count": 0,
   "mixed_without_cjk_count": 0,
   "model_compute_authorized": false,
@@ -784,7 +784,7 @@
     }
   },
   "production_gate_scope_contract_mismatch_count": 0,
-  "review_queue_sha256": "74392879041db2b1d513bb2d16b7eeab25cdf4d5221d421593c52803cd8d868c",
+  "review_queue_sha256": "5628a3acfe74c08baead3abe538a6ab2a83759c107f007a1f5e65e6464916fe8",
   "review_status_counts": {
     "pending_independent_review": 3600
   },

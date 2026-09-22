@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-22 PR #48 v4 entity-surface diversity / pending independent review
+### 2026-09-22 PR #48 v4 entity-surface diversity / HANS conversion corrected / pending independent review
 
 PR #47 was merged at the independently reviewed head
 `3fa9c8761d16962c85e25ec6970124b5d804f0f3` with merge commit
@@ -36,6 +36,10 @@ counts (any field) are zh-Hant 58, zh-Hans 12, mixed 70, and en 49; safe
 punctuation-bearing counts are 58, 12, 116, and 80. English/mixed
 apostrophe, hyphen, period, and parenthesis examples are present, and every
 major artist/track/album profile appears across at least two play slot modes.
+The HANS surface table now covers every Traditional character used by the Hant
+catalog, including the characters caught by artifact readback (`們`, `沒`, `屜`,
+and related forms); a strict local-conversion regression test prevents this
+contamination from returning.
 
 The corrected post-generation checks report deterministic negative-reason
 mismatches 0, safety negative-reason mismatches 0, mixed rows without CJK 0,
@@ -51,12 +55,12 @@ rows, while deterministic-only/safety-only are 300/240 blocked rows; scope
 contract mismatches are 0.
 
 Canonical artifact hashes are: candidate corpus
-`635bc53f0c043f52bb2e117badf9551862eb122554984f710700d81cfbc7a4c0`, entity
-catalog `e036d4b852e3d1c1ad8df3b00532558781961427eaeeec1ec9a12226fedaa9ab`,
+`c7e0a44b69d4033c960a8a1af20b0f4c71ad5674ece4b9a44953a1bea40e68d2`, entity
+catalog `5deb5bd5a5c7d02b0f2eb864d0bfc4063161c62697d19fc2363f9d3e458b502a`,
 generator config
 `d263bd9ec97a897134e9fc5bf1121f16b86a84ff9a361d7046c68f10670d4435`, review
-queue `74392879041db2b1d513bb2d16b7eeab25cdf4d5221d421593c52803cd8d868c`,
-manifest `42b72557b883c9ef2de6b753e925d87482de2cf2c92a7c2e20dcfa8280d0b85d`,
+queue `5628a3acfe74c08baead3abe538a6ab2a83759c107f007a1f5e65e6464916fe8`,
+manifest `a2ceef6205a3bf1a92c31a6ad12d34ac5a1d9aee467ace101532ba9ddfae074f`,
 and frozen near-duplicate config
 `64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7`. Total
 artifact size is 3,156,504 bytes.
@@ -70,12 +74,8 @@ is not accepted, and training, fine-tuning, inference, model compute, RX 9070
 XT qualification, Semantic Memory, Local AI fallback, RAG, vector storage,
 embeddings, production parser authority, deployment, and live
 Windows/Spotify/Siri/network operations remain out of scope. The candidate
-corpus suite passes (**14 passed**); the full unit suite passes (**467 passed**,
-with the same two dependency deprecation warnings).
-`compileall -q app scripts tests` and `git diff --check` also pass (with only
-Git's normal LF/CRLF conversion warnings).
-The focused candidate corpus suite passes (**18 passed**); the full unit suite
-passes (**471 passed, 2 existing dependency deprecation warnings**).
+corpus suite passes (**19 passed**); the full unit suite passes (**472 passed,
+2 existing dependency deprecation warnings**).
 `compileall -q app scripts tests` and `git diff --check` pass, with only Git's
 normal LF/CRLF conversion warnings. No hosted CI claim is made because PR #48
 currently reports no checks. `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
