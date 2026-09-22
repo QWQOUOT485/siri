@@ -6,6 +6,29 @@ def test_normalization_handles_case_punctuation_and_whitespace():
     assert normalize_name("Ｆｉｌｅ　Explorer") == "file explorer"
 
 
+def test_application_matching_normalizes_traditional_and_simplified_chinese():
+    from app.domain.app_models import AppEntry, AppType, LaunchMethod, LaunchSource, ProcessSpec
+
+    app = AppEntry(
+        app_id="app_netease_music_12345678",
+        display_name="網易雲音樂",
+        normalized_name="網易雲音樂",
+        aliases=("百度網盤",),
+        launch_method=LaunchMethod.EXECUTABLE,
+        launch_target="C:\\Apps\\music.exe",
+        executable_path="C:\\Apps\\music.exe",
+        process=ProcessSpec(executable_names=("music.exe",), reliable=True),
+        source="manual_apps",
+        app_type=AppType.PORTABLE,
+        launch_source=LaunchSource.MANUAL,
+        launch_confidence=1.0,
+        metadata_confidence=1.0,
+    )
+
+    assert match_app("网易云音乐", [app]).best_match is not None
+    assert match_app("百度网盘", [app]).best_match is not None
+
+
 def test_alias_and_fuzzy_matching(sample_entries):
     result = match_app("photoshop", sample_entries)
     assert result.best_match is not None

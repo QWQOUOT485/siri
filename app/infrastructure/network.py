@@ -27,7 +27,10 @@ def ip_allowed(address: str | None, networks: tuple[ipaddress._BaseNetwork, ...]
         parsed = ipaddress.ip_address(address)
     except ValueError:
         return False
-    return any(parsed in network for network in networks)
+    if any(parsed in network for network in networks):
+        return True
+    mapped = getattr(parsed, "ipv4_mapped", None)
+    return mapped is not None and any(mapped in network for network in networks)
 
 
 class PrivateNetworkMiddleware(BaseHTTPMiddleware):

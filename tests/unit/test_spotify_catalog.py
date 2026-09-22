@@ -450,6 +450,72 @@ def test_catalog_prefers_canonical_studio_over_live_for_same_artist():
     assert result.ambiguous is False
 
 
+@pytest.mark.parametrize("title", ["Live Forever", "Live to Tell", "Live and Let Die"])
+def test_catalog_keeps_studio_titles_that_contain_live_as_a_normal_word(title):
+    client = FakeSpotifySearchClient([track("studio", title, ["Artist"], album="Studio Album")])
+
+    result = SpotifyCatalog(client).find_track(title, "Artist", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "studio"
+
+
+def test_catalog_classifies_explicit_live_track_title_as_live():
+    ref = SpotifyCatalog._to_ref(track("live", "Stay (Live)", ["Artist"], album="Album"))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "live"
+
+
+@pytest.mark.parametrize("album", ["Live Through This", "Long Live Rock", "Magical Mystery Tour"])
+def test_catalog_does_not_classify_lexical_live_album_names_as_live(album):
+    ref = SpotifyCatalog._to_ref(track("studio", "Ordinary Song", ["Artist"], album=album))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "studio"
+
+
+@pytest.mark.parametrize("album", ["Live Through This", "Magical Mystery Tour"])
+def test_catalog_keeps_lexical_live_album_tracks_playable(album):
+    client = FakeSpotifySearchClient([track("studio", "Ordinary Song", ["Artist"], album=album)])
+
+    result = SpotifyCatalog(client).find_track("Ordinary Song", "Artist", access_token="test-token")
+
+    assert result.track is not None
+    assert result.track.track_id == "studio"
+
+
+def test_catalog_classifies_exact_live_album_title_as_live():
+    ref = SpotifyCatalog._to_ref(track("albumlive", "Ordinary Song", ["Artist"], album="Live"))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "live"
+
+
+def test_catalog_classifies_live_at_markers_in_title_and_album_as_live():
+    title_ref = SpotifyCatalog._to_ref(track("titlelive", "Live at Wembley", ["Artist"], album="Album"))
+    album_ref = SpotifyCatalog._to_ref(track("albumlive", "Ordinary Song", ["Artist"], album="Live at Wembley"))
+
+    assert title_ref is not None and album_ref is not None
+    assert SpotifyCatalog._classify_version(title_ref) == "live"
+    assert SpotifyCatalog._classify_version(album_ref) == "live"
+
+
+@pytest.mark.parametrize("album", ["In Concert", "Live on Tour"])
+def test_catalog_classifies_explicit_concert_and_tour_release_context_as_live(album):
+    ref = SpotifyCatalog._to_ref(track("release", "Ordinary Song", ["Artist"], album=album))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "live"
+
+
+def test_catalog_classifies_concert_album_as_live():
+    ref = SpotifyCatalog._to_ref(track("live", "晴天", ["周杰倫"], album="2004 無與倫比演唱會"))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "live"
+
+
 def test_catalog_excludes_live_candidates_when_no_formal_recording_exists():
     client = FakeSpotifySearchClient(
         [

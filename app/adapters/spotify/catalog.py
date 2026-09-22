@@ -678,14 +678,13 @@ class SpotifyCatalog:
 
     @classmethod
     def _classify_version(cls, ref: SpotifyTrackRef) -> str:
-        searchable = f"{ref.track_name} {ref.album_name}"
-        if cls._contains_marker(searchable, cls._LIVE_MARKERS):
+        if cls._contains_live_context(ref.track_name) or cls._contains_live_context(ref.album_name):
             return "live"
+        searchable = f"{ref.track_name} {ref.album_name}"
         if ref.album_type.casefold() == "compilation" or cls._contains_marker(searchable, cls._SECONDARY_MARKERS):
             return "secondary"
         return "studio"
 
-    _LIVE_MARKERS = ("live", "concert", "tour", "演唱會", "演唱会", "現場", "现场")
     _SECONDARY_MARKERS = (
         "acoustic",
         "remix",
@@ -704,6 +703,30 @@ class SpotifyCatalog:
         "精選",
         "精选",
     )
+
+    _LIVE_CONTEXT_PATTERNS = (
+        r"(?:\(|\[|\{)\s*(?:live|concert)(?:\s+(?:version|recording|performance|album))?\s*(?:\)|\]|\})",
+        r"(?:^|\s)[\-–—:]\s*(?:live|concert)(?:\s+(?:version|recording|performance|album))?\s*$",
+        r"\b(?:live|concert)\s+(?:version|recording|performance|album)\b",
+        r"\blive\s+(?:at|from)\b",
+        r"\brecorded\s+live\b",
+        r"\b(?:live\s+in|recorded\s+in|in)\s+concert\b",
+        r"\blive\s+on\s+tour\b",
+        r"\blive\s+tour\b",
+        r"\btour\s+live\b",
+        r"(?:演唱會版|演唱会版|演唱會|演唱会|現場版|现场版|現場|现场)",
+    )
+
+    @classmethod
+    def _contains_live_context(cls, value: str) -> bool:
+        # A bare word in a canonical title or album is not enough:
+        # "Live Forever", "Live Through This", and "Magical Mystery Tour"
+        # are ordinary names.  Exact release names, explicit version phrases,
+        # release context, and Chinese concert wording remain strong evidence.
+        normalized = str(value or "").strip().casefold()
+        if normalized in {"live", "concert"}:
+            return True
+        return any(re.search(pattern, normalized) for pattern in cls._LIVE_CONTEXT_PATTERNS)
 
     @classmethod
     def _contains_marker(cls, value: str, markers: tuple[str, ...]) -> bool:
