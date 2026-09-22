@@ -83,6 +83,26 @@
     "artist_only",
     "missing_track"
   ],
+  "entity_morphology_quality_requirements": {
+    "artist_starts_the_rate_max_exclusive": 0.5,
+    "chinese_artist_band_suffix_rate_max": 0.4,
+    "chinese_artist_group_no_suffix_rate_min": 0.25,
+    "chinese_artist_solo_style_rate_min": 0.25,
+    "en_album_word_count_bucket_min": 3,
+    "en_artist_word_count_bucket_min": 3,
+    "en_track_word_count_bucket_min": 3,
+    "mixed_album_word_count_bucket_min": 3,
+    "mixed_artist_word_count_bucket_min": 3,
+    "mixed_track_word_count_bucket_min": 3,
+    "profile_slot_mode_min": 2,
+    "required_safe_surface_features": [
+      "digit",
+      "punctuation",
+      "apostrophe",
+      "hyphen",
+      "period"
+    ]
+  },
   "final_stage_b_corpus": false,
   "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
   "gate_blocked_unknown_reasons": [
@@ -90,9 +110,9 @@
     "ambiguous_version",
     "unsupported_domain"
   ],
-  "generation_source": "synthetic_local_entity_catalog_v1",
-  "generator_config_sha256": "a142f8adfe851e65795a61965ae5e896602e1803961f695a953bd5d075413c1c",
-  "generator_version": "stage-b-candidate-generator-v3",
+  "generation_source": "synthetic_local_entity_catalog_v2",
+  "generator_config_sha256": "d263bd9ec97a897134e9fc5bf1121f16b86a84ff9a361d7046c68f10670d4435",
+  "generator_version": "stage-b-candidate-generator-v4",
   "group_counts": {
     "deterministic_only": 50,
     "safety_only": 40,

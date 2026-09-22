@@ -71,7 +71,7 @@ def test_generation_is_deterministic_and_ids_are_unique() -> None:
     }
     assert len({row.candidate_id for row in first_rows}) == 3600
     assert len({row.source_group_id for row in first_rows}) == 600
-    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v3"}
+    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v4"}
     assert Counter(row.source_group_id for row in first_rows) == Counter(
         {f"source-group-{index:04d}": 6 for index in range(1, 601)}
     )
@@ -235,6 +235,107 @@ def test_supported_chinese_play_rows_are_script_preserving() -> None:
     assert all(not ASCII_LETTER_RE.search(row.utterance) for row in chinese_play_rows)
     assert not hasattr(candidate, "ZH_HANT_PINYIN_SURFACE")
     assert not hasattr(candidate, "ZH_HANS_PINYIN_SURFACE")
+
+
+def test_entity_catalog_has_diverse_chinese_artist_morphology() -> None:
+    rows, catalog = candidate.generate_candidate_records()
+    metrics = candidate._catalog_morphology_metrics(catalog, rows)
+
+    for language_tag, suffix in (("zh-Hant", "樂團"), ("zh-Hans", "乐团")):
+        artists = [
+            entity["artist"] for entity in catalog if entity["language_tag"] == language_tag
+        ]
+        assert artists
+        assert not all(artist.endswith(suffix) for artist in artists)
+        data = metrics[language_tag]
+        assert data["artist_band_suffix_rate"] <= 0.40
+        assert data["artist_solo_style_count"] / data["entity_count"] >= 0.25
+        assert data["artist_group_no_suffix_count"] / data["entity_count"] >= 0.25
+        assert set(data["artist_profile_counts"]) == {
+            "band_suffix",
+            "group_no_suffix",
+            "solo_style",
+        }
+
+
+def test_english_and_mixed_entity_shapes_have_multiple_word_buckets() -> None:
+    rows, catalog = candidate.generate_candidate_records()
+    metrics = candidate._catalog_morphology_metrics(catalog, rows)
+
+    for language_tag in ("en", "mixed"):
+        data = metrics[language_tag]
+        assert data["artist_starts_the_count"] < data["entity_count"] / 2
+        assert len(data["artist_word_count_buckets"]) >= 3
+        assert len(data["track_word_count_buckets"]) >= 3
+        assert len(data["album_word_count_buckets"]) >= 3
+        assert data["digit_bearing_entity_counts"]["any_entity"] > 0
+        assert data["safe_punctuation_bearing_entity_counts"]["any_entity"] > 0
+        assert data["apostrophe_bearing_count"]["any_entity"] > 0
+        assert data["hyphen_bearing_count"]["any_entity"] > 0
+        assert data["period_bearing_count"]["any_entity"] > 0
+
+
+def test_entity_morphology_profiles_cross_slot_modes() -> None:
+    rows, catalog = candidate.generate_candidate_records()
+    coverage = candidate._catalog_morphology_metrics(catalog, rows)[
+        "profile_slot_mode_coverage"
+    ]
+
+    for language_tag in candidate.LANGUAGE_ORDER:
+        for profiles in coverage[language_tag].values():
+            assert profiles
+            assert all(evidence["slot_mode_count"] >= 2 for evidence in profiles.values())
+
+
+def test_entity_catalog_preserves_chinese_script_and_exact_punctuation_spans() -> None:
+    rows, catalog = candidate.generate_candidate_records()
+    hant_chars = {
+        character
+        for entity in catalog
+        if entity["language_tag"] == "zh-Hant"
+        for field in ("artist", "track", "album")
+        for character in entity[field]
+    }
+    hans_chars = {
+        character
+        for entity in catalog
+        if entity["language_tag"] == "zh-Hans"
+        for field in ("artist", "track", "album")
+        for character in entity[field]
+    }
+    traditional_only = hant_chars - hans_chars
+    simplified_only = hans_chars - hant_chars
+
+    for entity in catalog:
+        surfaces = (entity["artist"], entity["track"], entity["album"])
+        if entity["language_tag"] == "zh-Hant":
+            assert not any(character in simplified_only for surface in surfaces for character in surface)
+        elif entity["language_tag"] == "zh-Hans":
+            assert not any(character in traditional_only for surface in surfaces for character in surface)
+
+    entities = {
+        entry["entity_key"]: entry
+        for entry in catalog
+    }
+    punctuation_rows = 0
+    digit_rows = 0
+    for row in rows:
+        if row.provisional_expected.intent != "spotify_play_track":
+            continue
+        entity = entities[f"synthetic-entity-{row.source_group_id.rsplit('-', 1)[1]}"]
+        for field in ("track", "artist", "album"):
+            span = getattr(row.provisional_expected, field)
+            if span is None:
+                continue
+            assert row.utterance[span.start : span.end] == span.text
+            if field != "track" or _variant_index(row) not in {4, 5}:
+                assert span.text == entity[field]
+            if any(character.isdigit() for character in span.text):
+                digit_rows += 1
+            if any(candidate._contains_unicode_punctuation(character) for character in (span.text,)):
+                punctuation_rows += 1
+    assert digit_rows > 0
+    assert punctuation_rows > 0
 
 
 def test_asr_noise_changes_at_most_one_present_entity_surface() -> None:
@@ -407,7 +508,7 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     }
     assert first_manifest["source_group_count"] == 600
     assert first_manifest["template_family_count"] == 32
-    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v3"
+    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v4"
     assert first_manifest["exact_duplicate_count"] == 0
     assert first_manifest["same_group_near_duplicate_count"] == 0
     assert first_manifest["cross_group_near_duplicate_count"] == 0
@@ -418,6 +519,10 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     assert first_manifest["mixed_without_cjk_count"] == 0
     assert first_manifest["mixed_without_ascii_letter_count"] == 0
     assert first_manifest["english_with_cjk_count"] == 0
+    assert first_manifest["entity_morphology"]["zh-Hant"]["artist_band_suffix_rate"] <= 0.40
+    assert first_manifest["entity_morphology"]["zh-Hans"]["artist_band_suffix_rate"] <= 0.40
+    assert len(first_manifest["entity_morphology"]["en"]["artist_word_count_buckets"]) >= 3
+    assert len(first_manifest["entity_morphology"]["mixed"]["artist_word_count_buckets"]) >= 3
     assert first_manifest["play_slot_mode_matrix"] == candidate.PLAY_SLOT_MODE_MATRIX
     assert first_manifest["production_gate_required_counts"] == {
         "supported_play": {"rows": 1800, "eligible": 1800, "blocked": 0},

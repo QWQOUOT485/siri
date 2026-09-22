@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -38,8 +39,8 @@ from app.services.command_parser import CommandParser
 
 CANDIDATE_SCHEMA_VERSION = 1
 CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v1"
-GENERATOR_VERSION = "stage-b-candidate-generator-v3"
-GENERATION_SOURCE = "synthetic_local_entity_catalog_v1"
+GENERATOR_VERSION = "stage-b-candidate-generator-v4"
+GENERATION_SOURCE = "synthetic_local_entity_catalog_v2"
 REVIEW_STATUS = "pending_independent_review"
 VARIANTS_PER_SOURCE_GROUP = 6
 TARGET_CANDIDATE_ROWS = 3600
@@ -221,6 +222,294 @@ ZH_HANS_HOMOPHONE_SURFACE = {
 
 CJK_RE = re.compile(r"[\u3400-\u9fff]")
 ASCII_LETTER_RE = re.compile(r"[A-Za-z]")
+UNSAFE_ENTITY_SURFACE_CHARS = frozenset(";&|`$<>")
+
+# The catalog is deliberately synthetic, but the surfaces should look like
+# the kinds of short names a real user might dictate.  The table is local and
+# deterministic; it is not a provider catalog or a runtime conversion path.
+_TRADITIONAL_TO_SIMPLIFIED = str.maketrans(
+    {
+        "樂": "乐", "團": "团", "島": "岛", "霧": "雾", "風": "风",
+        "遠": "远", "嶼": "屿", "晝": "昼", "聲": "声", "葉": "叶",
+        "紙": "纸", "鳶": "鸢", "雲": "云", "靜": "静", "線": "线",
+        "見": "见", "點": "点", "給": "给", "藍": "蓝", "夢": "梦",
+        "這": "这", "還": "还", "說": "说", "後": "后", "學": "学",
+        "會": "会", "記": "记", "盞": "盏", "離": "离", "願": "愿",
+        "寫": "写", "讓": "让", "進": "进", "燈": "灯", "歸": "归",
+        "聽": "听", "談": "谈", "開": "开", "關": "关", "專": "专",
+        "輯": "辑", "備": "备", "錄": "录", "顏": "颜", "節": "节",
+        "長": "长", "號": "号", "樓": "楼", "車": "车", "頁": "页",
+        "處": "处", "邊": "边", "橋": "桥", "變": "变", "戀": "恋",
+        "無": "无", "與": "与", "來": "来", "發": "发", "萬": "万",
+        "緩": "缓", "觀": "观", "測": "测", "書": "书", "郵": "邮",
+        "電": "电", "臺": "台", "簡": "简", "顧": "顾", "蕭": "萧",
+        "莊": "庄", "陳": "陈", "黃": "黄", "許": "许", "鄭": "郑",
+        "吳": "吴", "蘇": "苏", "羅": "罗", "邱": "邱", "曾": "曾",
+        "應": "应", "導": "导", "國": "国", "華": "华", "場": "场",
+        "現": "现", "時": "时", "間": "间", "話": "话", "語": "语",
+        "題": "题", "類": "类", "別": "别", "庫": "库", "網": "网",
+        "軟": "软", "機": "机", "館": "馆", "線": "线", "將": "将",
+        "從": "从", "兩": "两", "過": "过", "總": "总", "體": "体",
+        "標": "标", "選": "选", "擇": "择", "個": "个", "這": "这",
+        "發": "发", "場": "场", "頭": "头", "細": "细", "獨": "独",
+    }
+)
+
+ZH_HANT_BAND_PREFIXES = (
+    "星河", "青岑", "月島", "晨霧", "南風", "遠岸", "微光", "晴嶼", "白晝", "夜航",
+    "潮聲", "霜葉", "空港", "山海", "回聲", "紙鳶", "拾光", "霧港", "流火", "星野",
+    "岸線", "春潮", "雲上", "靜海",
+)
+ZH_HANT_BAND_ARTISTS = tuple(
+    f"{prefix}{qualifier}樂團"
+    for qualifier in ("", "新聲", "回聲")
+    for prefix in ZH_HANT_BAND_PREFIXES
+)
+ZH_HANT_SOLO_SURNAMES = (
+    "林", "周", "許", "陳", "葉", "鄭", "吳", "蔡", "彭", "江", "沈", "蘇",
+    "高", "方", "羅", "邱", "曾", "簡", "白", "夏", "唐", "梁", "杜", "顧",
+)
+ZH_HANT_SOLO_GIVEN_NAMES = ("予安", "辰野", "未央", "青禾")
+ZH_HANT_SOLO_ARTISTS = tuple(
+    f"{surname}{given}"
+    for given in ZH_HANT_SOLO_GIVEN_NAMES
+    for surname in ZH_HANT_SOLO_SURNAMES
+)
+ZH_HANT_GROUP_HEADS = ("夜航", "白晝", "南岸", "雨季", "微光", "青空", "潮汐", "月台", "遠岸", "霧中", "星塵", "春日")
+ZH_HANT_GROUP_TAILS = ("者", "電台", "線", "公園", "列車", "郵局")
+ZH_HANT_GROUP_ARTISTS = tuple(
+    f"{head}{tail}"
+    for tail in ZH_HANT_GROUP_TAILS
+    for head in ZH_HANT_GROUP_HEADS
+)
+
+ZH_HANT_SHORT_SURFACES = (
+    "未央", "微光", "遠岸", "星塵", "晚風", "南風", "青禾", "潮聲",
+    "月白", "霧散", "拾光", "歸途", "安眠", "無聲", "晴嶼", "霜降",
+    "雲深", "夜航", "空城", "初雪", "望海", "聽雨", "逐光", "回聲",
+    "早安", "紙鳶", "靜默", "旅人", "流火", "青空", "眠島", "燈影",
+)
+ZH_HANT_LONG_SURFACES = (
+    "我們還沒說完", "你說過的話都在", "如果今晚還有月亮", "我想回到那年夏天",
+    "請把沉默留給海", "走過凌晨四點的街", "後來我們都學會了", "別在雨裡說再見",
+    "我還記得那盞燈", "直到天亮以前", "你離開後風還在吹", "我把所有星星都寄給你",
+    "這一次讓我們慢慢走", "如果時間願意多停一會", "那個夏天我們沒有告別",
+    "請不要把我忘在昨天", "我在城市中央等你", "回家以前先看看天",
+    "我們在同一場雨裡", "你說明天會更好", "我想聽見你的答案",
+    "後來才知道那不是夢", "當所有燈都熄滅之後", "請沿著月光找到我",
+    "我把名字寫在海風裡", "這封信還沒有寄出去", "如果你也想起那個午後",
+    "我們總會走到天亮", "不要在沉默裡錯過", "我只想和你說晚安",
+    "等風把故事帶回來", "請讓這場雨慢慢停下來",
+)
+ZH_HANT_DIGIT_SURFACES = (
+    "第7站", "凌晨3點", "第2次日落", "4號月台", "9樓的雨", "12點的海", "明天7點見",
+    "3分鐘的告白", "21號星球", "5月的風", "午夜8點", "1頁的信", "6號公車", "8點半的月亮",
+    "11月的信", "2公里的海", "17號房間", "星期5的晚餐", "0點之後", "24小時的雨",
+    "7封未寄的信", "3樓的燈", "10分鐘以後", "第5個夏天", "4月的遠方", "9號月台",
+    "13點的夢", "2站以後", "6月的潮汐", "8號路口", "15分鐘的安靜", "1次就好",
+)
+ZH_HANT_PUNCT_SURFACES = (
+    "再見，夏天", "岸邊・雨", "雨後、微光", "你和我：未完", "風來了？", "晚安。明天見",
+    "海上「小船」", "等你……不急", "月光・回聲", "紙上，留白", "窗外：下雨了", "這裡・那裡",
+    "春天、很遠", "說好不哭？", "夜色「未眠」", "給你，給我", "一半・一半", "別走……好嗎",
+    "城市：凌晨", "我在等，風", "夏日・備忘", "再唱一次？", "遠方「有光」", "雨停，之後",
+    "你看・那顆星", "晚風：慢慢來", "把夢，放下", "海邊・散步", "未完……待續",
+    "那年・冬天", "星光，落下", "明天？再說",
+)
+
+ZH_HANT_ALBUM_SHORT_SURFACES = (
+    "遠方", "城市", "月亮", "安靜", "藍色", "時間", "春天", "晚風", "星光", "沿岸", "紙上", "沒有",
+    "溫柔", "一點", "回聲", "晴朗", "夜裡", "南方", "空白", "晨霧", "山海", "微光", "海棠", "雲端",
+    "午後", "長夜", "星野", "青岑", "潮汐", "月島", "靜海", "白晝",
+)
+ZH_HANT_ALBUM_LONG_SURFACES = (
+    "沒有說完的夏天", "城市邊緣的燈", "把星星收進口袋", "我們走過的那條街", "遠方寄來的信",
+    "藍色日子裡的雨", "月亮落在屋頂上", "安靜地等待天亮", "沿著海岸線回家", "寫給明天的旅程",
+    "春天以後還有春天", "把晚風留在窗邊", "你說過的那句話", "一座城市的記憶",
+    "在回聲裡找到自己", "紙上沒有地址的信", "我想念那片海岸", "星光穿過舊房間",
+    "沒有終點的散步", "午後醒來的夢", "我們都會變得溫柔", "遠岸的燈一直亮著",
+    "把昨天收進抽屜", "夜裡有人唱著歌", "沿著記憶慢慢走", "晴朗之前的一場雨",
+    "一點一點靠近你", "南方吹來的風景", "空白之後的答案", "海棠開在春天裡",
+    "雲端之外的月光", "給未來的最後一封信",
+)
+ZH_HANT_ALBUM_DIGIT_SURFACES = (
+    "第7頁", "凌晨3點的信", "12月的海", "第2章", "4號房間", "9號公路", "午夜8點", "21日的風",
+    "5月備忘錄", "1號入口", "6點的城市", "17公里以外", "3樓的星光", "24小時以後", "第5個季節",
+    "8月的午後", "11號街角", "0點的回聲", "2次日落", "13頁日記", "7站之外", "4月的地址",
+    "9封信", "15分鐘的海", "第1場雨", "6號月台", "10年的夏天", "18樓的風", "3個願望",
+    "22日以後", "8號房的燈", "2月的遠方",
+)
+ZH_HANT_ALBUM_PUNCT_SURFACES = (
+    "遠方・未完", "城市，慢慢", "月亮：一封信", "夏天「之後」", "藍色……回聲", "沿岸、微光",
+    "紙上：留白", "溫柔・不說", "夜裡，還亮著", "南方？北方", "空白「答案」", "晨霧……散開",
+    "山海・之間", "海棠，落雨", "雲端：有光", "午後・慢行", "長夜……未眠", "星野「遠方」",
+    "青岑，聽風", "潮汐・回家", "月島：晴天", "靜海、微光", "白晝「以前」", "回聲……再見",
+    "晴朗・以後", "沿岸：一盞燈", "紙鳶，飛遠", "沒有・地址", "一點「星光」", "微光……入夢",
+    "海岸、日常", "春天：還在",
+)
+
+# Simplified Chinese shares the deterministic family layout, but is produced
+# by an explicit local character map rather than by a runtime dependency.
+ZH_HANS_BAND_ARTISTS = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_BAND_ARTISTS)
+ZH_HANS_SOLO_ARTISTS = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_SOLO_ARTISTS)
+ZH_HANS_GROUP_ARTISTS = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_GROUP_ARTISTS)
+ZH_HANS_SHORT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_SHORT_SURFACES)
+ZH_HANS_LONG_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_LONG_SURFACES)
+ZH_HANS_DIGIT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_DIGIT_SURFACES)
+ZH_HANS_PUNCT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_PUNCT_SURFACES)
+ZH_HANS_ALBUM_SHORT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_ALBUM_SHORT_SURFACES)
+ZH_HANS_ALBUM_LONG_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_ALBUM_LONG_SURFACES)
+ZH_HANS_ALBUM_DIGIT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_ALBUM_DIGIT_SURFACES)
+ZH_HANS_ALBUM_PUNCT_SURFACES = tuple(value.translate(_TRADITIONAL_TO_SIMPLIFIED) for value in ZH_HANT_ALBUM_PUNCT_SURFACES)
+
+EN_ARTIST_ONE_WORD = (
+    "Northlight", "Juniper", "Cedarline", "Silvermere", "Willow", "Marble", "Velvet",
+    "Morningstar", "Copperfield", "Lumen", "Vesper", "Halcyon", "Bluehour", "Evermist",
+    "Morrow", "Solstice", "Daybreak", "Kindred", "Frostline", "Cinder", "Openwater",
+    "Meadow", "Sunlit", "Rookery",
+)
+MIXED_ARTIST_ONE_WORD = (
+    "Mosaic", "Daystar", "Harborlight", "Clover", "Eastward", "Moonrise", "Wildfern",
+    "Glasswing", "Lantern", "Driftwood", "Rainshadow", "Starling", "Lowtide", "Brighton",
+    "Cloudline", "Hearth", "Seabird", "Pinecone", "Goldleaf", "Bluebird", "Northstar",
+    "Wanderer", "Sunroom", "Tidepool",
+)
+EN_ARTIST_TWO_HEADS = ("Harbor", "Quiet", "Paper", "Copper", "Golden", "River", "Juniper", "Velvet")
+EN_ARTIST_TWO_TAILS = ("Atlas", "Signal", "Orchard", "Current", "Garden", "Transit")
+MIXED_ARTIST_TWO_HEADS = ("Mosaic", "Cobalt", "Lantern", "Autumn", "Echo", "Civic", "Rain", "East")
+MIXED_ARTIST_TWO_TAILS = ("Harbor", "Theory", "Parade", "Archive", "Garden", "Transit")
+EN_ARTIST_THREE_FIRSTS = ("Harbor", "Cedar", "Silver", "Quiet", "Marble", "Willow", "Morning", "North")
+EN_ARTIST_THREE_MIDDLES = ("Blue", "Golden", "Hidden")
+EN_ARTIST_THREE_TAILS = ("Signal", "Atlas", "Archive")
+MIXED_ARTIST_THREE_FIRSTS = ("Mosaic", "Cobalt", "Lantern", "Autumn", "Echo", "Civic", "Rain", "East")
+MIXED_ARTIST_THREE_MIDDLES = ("Bright", "Quiet", "Open")
+MIXED_ARTIST_THREE_TAILS = ("Theory", "Parade", "Letters")
+EN_ARTIST_FOUR_FIRSTS = ("Second", "Electric", "Wandering", "Little", "Northern", "Tender")
+EN_ARTIST_FOUR_MIDDLES = ("Avenue", "Meadow", "Cedar", "Paper")
+EN_ARTIST_FOUR_THIRDS = ("Echo", "Window", "Garden", "Harbor")
+EN_ARTIST_FOUR_ENDS = ("Club", "Society", "Project", "Choir")
+MIXED_ARTIST_FOUR_FIRSTS = ("Daylight", "Cobalt", "Wandering", "Little", "Southern", "Tender")
+MIXED_ARTIST_FOUR_MIDDLES = ("Avenue", "Meadow", "Cedar", "Signal")
+MIXED_ARTIST_FOUR_THIRDS = ("Echo", "Window", "Garden", "Harbor")
+MIXED_ARTIST_FOUR_ENDS = ("Club", "Society", "Project", "Choir")
+EN_ARTIST_DIGIT_HEADS = ("Nova", "Signal", "Orbit", "Vector", "Echo", "Phase", "Cedar", "Room")
+MIXED_ARTIST_DIGIT_HEADS = ("Mosaic", "Signal", "Orbit", "Vector", "Echo", "Phase", "Civic", "Room")
+EN_ARTIST_PUNCTUATED = (
+    "O'Rin Vale", "Mara O'Keefe", "A.M. North", "R.J. Harbor", "Luna O'Neil", "C.J. Rivers",
+    "D'Arcy Field", "N.O. Garden", "Tess O'Bright", "J.P. Meadow", "K.A. Signal", "Eli O'West",
+    "M.I. Lantern", "Saoirse O'Lane", "P.R. Echo", "Nia O'Cloud", "A.J. Cedar", "Rae O'Wren",
+    "S.T. Atlas", "Milo O'Hart", "Q.L. Morning", "Ivy O'Vale", "B.E. North", "O.M. Harbor",
+)
+MIXED_ARTIST_PUNCTUATED = (
+    "O'Rin Harbor", "Mara O'Vale", "A.M. Mosaic", "R.J. Lantern", "Luna O'West", "C.J. Civic",
+    "D'Arcy Rain", "N.O. Garden", "Tess O'Bright", "J.P. East", "K.A. Signal", "Eli O'North",
+    "M.I. Parade", "Saoirse O'Lane", "P.R. Echo", "Nia O'Cloud", "A.J. Cedar", "Rae O'Wren",
+    "S.T. Atlas", "Milo O'Hart", "Q.L. Morning", "Ivy O'Vale", "B.E. Harbor", "O.M. Theory",
+)
+EN_ARTIST_THE_HEADS = ("Quiet", "Silver", "Harbor", "Cedar", "Golden", "Willow")
+EN_ARTIST_THE_TAILS = ("Signal", "Atlas", "Archive", "Parade")
+MIXED_ARTIST_THE_HEADS = ("Quiet", "Cobalt", "Harbor", "Cedar", "Golden", "Lantern")
+MIXED_ARTIST_THE_TAILS = ("Theory", "Atlas", "Archive", "Parade")
+
+EN_TRACK_ONE_WORD = (
+    "Afterglow", "Undertow", "Daydream", "Firelight", "Bluebird", "Paperless", "Wildflower", "Nightfall",
+    "Homeward", "Driftline", "Crossing", "Evergreen", "Heartbeat", "Lowtide", "Starlight", "Rainfall",
+    "Sunrise", "Foresight", "Moonbeam", "Wayward", "Stillness", "Overcast", "Brightside", "Elsewhere",
+)
+MIXED_TRACK_ONE_WORD = (
+    "Daybreak", "Moonwater", "Seabreeze", "Crosstown", "Rainroom", "Starboard", "Blueglass", "Eastbound",
+    "Hushlight", "Tideway", "Sunroom", "Cloudfall", "Nightbird", "Openfield", "Shoreline", "Driftwood",
+    "Glowline", "Westward", "Softness", "Lanterns", "Harboring", "Afterrain", "Moonlit", "Faraway",
+)
+EN_TRACK_TWO_HEADS = ("Paper", "Golden", "Quiet", "Borrowed", "Second", "Falling")
+EN_TRACK_TWO_TAILS = ("Lanterns", "Signals", "Windows", "Rivers")
+MIXED_TRACK_TWO_HEADS = ("Cobalt", "Silver", "Hidden", "Open", "Morning", "Wandering")
+MIXED_TRACK_TWO_TAILS = ("Letters", "Gardens", "Stations", "Postcards")
+EN_TRACK_THREE_FIRSTS = ("Before", "Across", "Between", "Under", "After", "Beyond")
+EN_TRACK_THREE_MIDDLES = ("We", "The", "Our", "A", "This", "Your")
+EN_TRACK_THREE_ENDS = ("Go", "Horizon", "Window", "Way", "River", "Home")
+MIXED_TRACK_THREE_FIRSTS = ("Before", "Across", "Between", "Under", "After", "Beyond")
+MIXED_TRACK_THREE_MIDDLES = ("We", "The", "Our", "A", "This", "Your")
+MIXED_TRACK_THREE_ENDS = ("Return", "Harbor", "Window", "Way", "Garden", "Home")
+EN_TRACK_FOUR_FIRSTS = ("Letters", "Stories", "Footprints", "Postcards", "Conversations", "Photographs")
+EN_TRACK_FOUR_MIDDLES = ("from", "beside", "under", "across", "beyond", "inside")
+EN_TRACK_FOUR_THIRDS = ("the", "a", "our", "one", "this", "that")
+EN_TRACK_FOUR_ENDS = ("North", "Water", "Morning", "Distance", "Window", "Summer")
+MIXED_TRACK_FOUR_FIRSTS = ("Messages", "Stories", "Footprints", "Postcards", "Conversations", "Photographs")
+MIXED_TRACK_FOUR_MIDDLES = ("from", "beside", "under", "across", "beyond", "inside")
+MIXED_TRACK_FOUR_THIRDS = ("the", "a", "our", "one", "this", "that")
+MIXED_TRACK_FOUR_ENDS = ("Harbor", "Water", "Morning", "Distance", "Window", "Summer")
+EN_TRACK_APOSTROPHE = (
+    "I Can't Stay", "Don't Wake Me", "We're Still Here", "It's Not Late", "You Won't Know", "I've Been Away",
+    "We Can't Turn Back", "She's On The Way", "I'll Remember This", "Didn't See It", "That's Enough", "Ain't No Map",
+    "I Don't Mind", "You've Got Time", "We're Almost Home", "Can't Find Sleep", "It's All Quiet", "I've Lost Count",
+    "Don't Call Yet", "We'll Meet Again", "I Can't Explain", "You're Not Alone", "She Won't Return", "That's Our Song",
+)
+MIXED_TRACK_APOSTROPHE = (
+    "I Can't Wait", "Don't Leave Yet", "We're On Time", "It's Still Blue", "You Won't Forget", "I've Seen This",
+    "We Can't Slow", "She's In Town", "I'll Follow You", "Didn't Say Why", "That's The Way", "Ain't No Rain",
+    "I Don't Know", "You've Got Light", "We're Almost There", "Can't Sleep Now", "It's All Right", "I've Come Back",
+    "Don't Turn Around", "We'll Find Home", "I Can't Pretend", "You're In The Sky", "She Won't Fade", "That's The Signal",
+)
+EN_TRACK_PERIOD = tuple(f"A.M. {value}" for value in ("North", "Rain", "Signal", "Window", "Harbor", "Morning", "Summer", "Echo"))
+MIXED_TRACK_PERIOD = tuple(f"P.M. {value}" for value in ("Harbor", "Rain", "Signal", "Window", "Garden", "Morning", "Summer", "Echo"))
+EN_TRACK_PARENTHESIS = tuple(f"Letters {value} (Again)" for value in ("North", "Rain", "Signal", "Window", "Harbor", "Morning", "Summer", "Echo"))
+MIXED_TRACK_PARENTHESIS = tuple(f"Postcards {value} (Again)" for value in ("Harbor", "Rain", "Signal", "Window", "Garden", "Morning", "Summer", "Echo"))
+EN_TRACK_DIGIT_HEADS = ("Signal", "Room", "Station", "Route", "Phase", "Chapter", "Level", "Platform")
+MIXED_TRACK_DIGIT_HEADS = ("Harbor", "Room", "Station", "Route", "Phase", "Chapter", "Level", "Platform")
+
+EN_ALBUM_ONE_WORD = (
+    "Afterlight", "Northbound", "Undercurrent", "Daystar", "Evermore", "Wayfinder", "Bluehour", "Stillwater",
+    "Homecoming", "Driftwood", "Moonrise", "Foresight", "Quietude", "Shoreline", "Sunroom", "Nightgarden",
+    "Brightland", "Openroad", "Rainshadow", "Crosstown", "Starfield", "Elsewhere", "Longview", "Hinterland",
+)
+MIXED_ALBUM_ONE_WORD = (
+    "Harborline", "Daylight", "Moonroom", "Cedarhouse", "Eastward", "Wildtide", "Cloudwork", "Seabird",
+    "Rainhouse", "Northstar", "Lanternway", "Openwater", "Goldleaf", "Westward", "Tidepool", "Farfield",
+    "Mosaic", "Sunward", "Lowland", "Brightwater", "Civiclight", "Driftline", "Shorepath", "Afterrain",
+)
+EN_ALBUM_TWO_HEADS = ("Northbound", "Second", "Hidden", "Bright", "Quiet", "Common")
+EN_ALBUM_TWO_TAILS = ("Echoes", "Hours", "Distances", "Rooms")
+MIXED_ALBUM_TWO_HEADS = ("Cobalt", "Signal", "Hidden", "Bright", "Quiet", "Common")
+MIXED_ALBUM_TWO_TAILS = ("Archives", "Hours", "Parades", "Rooms")
+EN_ALBUM_THREE_FIRSTS = ("Between", "Inside", "Beyond", "Under", "Across", "After")
+EN_ALBUM_THREE_MIDDLES = ("Quiet", "Open", "Golden", "Little", "Long", "Soft")
+EN_ALBUM_THREE_ENDS = ("Hours", "Distances", "Seasons", "Skylines", "Chapters", "Tides")
+MIXED_ALBUM_THREE_FIRSTS = ("Between", "Inside", "Beyond", "Under", "Across", "After")
+MIXED_ALBUM_THREE_MIDDLES = ("Civic", "Open", "Golden", "Little", "Long", "Soft")
+MIXED_ALBUM_THREE_ENDS = ("Archives", "Distances", "Seasons", "Skylines", "Chapters", "Tides")
+EN_ALBUM_FOUR_FIRSTS = ("The", "A", "Our", "One", "This", "That")
+EN_ALBUM_FOUR_MIDDLES = ("Long", "Quiet", "Open", "Hidden", "Golden", "Little")
+EN_ALBUM_FOUR_THIRDS = ("Way", "House", "Garden", "Archive", "Window", "Harbor")
+EN_ALBUM_FOUR_ENDS = ("Home", "North", "Summer", "Road", "Light", "Water")
+MIXED_ALBUM_FOUR_FIRSTS = ("The", "A", "Our", "One", "This", "That")
+MIXED_ALBUM_FOUR_MIDDLES = ("Civic", "Quiet", "Open", "Hidden", "Golden", "Little")
+MIXED_ALBUM_FOUR_THIRDS = ("Way", "House", "Garden", "Archive", "Window", "Harbor")
+MIXED_ALBUM_FOUR_ENDS = ("Home", "Harbor", "Summer", "Road", "Light", "Water")
+EN_ALBUM_APOSTROPHE = (
+    "Don't Wake Me", "It's Been Quiet", "We're Going Home", "I Can't Sleep", "You've Got Time", "We'll Be Fine",
+    "She's In The Garden", "That's The Answer", "I Won't Forget", "Didn't Mean To", "It's All Here", "We're Still Young",
+    "I Don't Know Yet", "You've Seen This", "We'll Meet Again", "Can't Stay Long", "That's Our Road", "I've Been Away",
+    "Don't Lose Heart", "We're Almost There", "I Can't Explain", "She Won't Return", "It's Not Over", "You've Got Light",
+)
+MIXED_ALBUM_APOSTROPHE = (
+    "Don't Leave Town", "It's Still Morning", "We're On The Road", "I Can't Wait", "You've Got Rain", "We'll Find Light",
+    "She's In The Harbor", "That's The Signal", "I Won't Forget", "Didn't See This", "It's All Here", "We're Still Here",
+    "I Don't Know Yet", "You've Seen Rain", "We'll Meet Again", "Can't Stay Long", "That's Our Way", "I've Been Away",
+    "Don't Lose Hope", "We're Almost Home", "I Can't Pretend", "She Won't Fade", "It's Not Over", "You've Got Time",
+)
+EN_ALBUM_PERIOD = (
+    "No. 1 in Blue", "No. 2 at Dawn", "No. 3 by Water", "No. 4 under Stars",
+    "No. 5 after Rain", "No. 6 near Home", "No. 7 beyond North", "No. 8 before Morning",
+)
+MIXED_ALBUM_PERIOD = (
+    "Vol. 1 in Harbor", "Vol. 2 at Dawn", "Vol. 3 by Water", "Vol. 4 under Stars",
+    "Vol. 5 after Rain", "Vol. 6 near Home", "Vol. 7 beyond East", "Vol. 8 before Morning",
+)
+EN_ALBUM_PARENTHESIS = tuple(f"Letters {value} (Again)" for value in ("North", "Rain", "Signal", "Window", "Harbor", "Morning", "Summer", "Echo"))
+MIXED_ALBUM_PARENTHESIS = tuple(f"Postcards {value} (Again)" for value in ("Harbor", "Rain", "Signal", "Window", "Garden", "Morning", "Summer", "Echo"))
+EN_ALBUM_DIGIT_HEADS = ("Room", "Volume", "Chapter", "Edition", "Route", "Season", "Archive", "Number")
+MIXED_ALBUM_DIGIT_HEADS = ("Harbor", "Volume", "Chapter", "Edition", "Route", "Season", "Archive", "Number")
 
 CANDIDATE_FIELDS = frozenset(
     {
@@ -542,28 +831,28 @@ def _play_segments(
 
     if language_tag == "en":
         if variant == 0:
-            segments = [("Play ", None), (track, "track")]
+            segments = [("Play this requested track: ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             family = "play_en_direct"
         elif variant == 1:
-            segments = [("Listen to ", None), (track, "track")]
+            segments = [("Listen to this selected song: ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             family = "play_en_conversational"
         elif variant == 2:
-            segments = [("Put on ", None), (track, "track")]
+            segments = [("Put on the song ", None), (track, "track")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             family = "play_en_word_order"
         elif variant == 3:
-            segments = [("Play the song ", None), (track, "track")]
+            segments = [("Play the requested song ", None), (track, "track")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             if has_artist:
@@ -579,7 +868,7 @@ def _play_segments(
             segments += [(" right now please", None)]
             family = "play_en_punctuation_loss"
         else:
-            segments = [("Play ", None), (track, "track")]
+            segments = [("Play this request ", None), (track, "track")]
             if has_artist:
                 segments += [(" artist ", None), (artist, "artist")]
             if has_album:
@@ -680,28 +969,28 @@ def _play_segments(
             family = "play_hans_spacing"
     else:
         if variant == 0:
-            segments = [("播放 ", None), (track, "track")]
+            segments = [("播放：", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             family = "play_mixed_code_switch"
         elif variant == 1:
-            segments = [("我要聽 ", None), (track, "track")]
+            segments = [("我要聽：", None), (track, "track")]
             if has_artist:
                 segments += [("，artist 是 ", None), (artist, "artist")]
             if has_album:
                 segments += [("，album 是 ", None), (album, "album")]
             family = "play_mixed_conversational"
         elif variant == 2:
-            segments = [("Play 一下 ", None), (track, "track")]
+            segments = [("Play 一下這首歌：", None), (track, "track")]
             if has_album:
                 segments += [("，album 是 ", None), (album, "album")]
             if has_artist:
                 segments += [("，artist 是 ", None), (artist, "artist")]
             family = "play_mixed_word_order"
         elif variant == 3:
-            segments = [("聽這首歌 ", None), (track, "track")]
+            segments = [("聽這首歌，請幫我找：", None), (track, "track")]
             if has_artist:
                 segments += [("，by ", None), (artist, "artist")]
             if has_album:
@@ -715,7 +1004,7 @@ def _play_segments(
                 segments += [("，album ", None), (album, "album")]
             family = "play_mixed_asr_case"
         else:
-            segments = [("Put on 這首 ", None), (track, "track")]
+            segments = [("Put on 這首音樂：", None), (track, "track")]
             if has_artist:
                 segments += [("，artist ", None), (artist, "artist")]
             if has_album:
@@ -1112,90 +1401,239 @@ def _make_candidate(plan: GroupPlan, *, candidate_number: int, variant: int) -> 
     return record
 
 
-def _entity_words(language_tag: str, ordinal: int) -> tuple[str, str, str]:
-    if language_tag in {"en", "mixed"}:
-        artist_heads = (
-            "Harbor", "Juniper", "Cedar", "Silver", "Marble", "Willow", "Quiet", "Copper",
-            "Velvet", "Morning", "North", "Autumn", "Paper", "Golden", "River", "Hidden",
-            "Open", "Blue", "Kindred", "Electric", "Lunar", "Amber", "Hollow", "Bright",
-            "Meadow", "Cloud", "Frost", "Cobalt", "Wandering", "Sunlit", "Echo",
-        )
-        artist_tails = (
-            "Atlas", "Signal", "Orchard", "Harbor", "Parade", "Current", "Garden", "Transit",
-            "Lantern", "Theory", "Compass", "Window", "Assembly", "Letters", "Cinema", "Weather",
-            "Meadow", "Circuit", "Pines", "Archive",
-        )
-        track_heads = (
-            "Paper", "After", "Before", "Under", "Across", "Between", "Small", "Borrowed",
-            "Golden", "Quiet", "Far", "Second", "Blue", "Common", "Last", "Open", "Falling",
-            "Winter", "Morning", "Electric",
-        )
-        track_tails = (
-            "Lanterns", "Weather", "Stations", "Letters", "Signals", "Rivers", "Windows", "Maps",
-            "Gardens", "Circles", "Voices", "Stories", "Highways", "Islands", "Rooms", "Seasons",
-            "Footprints", "Horizons", "Postcards", "Promises",
-        )
-        album_heads = (
-            "Northbound", "Second", "Hidden", "Bright", "Quiet", "Common", "Golden", "Faraway",
-            "Midnight", "Open", "Waking", "Tender", "Signal", "Paper", "Little", "Long",
-            "Civic", "Soft", "Moving", "Wild",
-        )
-        album_tails = (
-            "Echoes", "Hours", "Distances", "Rooms", "Weather", "Lines", "Seasons", "Postcards",
-            "Skylines", "Answers", "Coordinates", "Photographs", "Horizons", "Rituals", "Corners",
-            "Chapters", "Tides", "Archives", "Light", "Noise",
-        )
-        if language_tag == "mixed":
-            artist = "The " + artist_heads[ordinal % len(artist_heads)] + " " + artist_tails[
-                (ordinal // len(artist_heads)) % len(artist_tails)
-            ]
-        else:
-            artist = artist_heads[ordinal % len(artist_heads)] + " " + artist_tails[
-                (ordinal // len(artist_heads)) % len(artist_tails)
-            ]
-        track = track_heads[ordinal % len(track_heads)] + " " + track_tails[
-            (ordinal // len(track_heads)) % len(track_tails)
-        ]
-        album = album_heads[ordinal % len(album_heads)] + " " + album_tails[
-            (ordinal // len(album_heads)) % len(album_tails)
-        ]
-        return artist, track, album
+def _select_surface(values: Sequence[str], serial: int) -> str:
+    if not values:
+        raise CandidateCorpusError("surface family must not be empty")
+    return values[serial % len(values)]
 
+
+def _select_chinese_surface(values: Sequence[str], serial: int) -> str:
+    """Select a natural base and add a bounded local qualifier on wraparound."""
+
+    base = _select_surface(values, serial)
+    if serial < len(values):
+        return base
+    qualifiers = ("之歌", "之夜", "之間", "之後")
+    return f"{base}{qualifiers[(serial // len(values) - 1) % len(qualifiers)]}"
+
+
+def _combine_two(heads: Sequence[str], tails: Sequence[str], serial: int) -> str:
+    head_index = serial % len(heads)
+    tail_index = (serial // len(heads)) % len(tails)
+    return f"{heads[head_index]} {tails[tail_index]}"
+
+
+def _combine_three(
+    firsts: Sequence[str], middles: Sequence[str], ends: Sequence[str], serial: int
+) -> str:
+    first_index = serial % len(firsts)
+    middle_index = (serial // len(firsts)) % len(middles)
+    end_index = (serial // (len(firsts) * len(middles))) % len(ends)
+    return f"{firsts[first_index]} {middles[middle_index]} {ends[end_index]}"
+
+
+def _combine_four(
+    firsts: Sequence[str],
+    middles: Sequence[str],
+    thirds: Sequence[str],
+    ends: Sequence[str],
+    serial: int,
+) -> str:
+    first_index = serial % len(firsts)
+    middle_index = (serial // len(firsts)) % len(middles)
+    third_index = (serial // (len(firsts) * len(middles))) % len(thirds)
+    end_index = (serial // (len(firsts) * len(middles) * len(thirds))) % len(ends)
+    return f"{firsts[first_index]} {middles[middle_index]} {thirds[third_index]} {ends[end_index]}"
+
+
+def _simplified_surface(value: str) -> str:
+    return value.translate(_TRADITIONAL_TO_SIMPLIFIED)
+
+
+def _chinese_artist_surface(language_tag: str, ordinal: int) -> str:
+    profile = ordinal % 10
     if language_tag == "zh-Hant":
-        artist_heads = (
-            "林", "周", "陳", "黃", "許", "葉", "鄭", "吳", "蔡", "彭", "江", "沈",
-            "蘇", "高", "方", "羅", "邱", "曾", "簡", "白", "夏", "唐", "梁", "杜",
-            "顧", "程", "莫", "蕭", "莊", "潘",
+        families = (ZH_HANT_BAND_ARTISTS, ZH_HANT_SOLO_ARTISTS, ZH_HANT_GROUP_ARTISTS)
+    else:
+        families = (ZH_HANS_BAND_ARTISTS, ZH_HANS_SOLO_ARTISTS, ZH_HANS_GROUP_ARTISTS)
+    if profile < 3:
+        return _select_surface(families[0], (ordinal // 10) * 3 + profile)
+    if profile < 7:
+        return _select_surface(families[1], (ordinal // 10) * 4 + profile - 3)
+    return _select_surface(families[2], (ordinal // 10) * 3 + profile - 7)
+
+
+def _chinese_entity_surface(language_tag: str, ordinal: int, *, field: str) -> str:
+    track_profiles = ("short", "medium", "medium", "long", "digit", "punctuation", "long", "short")
+    album_profiles = ("short", "medium", "long", "digit", "punctuation", "medium", "long", "short")
+    profile_sequence = track_profiles if field == "track" else album_profiles
+    profile_index = ordinal % len(profile_sequence)
+    profile = profile_sequence[profile_index]
+    serial = (ordinal // len(profile_sequence)) * profile_sequence.count(profile)
+    serial += sum(previous == profile for previous in profile_sequence[:profile_index])
+    if language_tag == "zh-Hant":
+        if field == "track":
+            short, long, digit, punct = (
+                ZH_HANT_SHORT_SURFACES,
+                ZH_HANT_LONG_SURFACES,
+                ZH_HANT_DIGIT_SURFACES,
+                ZH_HANT_PUNCT_SURFACES,
+            )
+            medium_heads = ("雨落", "紙船", "霧裡", "晚安", "沿著", "藍色", "失眠", "遠方", "在你", "月光", "慢慢", "回到", "未完", "海邊", "午後", "如果")
+            medium_tails = ("之前", "以後", "的路", "的信", "的歌", "的房間", "的島", "的季節", "的夢", "的風", "的名字", "的雨", "的燈", "的回聲", "的方向", "的答案")
+        else:
+            short, long, digit, punct = (
+                ZH_HANT_ALBUM_SHORT_SURFACES,
+                ZH_HANT_ALBUM_LONG_SURFACES,
+                ZH_HANT_ALBUM_DIGIT_SURFACES,
+                ZH_HANT_ALBUM_PUNCT_SURFACES,
+            )
+            medium_heads = ("遠方", "城市", "月亮", "安靜", "藍色", "時間", "春天", "晚風", "星光", "沿岸", "紙上", "沒有", "溫柔", "一點", "回聲", "晴朗")
+            medium_tails = ("的邊界", "的房間", "的信", "的旅程", "的日常", "的風景", "的回音", "的顏色", "的季節", "的地址", "的故事", "的入口", "的天氣", "的方向", "的記憶", "的海岸")
+    else:
+        if field == "track":
+            short, long, digit, punct = (
+                ZH_HANS_SHORT_SURFACES,
+                ZH_HANS_LONG_SURFACES,
+                ZH_HANS_DIGIT_SURFACES,
+                ZH_HANS_PUNCT_SURFACES,
+            )
+            medium_heads = tuple(_simplified_surface(value) for value in ("雨落", "紙船", "霧裡", "晚安", "沿著", "藍色", "失眠", "遠方", "在你", "月光", "慢慢", "回到", "未完", "海邊", "午後", "如果"))
+            medium_tails = tuple(_simplified_surface(value) for value in ("之前", "以後", "的路", "的信", "的歌", "的房間", "的島", "的季節", "的夢", "的風", "的名字", "的雨", "的燈", "的回聲", "的方向", "的答案"))
+        else:
+            short, long, digit, punct = (
+                ZH_HANS_ALBUM_SHORT_SURFACES,
+                ZH_HANS_ALBUM_LONG_SURFACES,
+                ZH_HANS_ALBUM_DIGIT_SURFACES,
+                ZH_HANS_ALBUM_PUNCT_SURFACES,
+            )
+            medium_heads = tuple(_simplified_surface(value) for value in ("遠方", "城市", "月亮", "安靜", "藍色", "時間", "春天", "晚風", "星光", "沿岸", "紙上", "沒有", "溫柔", "一點", "回聲", "晴朗"))
+            medium_tails = tuple(_simplified_surface(value) for value in ("的邊界", "的房間", "的信", "的旅程", "的日常", "的風景", "的回音", "的顏色", "的季節", "的地址", "的故事", "的入口", "的天氣", "的方向", "的記憶", "的海岸"))
+    if profile in {"short", "long", "digit", "punctuation"}:
+        return _select_chinese_surface(
+            {"short": short, "long": long, "digit": digit, "punctuation": punct}[profile],
+            serial,
         )
-        artist_tails = (
-            "星河", "晚風", "晨光", "藍海", "微光", "遠山", "青岑", "月島", "雲川", "松影",
-            "霧嶼", "海棠", "知夏", "長夜", "晴嶼", "秋聲", "南風", "拾光", "流年", "星野",
+    return medium_heads[serial % len(medium_heads)] + medium_tails[(serial // len(medium_heads)) % len(medium_tails)]
+
+
+def _english_artist_surface(language_tag: str, ordinal: int) -> str:
+    profile = ordinal % 10
+    mixed = language_tag == "mixed"
+    family_serial = ordinal // 10
+    if profile == 0:
+        return _select_surface(MIXED_ARTIST_ONE_WORD if mixed else EN_ARTIST_ONE_WORD, family_serial)
+    if profile in {1, 2}:
+        return _combine_two(
+            MIXED_ARTIST_TWO_HEADS if mixed else EN_ARTIST_TWO_HEADS,
+            MIXED_ARTIST_TWO_TAILS if mixed else EN_ARTIST_TWO_TAILS,
+            family_serial * 2 + profile - 1,
         )
-        track_heads = (
-            "雨落", "紙船", "霧裡", "晚安", "沿著", "藍色", "失眠", "遠方", "在你", "月光",
-            "慢慢", "回到", "未完", "海邊", "午後", "如果", "窗前", "微亮", "走過", "星塵",
+    if profile in {3, 4}:
+        return _combine_three(
+            MIXED_ARTIST_THREE_FIRSTS if mixed else EN_ARTIST_THREE_FIRSTS,
+            MIXED_ARTIST_THREE_MIDDLES if mixed else EN_ARTIST_THREE_MIDDLES,
+            MIXED_ARTIST_THREE_TAILS if mixed else EN_ARTIST_THREE_TAILS,
+            family_serial * 2 + profile - 3,
         )
-        track_tails = (
-            "之前", "以後", "的路", "的信", "的歌", "的房間", "的島", "的季節", "的夢", "的風",
-            "的名字", "的雨", "的燈", "的回聲", "的方向", "的答案", "的影子", "的日子", "的遠方", "的海",
+    if profile == 5 or profile == 9:
+        return _combine_four(
+            MIXED_ARTIST_FOUR_FIRSTS if mixed else EN_ARTIST_FOUR_FIRSTS,
+            MIXED_ARTIST_FOUR_MIDDLES if mixed else EN_ARTIST_FOUR_MIDDLES,
+            MIXED_ARTIST_FOUR_THIRDS if mixed else EN_ARTIST_FOUR_THIRDS,
+            MIXED_ARTIST_FOUR_ENDS if mixed else EN_ARTIST_FOUR_ENDS,
+            family_serial * 2 + (0 if profile == 5 else 1),
         )
-        album_heads = (
-            "遠方", "城市", "月亮", "安靜", "藍色", "時間", "春天", "晚風", "星光", "沿岸",
-            "紙上", "沒有", "溫柔", "一點", "回聲", "晴朗", "夜裡", "南方", "空白", "光之間",
+    if profile == 6:
+        heads = MIXED_ARTIST_DIGIT_HEADS if mixed else EN_ARTIST_DIGIT_HEADS
+        return f"{heads[family_serial % len(heads)]}-{family_serial + 1}"
+    if profile == 7:
+        return _select_surface(MIXED_ARTIST_PUNCTUATED if mixed else EN_ARTIST_PUNCTUATED, family_serial)
+    return "The " + _combine_two(
+        MIXED_ARTIST_THE_HEADS if mixed else EN_ARTIST_THE_HEADS,
+        MIXED_ARTIST_THE_TAILS if mixed else EN_ARTIST_THE_TAILS,
+        family_serial,
+    )
+
+
+def _english_entity_surface(language_tag: str, ordinal: int, *, field: str) -> str:
+    mixed = language_tag == "mixed"
+    profile = (ordinal + (2 if field == "track" else 5)) % 8
+    serial = ordinal // 8
+    if field == "track":
+        one = MIXED_TRACK_ONE_WORD if mixed else EN_TRACK_ONE_WORD
+        two_heads = MIXED_TRACK_TWO_HEADS if mixed else EN_TRACK_TWO_HEADS
+        two_tails = MIXED_TRACK_TWO_TAILS if mixed else EN_TRACK_TWO_TAILS
+        three_firsts = MIXED_TRACK_THREE_FIRSTS if mixed else EN_TRACK_THREE_FIRSTS
+        three_middles = MIXED_TRACK_THREE_MIDDLES if mixed else EN_TRACK_THREE_MIDDLES
+        three_ends = MIXED_TRACK_THREE_ENDS if mixed else EN_TRACK_THREE_ENDS
+        four_firsts = MIXED_TRACK_FOUR_FIRSTS if mixed else EN_TRACK_FOUR_FIRSTS
+        four_middles = MIXED_TRACK_FOUR_MIDDLES if mixed else EN_TRACK_FOUR_MIDDLES
+        four_thirds = MIXED_TRACK_FOUR_THIRDS if mixed else EN_TRACK_FOUR_THIRDS
+        four_ends = MIXED_TRACK_FOUR_ENDS if mixed else EN_TRACK_FOUR_ENDS
+        apostrophe = MIXED_TRACK_APOSTROPHE if mixed else EN_TRACK_APOSTROPHE
+        period = MIXED_TRACK_PERIOD if mixed else EN_TRACK_PERIOD
+        parenthesis = MIXED_TRACK_PARENTHESIS if mixed else EN_TRACK_PARENTHESIS
+        digit_heads = MIXED_TRACK_DIGIT_HEADS if mixed else EN_TRACK_DIGIT_HEADS
+    else:
+        one = MIXED_ALBUM_ONE_WORD if mixed else EN_ALBUM_ONE_WORD
+        two_heads = MIXED_ALBUM_TWO_HEADS if mixed else EN_ALBUM_TWO_HEADS
+        two_tails = MIXED_ALBUM_TWO_TAILS if mixed else EN_ALBUM_TWO_TAILS
+        three_firsts = MIXED_ALBUM_THREE_FIRSTS if mixed else EN_ALBUM_THREE_FIRSTS
+        three_middles = MIXED_ALBUM_THREE_MIDDLES if mixed else EN_ALBUM_THREE_MIDDLES
+        three_ends = MIXED_ALBUM_THREE_ENDS if mixed else EN_ALBUM_THREE_ENDS
+        four_firsts = MIXED_ALBUM_FOUR_FIRSTS if mixed else EN_ALBUM_FOUR_FIRSTS
+        four_middles = MIXED_ALBUM_FOUR_MIDDLES if mixed else EN_ALBUM_FOUR_MIDDLES
+        four_thirds = MIXED_ALBUM_FOUR_THIRDS if mixed else EN_ALBUM_FOUR_THIRDS
+        four_ends = MIXED_ALBUM_FOUR_ENDS if mixed else EN_ALBUM_FOUR_ENDS
+        apostrophe = MIXED_ALBUM_APOSTROPHE if mixed else EN_ALBUM_APOSTROPHE
+        period = MIXED_ALBUM_PERIOD if mixed else EN_ALBUM_PERIOD
+        parenthesis = MIXED_ALBUM_PARENTHESIS if mixed else EN_ALBUM_PARENTHESIS
+        digit_heads = MIXED_ALBUM_DIGIT_HEADS if mixed else EN_ALBUM_DIGIT_HEADS
+    if profile == 0:
+        return _select_surface(one, serial)
+    if profile == 1:
+        return _combine_two(two_heads, two_tails, serial)
+    if profile == 2:
+        return _combine_two(
+            tuple(f"{value}side" for value in two_heads),
+            tuple(f"{value}line" for value in two_tails),
+            serial,
         )
-        album_tails = (
-            "的邊界", "的房間", "的信", "的旅程", "的日常", "的風景", "的回音", "的顏色", "的季節", "的地址",
-            "的故事", "的入口", "的天氣", "的方向", "的記憶", "的海岸", "的星球", "的街角", "的午後", "的夜",
+    if profile == 3:
+        return _combine_three(three_firsts, three_middles, three_ends, serial)
+    if profile == 4:
+        return _combine_three(
+            tuple(f"{value}side" for value in three_firsts),
+            tuple(f"{value}light" for value in three_middles),
+            tuple(f"{value}field" for value in three_ends),
+            serial,
         )
+    if profile == 5:
+        return _combine_four(four_firsts, four_middles, four_thirds, four_ends, serial)
+    if profile == 6:
+        family = serial % 3
+        special_serial = serial // 3
+        if family == 0:
+            return _select_surface(apostrophe, special_serial)
+        if family == 1:
+            return _select_surface(period, special_serial)
+        return _select_surface(parenthesis, special_serial)
+    return f"{digit_heads[serial % len(digit_heads)]}-{serial + 1}"
+
+
+def _entity_words(language_tag: str, ordinal: int) -> tuple[str, str, str]:
+    if language_tag in {"zh-Hant", "zh-Hans"}:
         return (
-            artist_heads[ordinal % len(artist_heads)]
-            + artist_tails[(ordinal // len(artist_heads)) % len(artist_tails)]
-            + "樂團",
-            track_heads[ordinal % len(track_heads)]
-            + track_tails[(ordinal // len(track_heads)) % len(track_tails)],
-            album_heads[ordinal % len(album_heads)]
-            + album_tails[(ordinal // len(album_heads)) % len(album_tails)],
+            _chinese_artist_surface(language_tag, ordinal),
+            _chinese_entity_surface(language_tag, ordinal, field="track"),
+            _chinese_entity_surface(language_tag, ordinal, field="album"),
         )
+    return (
+        _english_artist_surface(language_tag, ordinal),
+        _english_entity_surface(language_tag, ordinal, field="track"),
+        _english_entity_surface(language_tag, ordinal, field="album"),
+    )
 
     artist_heads = (
         "林", "周", "陈", "黄", "许", "叶", "郑", "吴", "蔡", "彭", "江", "沈",
@@ -1330,6 +1768,7 @@ def generate_candidate_records() -> tuple[tuple[StageBCandidateRecord, ...], tup
             rows.append(_make_candidate(plan, candidate_number=candidate_number, variant=variant))
     if len(rows) != TARGET_CANDIDATE_ROWS:
         raise CandidateCorpusError("candidate generator produced an unexpected row count")
+    _validate_entity_morphology(_catalog_morphology_metrics(catalog, rows))
     return tuple(rows), catalog
 
 
@@ -1340,7 +1779,7 @@ def _candidate_corpus_hash(rows: Sequence[StageBCandidateRecord]) -> str:
 def _entity_catalog_payload(catalog: Sequence[Mapping[str, str]]) -> dict[str, Any]:
     payload = {
         "catalog_schema_version": 1,
-        "catalog_version": "synthetic-local-entity-catalog-v1",
+        "catalog_version": "synthetic-local-entity-catalog-v2",
         "source": GENERATION_SOURCE,
         "provider_ids_included": False,
         "entities": list(catalog),
@@ -1358,6 +1797,26 @@ def _generator_config_payload() -> dict[str, Any]:
         "corpus_protocol_version": "stage-b-corpus-build-v1",
         "generator_version": GENERATOR_VERSION,
         "generation_source": GENERATION_SOURCE,
+        "entity_morphology_quality_requirements": {
+            "chinese_artist_band_suffix_rate_max": 0.40,
+            "chinese_artist_solo_style_rate_min": 0.25,
+            "chinese_artist_group_no_suffix_rate_min": 0.25,
+            "en_artist_word_count_bucket_min": 3,
+            "mixed_artist_word_count_bucket_min": 3,
+            "en_track_word_count_bucket_min": 3,
+            "mixed_track_word_count_bucket_min": 3,
+            "en_album_word_count_bucket_min": 3,
+            "mixed_album_word_count_bucket_min": 3,
+            "artist_starts_the_rate_max_exclusive": 0.50,
+            "required_safe_surface_features": (
+                "digit",
+                "punctuation",
+                "apostrophe",
+                "hyphen",
+                "period",
+            ),
+            "profile_slot_mode_min": 2,
+        },
         "variants_per_source_group": VARIANTS_PER_SOURCE_GROUP,
         "target_candidate_rows": TARGET_CANDIDATE_ROWS,
         "group_counts": GROUP_COUNTS,
@@ -1498,9 +1957,251 @@ def audit_production_gate(
     }
 
 
+def _word_count_bucket(value: str) -> str:
+    count = len(value.split())
+    return str(count) if count <= 3 else "4+"
+
+
+def _entity_length_bucket(value: str) -> str:
+    meaningful_length = sum(
+        character.isalnum() or CJK_RE.fullmatch(character) is not None
+        for character in value
+    )
+    if meaningful_length <= 3:
+        return "1-3"
+    if meaningful_length <= 6:
+        return "4-6"
+    return "7+"
+
+
+def _contains_unicode_punctuation(value: str) -> bool:
+    return any(unicodedata.category(character).startswith("P") for character in value)
+
+
+def _entity_flag_counts(entities: Sequence[Mapping[str, str]], predicate) -> dict[str, int]:
+    by_field = {
+        field: sum(predicate(entity[field]) for entity in entities)
+        for field in ("artist", "track", "album")
+    }
+    by_field["any_entity"] = sum(
+        any(predicate(entity[field]) for field in ("artist", "track", "album"))
+        for entity in entities
+    )
+    return by_field
+
+
+def _entity_character_counts(
+    entities: Sequence[Mapping[str, str]], characters: str
+) -> dict[str, int]:
+    return _entity_flag_counts(
+        entities,
+        lambda value: any(character in value for character in characters),
+    )
+
+
+def _artist_morphology(language_tag: str, artist: str) -> str:
+    if language_tag == "zh-Hant":
+        if artist.endswith("樂團"):
+            return "band_suffix"
+        if artist in ZH_HANT_SOLO_ARTISTS:
+            return "solo_style"
+        return "group_no_suffix"
+    if language_tag == "zh-Hans":
+        if artist.endswith("乐团"):
+            return "band_suffix"
+        if artist in ZH_HANS_SOLO_ARTISTS:
+            return "solo_style"
+        return "group_no_suffix"
+    return _word_count_bucket(artist)
+
+
+def _slot_mode_from_status(status: Mapping[str, str] | None) -> str | None:
+    if status is None:
+        return None
+    return (
+        "both"
+        if status["artist"] == "present" and status["album"] == "present"
+        else "artist_only"
+        if status["artist"] == "present"
+        else "album_only"
+        if status["album"] == "present"
+        else "neither"
+    )
+
+
+def _catalog_morphology_metrics(
+    catalog: Sequence[Mapping[str, str]],
+    rows: Sequence[StageBCandidateRecord],
+) -> dict[str, Any]:
+    if len(catalog) != sum(GROUP_COUNTS.values()):
+        raise CandidateCorpusError("entity catalog cardinality is not frozen")
+    entities_by_language = {
+        language_tag: [
+            entity for entity in catalog if entity.get("language_tag") == language_tag
+        ]
+        for language_tag in LANGUAGE_ORDER
+    }
+    if any(not entities for entities in entities_by_language.values()):
+        raise CandidateCorpusError("entity catalog is missing a language surface")
+    if any(
+        set(entity) != {"entity_key", "language_tag", "artist", "track", "album"}
+        for entity in catalog
+    ):
+        raise CandidateCorpusError("entity catalog fields are not closed")
+    if any(
+        any(character in entity[field] for field in ("artist", "track", "album") for character in UNSAFE_ENTITY_SURFACE_CHARS)
+        for entity in catalog
+    ):
+        raise CandidateCorpusError("entity catalog contains an authority-syntax character")
+
+    morphology: dict[str, Any] = {}
+    for language_tag, entities in entities_by_language.items():
+        digit_counts = _entity_flag_counts(
+            entities, lambda value: any(character.isdigit() for character in value)
+        )
+        punctuation_counts = _entity_flag_counts(entities, _contains_unicode_punctuation)
+        common = {
+            "entity_count": len(entities),
+            "digit_bearing_entity_counts": digit_counts,
+            "punctuation_bearing_entity_counts": punctuation_counts,
+        }
+        if language_tag in {"zh-Hant", "zh-Hans"}:
+            artist_profiles = Counter(
+                _artist_morphology(language_tag, entity["artist"]) for entity in entities
+            )
+            common.update(
+                {
+                    "artist_band_suffix_count": artist_profiles["band_suffix"],
+                    "artist_band_suffix_rate": round(
+                        artist_profiles["band_suffix"] / len(entities), 6
+                    ),
+                    "artist_solo_style_count": artist_profiles["solo_style"],
+                    "artist_group_no_suffix_count": artist_profiles["group_no_suffix"],
+                    "artist_profile_counts": dict(sorted(artist_profiles.items())),
+                    "track_length_bucket_counts": dict(
+                        sorted(Counter(_entity_length_bucket(entity["track"]) for entity in entities).items())
+                    ),
+                    "album_length_bucket_counts": dict(
+                        sorted(Counter(_entity_length_bucket(entity["album"]) for entity in entities).items())
+                    ),
+                }
+            )
+        else:
+            common.update(
+                {
+                    "artist_starts_the_count": sum(
+                        entity["artist"].startswith("The ") for entity in entities
+                    ),
+                    "artist_word_count_buckets": dict(
+                        sorted(Counter(_word_count_bucket(entity["artist"]) for entity in entities).items())
+                    ),
+                    "track_word_count_buckets": dict(
+                        sorted(Counter(_word_count_bucket(entity["track"]) for entity in entities).items())
+                    ),
+                    "album_word_count_buckets": dict(
+                        sorted(Counter(_word_count_bucket(entity["album"]) for entity in entities).items())
+                    ),
+                    "safe_punctuation_bearing_entity_counts": punctuation_counts,
+                    "apostrophe_bearing_count": _entity_character_counts(entities, "'"),
+                    "hyphen_bearing_count": _entity_character_counts(entities, "-"),
+                    "period_bearing_count": _entity_character_counts(entities, "."),
+                    "parenthesis_bearing_count": _entity_character_counts(entities, "()"),
+                }
+            )
+        morphology[language_tag] = common
+
+    slot_modes_by_group: dict[str, str] = {}
+    for row in rows:
+        if _scope_for_row(row) != "supported_play":
+            continue
+        mode = _slot_mode_from_status(row.provisional_optional_slot_status)
+        if mode is None:
+            raise CandidateCorpusError("supported play row has no slot mode")
+        previous = slot_modes_by_group.setdefault(row.source_group_id, mode)
+        if previous != mode:
+            raise CandidateCorpusError("entity morphology slot mode is inconsistent")
+
+    profile_modes: dict[str, dict[str, dict[str, set[str]]]] = {
+        language_tag: {"artist": {}, "track": {}, "album": {}}
+        for language_tag in LANGUAGE_ORDER
+    }
+    for index, entity in enumerate(catalog, start=1):
+        group_id = f"source-group-{index:04d}"
+        mode = slot_modes_by_group.get(group_id)
+        if mode is None:
+            continue
+        language_tag = entity["language_tag"]
+        profiles = (
+            _artist_morphology(language_tag, entity["artist"]),
+            _word_count_bucket(entity["track"])
+            if language_tag in {"en", "mixed"}
+            else _entity_length_bucket(entity["track"]),
+            _word_count_bucket(entity["album"])
+            if language_tag in {"en", "mixed"}
+            else _entity_length_bucket(entity["album"]),
+        )
+        for field, profile in zip(("artist", "track", "album"), profiles):
+            profile_modes[language_tag][field].setdefault(profile, set()).add(mode)
+
+    morphology["profile_slot_mode_coverage"] = {
+        language_tag: {
+            field: {
+                profile: {
+                    "slot_modes": sorted(modes),
+                    "slot_mode_count": len(modes),
+                }
+                for profile, modes in sorted(field_profiles.items())
+            }
+            for field, field_profiles in fields.items()
+        }
+        for language_tag, fields in profile_modes.items()
+    }
+    return morphology
+
+
+def _validate_entity_morphology(morphology: Mapping[str, Any]) -> None:
+    for language_tag in ("zh-Hant", "zh-Hans"):
+        data = morphology[language_tag]
+        if data["artist_band_suffix_rate"] > 0.40:
+            raise CandidateCorpusError(f"{language_tag} artist band-suffix rate exceeds 40%")
+        if data["artist_solo_style_count"] / data["entity_count"] < 0.25:
+            raise CandidateCorpusError(f"{language_tag} solo-style coverage is too small")
+        if data["artist_group_no_suffix_count"] / data["entity_count"] < 0.25:
+            raise CandidateCorpusError(f"{language_tag} group-style coverage is too small")
+        if not data["digit_bearing_entity_counts"]["any_entity"]:
+            raise CandidateCorpusError(f"{language_tag} has no digit-bearing entity")
+        if not data["punctuation_bearing_entity_counts"]["any_entity"]:
+            raise CandidateCorpusError(f"{language_tag} has no punctuation-bearing entity")
+
+    for language_tag in ("en", "mixed"):
+        data = morphology[language_tag]
+        if data["artist_starts_the_count"] >= data["entity_count"] / 2:
+            raise CandidateCorpusError(f"{language_tag} artist surfaces overuse The")
+        for field in ("artist_word_count_buckets", "track_word_count_buckets", "album_word_count_buckets"):
+            if len(data[field]) < 3:
+                raise CandidateCorpusError(f"{language_tag} lacks word-count diversity for {field}")
+        if not data["digit_bearing_entity_counts"]["any_entity"]:
+            raise CandidateCorpusError(f"{language_tag} has no digit-bearing entity")
+        if not data["safe_punctuation_bearing_entity_counts"]["any_entity"]:
+            raise CandidateCorpusError(f"{language_tag} has no safe punctuation-bearing entity")
+        for field in ("apostrophe_bearing_count", "hyphen_bearing_count", "period_bearing_count"):
+            if not data[field]["any_entity"]:
+                raise CandidateCorpusError(f"{language_tag} has no {field.replace('_bearing_count', '')} example")
+
+    for language_tag in LANGUAGE_ORDER:
+        coverage = morphology["profile_slot_mode_coverage"][language_tag]
+        for field, profiles in coverage.items():
+            for profile, evidence in profiles.items():
+                if evidence["slot_mode_count"] < 2:
+                    raise CandidateCorpusError(
+                        f"{language_tag} {field} profile {profile} is exclusive to one slot mode"
+                    )
+
+
 def _metric_counts(
     rows: Sequence[StageBCandidateRecord],
     *,
+    catalog: Sequence[Mapping[str, str]],
     stage_a_path: str | Path,
 ) -> tuple[dict[str, Any], tuple[protocol.StageBRecord, ...]]:
     frozen_near_duplicate_config = _frozen_near_duplicate_config()
@@ -1702,6 +2403,8 @@ def _metric_counts(
         row.provisional_negative_reason != SAFETY_REASON_BY_VARIANT[_variant_index(row)]
         for row in safety_rows
     )
+    entity_morphology = _catalog_morphology_metrics(catalog, rows)
+    _validate_entity_morphology(entity_morphology)
     mixed_without_cjk_count = sum(
         row.language_tag == "mixed" and not _contains_cjk(row.utterance) for row in rows
     )
@@ -1761,6 +2464,7 @@ def _metric_counts(
             "production_gate_scope_contract_mismatch_count": gate_audit[
                 "scope_contract_mismatch_count"
             ],
+            "entity_morphology": entity_morphology,
         },
         records,
     )
@@ -1840,6 +2544,7 @@ def _candidate_manifest(
         "production_gate_scope_contract_mismatch_count": metrics[
             "production_gate_scope_contract_mismatch_count"
         ],
+        "entity_morphology": metrics["entity_morphology"],
         "stage_a_identity": dict(stage_a_identity),
         "review_status_counts": metrics["review_status_counts"],
         "candidate_pool_split_status": "unsplit",
@@ -1896,7 +2601,11 @@ def build_candidate_artifacts(
     safe_stage_a_path = protocol.validate_local_path(stage_a_path, field="stage_a_path")
     safe_output_dir.mkdir(parents=True, exist_ok=True)
     rows, catalog = generate_candidate_records()
-    metrics, _records = _metric_counts(rows, stage_a_path=safe_stage_a_path)
+    metrics, _records = _metric_counts(
+        rows,
+        catalog=catalog,
+        stage_a_path=safe_stage_a_path,
+    )
     catalog_payload = _entity_catalog_payload(catalog)
     generator_config = _generator_config_payload()
     review_queue = _review_queue(rows)

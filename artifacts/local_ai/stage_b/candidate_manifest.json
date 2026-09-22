@@ -5,8 +5,8 @@
     "safety_only": 240,
     "supported": 3060
   },
-  "artifact_total_size_bytes": 3122090,
-  "candidate_corpus_sha256": "271131ac4b8a07ce3bcd49b991ea241c06c74ffe501f503dbbe9aaf1d08ce93c",
+  "artifact_total_size_bytes": 3156504,
+  "candidate_corpus_sha256": "635bc53f0c043f52bb2e117badf9551862eb122554984f710700d81cfbc7a4c0",
   "candidate_corpus_version": "stage-b-candidate-corpus-v1",
   "candidate_manifest_version": 1,
   "candidate_pool_split_status": "unsplit",
@@ -35,7 +35,615 @@
     }
   },
   "english_with_cjk_count": 0,
-  "entity_catalog_sha256": "3089c6b4072e87557821f44aeb02b6f3a97ca576490a7d812197649e06b14723",
+  "entity_catalog_sha256": "e036d4b852e3d1c1ad8df3b00532558781961427eaeeec1ec9a12226fedaa9ab",
+  "entity_morphology": {
+    "en": {
+      "album_word_count_buckets": {
+        "1": 34,
+        "2": 32,
+        "3": 43,
+        "4+": 23
+      },
+      "apostrophe_bearing_count": {
+        "album": 6,
+        "any_entity": 18,
+        "artist": 6,
+        "track": 6
+      },
+      "artist_starts_the_count": 13,
+      "artist_word_count_buckets": {
+        "1": 27,
+        "2": 40,
+        "3": 39,
+        "4+": 26
+      },
+      "digit_bearing_entity_counts": {
+        "album": 23,
+        "any_entity": 49,
+        "artist": 13,
+        "track": 16
+      },
+      "entity_count": 132,
+      "hyphen_bearing_count": {
+        "album": 17,
+        "any_entity": 43,
+        "artist": 13,
+        "track": 16
+      },
+      "parenthesis_bearing_count": {
+        "album": 5,
+        "any_entity": 10,
+        "artist": 0,
+        "track": 5
+      },
+      "period_bearing_count": {
+        "album": 6,
+        "any_entity": 17,
+        "artist": 7,
+        "track": 5
+      },
+      "punctuation_bearing_entity_counts": {
+        "album": 34,
+        "any_entity": 80,
+        "artist": 26,
+        "track": 32
+      },
+      "safe_punctuation_bearing_entity_counts": {
+        "album": 34,
+        "any_entity": 80,
+        "artist": 26,
+        "track": 32
+      },
+      "track_word_count_buckets": {
+        "1": 32,
+        "2": 38,
+        "3": 45,
+        "4+": 17
+      }
+    },
+    "mixed": {
+      "album_word_count_buckets": {
+        "1": 48,
+        "2": 48,
+        "3": 60,
+        "4+": 34
+      },
+      "apostrophe_bearing_count": {
+        "album": 8,
+        "any_entity": 25,
+        "artist": 9,
+        "track": 8
+      },
+      "artist_starts_the_count": 19,
+      "artist_word_count_buckets": {
+        "1": 38,
+        "2": 57,
+        "3": 57,
+        "4+": 38
+      },
+      "digit_bearing_entity_counts": {
+        "album": 32,
+        "any_entity": 70,
+        "artist": 19,
+        "track": 24
+      },
+      "entity_count": 190,
+      "hyphen_bearing_count": {
+        "album": 24,
+        "any_entity": 62,
+        "artist": 19,
+        "track": 24
+      },
+      "parenthesis_bearing_count": {
+        "album": 8,
+        "any_entity": 16,
+        "artist": 0,
+        "track": 8
+      },
+      "period_bearing_count": {
+        "album": 8,
+        "any_entity": 25,
+        "artist": 10,
+        "track": 8
+      },
+      "punctuation_bearing_entity_counts": {
+        "album": 48,
+        "any_entity": 116,
+        "artist": 38,
+        "track": 48
+      },
+      "safe_punctuation_bearing_entity_counts": {
+        "album": 48,
+        "any_entity": 116,
+        "artist": 38,
+        "track": 48
+      },
+      "track_word_count_buckets": {
+        "1": 47,
+        "2": 55,
+        "3": 64,
+        "4+": 24
+      }
+    },
+    "profile_slot_mode_coverage": {
+      "en": {
+        "album": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "mixed": {
+        "album": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "zh-Hans": {
+        "album": {
+          "1-3": {
+            "slot_mode_count": 3,
+            "slot_modes": [
+              "album_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "band_suffix": {
+            "slot_mode_count": 3,
+            "slot_modes": [
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "group_no_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "solo_style": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "zh-Hant": {
+        "album": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "band_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "group_no_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "solo_style": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      }
+    },
+    "zh-Hans": {
+      "album_length_bucket_counts": {
+        "1-3": 14,
+        "4-6": 24,
+        "7+": 10
+      },
+      "artist_band_suffix_count": 15,
+      "artist_band_suffix_rate": 0.3125,
+      "artist_group_no_suffix_count": 13,
+      "artist_profile_counts": {
+        "band_suffix": 15,
+        "group_no_suffix": 13,
+        "solo_style": 20
+      },
+      "artist_solo_style_count": 20,
+      "digit_bearing_entity_counts": {
+        "album": 6,
+        "any_entity": 12,
+        "artist": 0,
+        "track": 6
+      },
+      "entity_count": 48,
+      "punctuation_bearing_entity_counts": {
+        "album": 6,
+        "any_entity": 12,
+        "artist": 0,
+        "track": 6
+      },
+      "track_length_bucket_counts": {
+        "1-3": 15,
+        "4-6": 23,
+        "7+": 10
+      }
+    },
+    "zh-Hant": {
+      "album_length_bucket_counts": {
+        "1-3": 35,
+        "4-6": 141,
+        "7+": 54
+      },
+      "artist_band_suffix_count": 69,
+      "artist_band_suffix_rate": 0.3,
+      "artist_group_no_suffix_count": 69,
+      "artist_profile_counts": {
+        "band_suffix": 69,
+        "group_no_suffix": 69,
+        "solo_style": 92
+      },
+      "artist_solo_style_count": 92,
+      "digit_bearing_entity_counts": {
+        "album": 29,
+        "any_entity": 58,
+        "artist": 0,
+        "track": 29
+      },
+      "entity_count": 230,
+      "punctuation_bearing_entity_counts": {
+        "album": 29,
+        "any_entity": 58,
+        "artist": 0,
+        "track": 29
+      },
+      "track_length_bucket_counts": {
+        "1-3": 35,
+        "4-6": 140,
+        "7+": 55
+      }
+    }
+  },
   "exact_duplicate_count": 0,
   "final_split_assigned": false,
   "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
@@ -69,12 +677,12 @@
     "supported_semantic_unknown": 1080,
     "total": 3000
   },
-  "generation_source": "synthetic_local_entity_catalog_v1",
+  "generation_source": "synthetic_local_entity_catalog_v2",
   "generation_source_counts": {
-    "synthetic_local_entity_catalog_v1": 3600
+    "synthetic_local_entity_catalog_v2": 3600
   },
-  "generator_config_sha256": "a142f8adfe851e65795a61965ae5e896602e1803961f695a953bd5d075413c1c",
-  "generator_version": "stage-b-candidate-generator-v3",
+  "generator_config_sha256": "d263bd9ec97a897134e9fc5bf1121f16b86a84ff9a361d7046c68f10670d4435",
+  "generator_version": "stage-b-candidate-generator-v4",
   "held_out_sealed": false,
   "intent_counts": {
     "spotify_play_track": 1800,
@@ -92,7 +700,7 @@
     "mixed": 1140
   },
   "local_ai_fallback_approved": false,
-  "manifest_sha256": "eb29f80accf671fdea4647ff68f393457d7e6f02a0e7e2eff5f0b9a0d9bbbfd7",
+  "manifest_sha256": "42b72557b883c9ef2de6b753e925d87482de2cf2c92a7c2e20dcfa8280d0b85d",
   "mixed_without_ascii_letter_count": 0,
   "mixed_without_cjk_count": 0,
   "model_compute_authorized": false,
@@ -176,7 +784,7 @@
     }
   },
   "production_gate_scope_contract_mismatch_count": 0,
-  "review_queue_sha256": "7a9f54e0e76c975eab93c33e42e20e977517403530a2c022be7a42e3a32d4b3d",
+  "review_queue_sha256": "74392879041db2b1d513bb2d16b7eeab25cdf4d5221d421593c52803cd8d868c",
   "review_status_counts": {
     "pending_independent_review": 3600
   },
