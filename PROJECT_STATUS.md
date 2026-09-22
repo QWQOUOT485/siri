@@ -4,25 +4,34 @@
 
 ## Current Phase
 
-### 2026-09-22 Verified runtime bug audit fixes / source evidence only
+### 2026-09-22 PR #47 merged / Stage B candidate corpus pending independent review
 
-Branch `codex/verified-runtime-bug-audit-fixes-20260921` contains the six
-reviewed boundary fixes: fail-closed Windows graceful-close liveness using one
-synchronization handle per unique PID plus `WaitForSingleObject`, context-aware
-Spotify Live classification for both titles and albums, one-row-per-app-id
-discovery metadata merging, explicit WTS DWORD handling,
-Traditional/Simplified application-name comparison, and IPv4-mapped IPv6 LAN
-allowlist support. The follow-up Spotify release-context correction keeps
-lexical album names such as `Live Through This` and `Magical Mystery Tour` in
-the normal studio path while retaining strong concert/live release markers.
-Focused regressions and the full unit suite pass (**453 passed**, with two
-existing dependency deprecation warnings); compileall and git diff checks also
-pass. This is source/unit evidence only: no Windows, Spotify, Siri, live
-network, deployment, destructive process, model, RAG, or Local AI runtime
-acceptance was run. Spotify previous/resume semantics and force-close
-top-level-window authority were intentionally unchanged. The review PR is to
-remain OPEN for independent review;
-`LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+PR #47 was merged at the independently reviewed head
+`3fa9c8761d16962c85e25ec6970124b5d804f0f3` with merge commit
+`654a1d00de54d13960b6920ed98431e03eeaed54`. The accepted Windows runtime,
+Spotify release-context, discovery, WTS, app-matching, and LAN fixes are now
+in `main`; the old PR branch is no longer the active work branch.
+
+New branch `codex/stage-b-candidate-corpus-20260922` contains an offline,
+deterministic, **unsplit** Stage B candidate pool under
+[`artifacts/local_ai/stage_b/`](artifacts/local_ai/stage_b/): 3,600 provisional
+rows across 600 source groups, with 1,800 supported play, 1,260 supported
+semantic-unknown, 300 deterministic-only, and 240 safety-only rows. Language
+counts are zh-Hant 1,380, zh-Hans 288, mixed 1,140, and en 792. The candidate
+corpus SHA-256 is
+`28c4701fe92a3d34faaa521f0809f1d81d4d0243638309158a569ad20a4f9683` and the
+artifact total is 3,121,471 bytes. Stage A leakage, exact duplicates, and
+cross-source-group near duplicates are all zero; every row is
+`pending_independent_review`.
+
+This is **not** the final Stage B corpus: no final split is assigned, held-out
+data is not sealed, the 3,000-row corpus is not accepted, and training,
+fine-tuning, inference, model compute, RX 9070 XT qualification, Semantic
+Memory, Local AI fallback, RAG, vector storage, embeddings, production parser
+authority, deployment, and live Windows/Spotify/Siri/network operations remain
+out of scope. Focused Stage B/candidate tests pass (**41 passed**); the full
+unit suite passes (**459 passed**, with two existing dependency deprecation
+warnings). `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
 `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
 
 ### 2026-09-21 Stage B pre-corpus gate / Memory RAG roadmap-only / compute not authorized

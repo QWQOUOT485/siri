@@ -1,0 +1,80 @@
+{
+  "candidate_corpus_version": "stage-b-candidate-corpus-v1",
+  "candidate_pool_split_status": "unsplit",
+  "candidate_schema_version": 1,
+  "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "deterministic_reasons": [
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "unsupported_domain"
+  ],
+  "final_stage_b_corpus": false,
+  "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "generation_source": "synthetic_local_entity_catalog_v1",
+  "generator_config_sha256": "b6b7db70a8294edc8a80e42b9dc2ff8cff922fcb224dbe3459d70731a61038ed",
+  "generator_version": "stage-b-candidate-generator-v1",
+  "group_counts": {
+    "deterministic_only": 50,
+    "safety_only": 40,
+    "supported_play": 300,
+    "supported_unknown": 210
+  },
+  "held_out_sealed": false,
+  "language_group_counts": {
+    "deterministic_only": {
+      "en": 10,
+      "mixed": 18,
+      "zh-Hans": 4,
+      "zh-Hant": 18
+    },
+    "safety_only": {
+      "en": 12,
+      "mixed": 12,
+      "zh-Hans": 4,
+      "zh-Hant": 12
+    },
+    "supported_play": {
+      "en": 66,
+      "mixed": 90,
+      "zh-Hans": 24,
+      "zh-Hant": 120
+    },
+    "supported_unknown": {
+      "en": 44,
+      "mixed": 70,
+      "zh-Hans": 16,
+      "zh-Hant": 80
+    }
+  },
+  "near_duplicate_policy_version": "stage-b-near-duplicate-v1",
+  "play_slot_modes": {
+    "album_only": 60,
+    "artist_only": 60,
+    "both": 120,
+    "neither": 60
+  },
+  "review_status": "pending_independent_review",
+  "reviewed_stage_b_record_schema_version": 1,
+  "safety_reasons": [
+    "hostile_system",
+    "path_or_url",
+    "path_or_url",
+    "hostile_system",
+    "hostile_system",
+    "hostile_system"
+  ],
+  "stage_a_generation_access": "forbidden; leakage check only after generation",
+  "target_candidate_rows": 3600,
+  "training_authorized": false,
+  "unknown_reasons": [
+    "artist_only",
+    "missing_track",
+    "unresolved_reference",
+    "ambiguous_version",
+    "unsupported_domain"
+  ],
+  "variants_per_source_group": 6
+}
