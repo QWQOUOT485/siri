@@ -276,6 +276,89 @@ Retrieved memory 永遠只是 untrusted evidence。它不能：
 
 Poisoned 或互相衝突的 memory 必須 fail toward clarification。敏感／私人記憶
 預設留在本機；未來仍需要 memory inspection、deletion、disable 等使用者控制。
+
+### Candidate implementation research — TencentDB Agent Memory
+
+TencentCloud/TencentDB-Agent-Memory 可作為這個低信任 long-term-memory
+layer 的候選實作，但不是目前已採用的 production dependency，也不得取代既有
+Semantic Memory。
+
+建議邊界：
+
+~~~text
+Current high-trust Semantic Memory
+    confirmed alias / trusted entity / conflict handling
+                    │
+                    │ remains authoritative
+                    ▼
+Project-owned MemoryProvider interface
+                    │
+                    ├── NullMemoryProvider
+                    └── TencentMemoryProvider
+                             │
+                             ▼
+                     Tencent MemoryCore
+                  conversation / facts /
+                    scenes / profile
+                             │
+                             ▼
+                    bounded recall evidence
+                             │
+                             ▼
+                         Local AI
+                             ↓
+                        Grounding
+                             ↓
+                         Policy
+                             ↓
+                     ValidatedAction
+~~~
+
+研究時優先採 direct MemoryCore SDK / localhost HTTP integration，而不是先把
+MemoryProxy 放進 Siri Agent 的主路徑。原因是 Python Agent 應由本專案自己控制
+何時 recall、哪些欄位可進 prompt、最大 evidence 數量、timeout 與 fail-closed
+行為。
+
+整合必須透過本專案自己的 provider abstraction，避免 application code 直接依賴
+Tencent 專用資料模型。第一版研究介面至少應能表達：
+
+- bounded recall；
+- conversation/fact capture；
+- health / unavailable 狀態；
+- explicit delete / disable；
+- source/provenance metadata；
+- timeout / cancellation；
+- no-op fallback。
+
+Tencent memory 的任何輸出都屬低信任 evidence。它不得：
+
+- 取代 confirmed alias / trusted entity mappings；
+- 自動提升 alias trust state；
+- 直接提供可執行 Spotify URI、provider ID、Windows path、URL 或 command；
+- bypass deterministic eligibility、grounding、policy 或 clarification；
+- 建立或批准 `ValidatedAction`；
+- 自動啟用 Local AI fallback；
+- 因 vector/semantic similarity 而取得執行權限。
+
+第一個 feasibility / PoC gate 應只驗證：
+
+1. local standalone MemoryCore 是否能在 Windows 開發環境穩定啟動與停止；
+2. Python SDK / localhost HTTP 是否能 bounded recall / capture，且 failure 不影響
+   deterministic Agent；
+3. local OpenAI-compatible model / embedding backend 相容性與 latency；
+4. Traditional Chinese、Simplified Chinese、mixed-language 記憶召回品質；
+5. stale memory、contradiction、dedup、provenance 與 deletion 行為；
+6. restart persistence、schema/version migration、backup/restore；
+7. sensitive-data redaction 與禁止 secrets/provider IDs 進入記憶；
+8. memory poisoning / prompt-injection evidence 是否能被限制在低信任層；
+9. disabling/removing the provider 是否能完全退回現有 behavior；
+10. pinned reviewed version 是否可重現，不依賴 rolling latest/pre-release。
+
+只有 PoC、security review、failure-mode review 和 acceptance evidence 都通過後，
+才可以另外開 production-integration scope。即使未來正式採用，TencentDB Agent
+Memory 仍只是 Personal RAG / long-term context implementation；本專案自己的
+Semantic Memory、grounding、policy 與 ValidatedAction authority 保持不變。
+
 本項目前只屬 FUTURE RESEARCH / ROADMAP：不實作 vector storage、embeddings、
 RAG runtime，也不改變 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` 或
 `LOCAL_AI_FALLBACK_APPROVED=false`。
