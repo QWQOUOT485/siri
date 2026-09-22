@@ -24,6 +24,9 @@ artifact total is 3,121,471 bytes. Stage A leakage, exact duplicates, and
 cross-source-group near duplicates are all zero; every row is
 `pending_independent_review`.
 
+New PR #48 is OPEN for independent review and must not be merged as part of
+this task.
+
 This is **not** the final Stage B corpus: no final split is assigned, held-out
 data is not sealed, the 3,000-row corpus is not accepted, and training,
 fine-tuning, inference, model compute, RX 9070 XT qualification, Semantic
