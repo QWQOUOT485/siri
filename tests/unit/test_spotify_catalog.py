@@ -467,7 +467,7 @@ def test_catalog_classifies_explicit_live_track_title_as_live():
     assert SpotifyCatalog._classify_version(ref) == "live"
 
 
-@pytest.mark.parametrize("album", ["Live Through This", "Long Live Rock"])
+@pytest.mark.parametrize("album", ["Live Through This", "Long Live Rock", "Magical Mystery Tour"])
 def test_catalog_does_not_classify_lexical_live_album_names_as_live(album):
     ref = SpotifyCatalog._to_ref(track("studio", "Ordinary Song", ["Artist"], album=album))
 
@@ -475,8 +475,9 @@ def test_catalog_does_not_classify_lexical_live_album_names_as_live(album):
     assert SpotifyCatalog._classify_version(ref) == "studio"
 
 
-def test_catalog_keeps_studio_track_from_live_through_this_playable():
-    client = FakeSpotifySearchClient([track("studio", "Ordinary Song", ["Artist"], album="Live Through This")])
+@pytest.mark.parametrize("album", ["Live Through This", "Magical Mystery Tour"])
+def test_catalog_keeps_lexical_live_album_tracks_playable(album):
+    client = FakeSpotifySearchClient([track("studio", "Ordinary Song", ["Artist"], album=album)])
 
     result = SpotifyCatalog(client).find_track("Ordinary Song", "Artist", access_token="test-token")
 
@@ -498,6 +499,14 @@ def test_catalog_classifies_live_at_markers_in_title_and_album_as_live():
     assert title_ref is not None and album_ref is not None
     assert SpotifyCatalog._classify_version(title_ref) == "live"
     assert SpotifyCatalog._classify_version(album_ref) == "live"
+
+
+@pytest.mark.parametrize("album", ["In Concert", "Live on Tour"])
+def test_catalog_classifies_explicit_concert_and_tour_release_context_as_live(album):
+    ref = SpotifyCatalog._to_ref(track("release", "Ordinary Song", ["Artist"], album=album))
+
+    assert ref is not None
+    assert SpotifyCatalog._classify_version(ref) == "live"
 
 
 def test_catalog_classifies_concert_album_as_live():
