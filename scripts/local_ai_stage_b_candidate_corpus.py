@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -24,12 +25,20 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
+# Keep the offline builder runnable both as ``python scripts/<file>`` and as
+# an imported test module without changing its production/runtime imports.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import local_ai_stage_b_corpus as protocol
+from app.services.ai_eligibility import SemanticRetryEligibilityGate
+from app.services.command_parser import CommandParser
 
 
 CANDIDATE_SCHEMA_VERSION = 1
 CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v1"
-GENERATOR_VERSION = "stage-b-candidate-generator-v2"
+GENERATOR_VERSION = "stage-b-candidate-generator-v3"
 GENERATION_SOURCE = "synthetic_local_entity_catalog_v1"
 REVIEW_STATUS = "pending_independent_review"
 VARIANTS_PER_SOURCE_GROUP = 6
@@ -71,6 +80,13 @@ PLAY_SLOT_MODES = (
     ("neither", 60),
 )
 
+PLAY_SLOT_MODE_MATRIX = {
+    "zh-Hant": {"both": 48, "artist_only": 24, "album_only": 24, "neither": 24},
+    "zh-Hans": {"both": 9, "artist_only": 5, "album_only": 5, "neither": 5},
+    "mixed": {"both": 36, "artist_only": 18, "album_only": 18, "neither": 18},
+    "en": {"both": 27, "artist_only": 13, "album_only": 13, "neither": 13},
+}
+
 UNKNOWN_REASONS = (
     "artist_only",
     "missing_track",
@@ -78,6 +94,39 @@ UNKNOWN_REASONS = (
     "ambiguous_version",
     "unsupported_domain",
 )
+
+ELIGIBLE_UNKNOWN_REASONS = ("artist_only", "missing_track")
+GATE_BLOCKED_UNKNOWN_REASONS = (
+    "unresolved_reference",
+    "ambiguous_version",
+    "unsupported_domain",
+)
+
+PRODUCTION_GATE_ERROR_CODE = "SPOTIFY_TRACK_NOT_FOUND"
+PRODUCTION_GATE_ELIGIBLE_SCOPES = ("supported_play", "supported_unknown")
+PRODUCTION_GATE_BLOCKED_SCOPES = ("deterministic_only", "safety_only")
+
+DETERMINISTIC_PROFILE_SEQUENCE_BY_LANGUAGE = {
+    "zh-Hant": (
+        ("controls",) * 11
+        + ("unresolved_reference",) * 3
+        + ("ambiguous_version",) * 2
+        + ("unsupported_domain",) * 2
+    ),
+    "zh-Hans": (("controls",) * 3 + ("unresolved_reference",)),
+    "mixed": (
+        ("controls",) * 11
+        + ("unresolved_reference",) * 2
+        + ("ambiguous_version",) * 3
+        + ("unsupported_domain",) * 2
+    ),
+    "en": (
+        ("controls",) * 5
+        + ("unresolved_reference",)
+        + ("ambiguous_version",) * 2
+        + ("unsupported_domain",) * 2
+    ),
+}
 
 DETERMINISTIC_REASONS = (
     "playback_control",
@@ -113,6 +162,17 @@ SAFETY_REASON_BY_VARIANT = {
     4: "hostile_system",
     5: "hostile_system",
 }
+
+
+def _frozen_near_duplicate_config() -> protocol.NearDuplicateConfig:
+    """Return the reviewed policy, failing closed if the default drifts."""
+
+    config = protocol.DEFAULT_NEAR_DUPLICATE_CONFIG
+    if config.config_sha256 != protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256:
+        raise CandidateCorpusError(
+            "candidate generation requires the frozen near-duplicate config hash"
+        )
+    return config
 
 ZH_HANT_HOMOPHONE_SURFACE = {
     "林": "淋",
@@ -215,6 +275,7 @@ class GroupPlan:
     entity: SyntheticEntity
     slot_mode: str | None
     negative_reason: str | None
+    deterministic_profile: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -488,34 +549,34 @@ def _play_segments(
                 segments += [(" from ", None), (album, "album")]
             family = "play_en_direct"
         elif variant == 1:
-            segments = [("I want to hear ", None), (track, "track")]
+            segments = [("Listen to ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
-                segments += [(" on the album ", None), (album, "album")]
+                segments += [(" from ", None), (album, "album")]
             family = "play_en_conversational"
         elif variant == 2:
-            segments = [("Put on ", None)]
-            if has_album:
-                segments += [(album, "album"), (" — ", None)]
-            segments += [(track, "track")]
-            if has_artist:
-                segments += [(" by ", None), (artist, "artist")]
-            family = "play_en_word_order"
-        elif variant == 3:
-            segments = [("Could you play ", None), (track, "track")]
+            segments = [("Put on ", None), (track, "track")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
-            segments += [(" for me?", None)]
+            family = "play_en_word_order"
+        elif variant == 3:
+            segments = [("Play the song ", None), (track, "track")]
+            if has_album:
+                segments += [(" from ", None), (album, "album")]
+            if has_artist:
+                segments += [(" by ", None), (artist, "artist")]
+            segments += [(" for me", None)]
             family = "play_en_polite"
         elif variant == 4:
-            segments = [("Please queue ", None), (track, "track")]
+            segments = [("Put on ", None), (track, "track")]
             if has_artist:
                 segments += [(" / ", None), (artist, "artist")]
             if has_album:
                 segments += [(" / ", None), (album, "album")]
+            segments += [(" right now please", None)]
             family = "play_en_punctuation_loss"
         else:
             segments = [("Play ", None), (track, "track")]
@@ -527,15 +588,14 @@ def _play_segments(
             family = "play_en_asr_spacing"
     elif language_tag == "zh-Hant":
         if variant == 0:
-            segments = [("幫我播", None)]
+            segments = [("播放", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), ("的", None)]
-            segments += [(track, "track")]
+                segments += [("，歌手是", None), (artist, "artist")]
             if has_album:
                 segments += [("，專輯是", None), (album, "album")]
             family = "play_hant_direct"
         elif variant == 1:
-            segments = [("播放一下", None), (track, "track")]
+            segments = [("請播放這首歌：", None), (track, "track")]
             if has_artist:
                 segments += [("，歌手是", None), (artist, "artist")]
             if has_album:
@@ -544,44 +604,44 @@ def _play_segments(
         elif variant == 2:
             segments = [("我要聽", None)]
             if has_album:
-                segments += [(album, "album"), ("裡的", None)]
-            if has_artist:
-                segments += [(artist, "artist"), ("那首", None)]
+                segments += [("專輯", None), (album, "album"), ("的", None)]
             segments += [(track, "track")]
+            if has_artist:
+                segments += [("，歌手是", None), (artist, "artist")]
             family = "play_hant_word_order"
         elif variant == 3:
-            segments = [("先放", None), (track, "track")]
+            segments = [("想聽歌名是", None), (track, "track")]
             if has_artist:
-                segments += [("，是", None), (artist, "artist")]
+                segments += [("，演出者標籤是", None), (artist, "artist")]
             if has_album:
-                segments += [("專輯", None), (album, "album")]
+                segments += [("，專輯標籤是", None), (album, "album")]
+            segments += [("，就這首就好", None)]
             family = "play_hant_particle"
         elif variant == 4:
-            segments = [("麻煩播", None)]
+            segments = [("聽", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), ("那張", None)]
+                segments += [("，歌手", None), (artist, "artist")]
             if has_album:
-                segments += [(album, "album"), ("裡的", None)]
-            segments += [(track, "track"), ("，謝謝", None)]
+                segments += [("，專輯", None), (album, "album")]
+            segments += [("，謝謝", None)]
             family = "play_hant_homophone"
         else:
-            segments = [("播一下", None), (track, "track"), ("，請幫我放", None)]
+            segments = [("播", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist")]
+                segments += [("，演出者", None), (artist, "artist")]
             if has_album:
                 segments += [("，專輯", None), (album, "album")]
             family = "play_hant_spacing"
     elif language_tag == "zh-Hans":
         if variant == 0:
-            segments = [("帮我播", None)]
+            segments = [("播放", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), ("的", None)]
-            segments += [(track, "track")]
+                segments += [("，歌手是", None), (artist, "artist")]
             if has_album:
                 segments += [("，专辑是", None), (album, "album")]
             family = "play_hans_direct"
         elif variant == 1:
-            segments = [("播放一下", None), (track, "track")]
+            segments = [("请播放这首歌：", None), (track, "track")]
             if has_artist:
                 segments += [("，歌手是", None), (artist, "artist")]
             if has_album:
@@ -590,80 +650,84 @@ def _play_segments(
         elif variant == 2:
             segments = [("我要听", None)]
             if has_album:
-                segments += [(album, "album"), ("里的", None)]
-            if has_artist:
-                segments += [(artist, "artist"), ("那首", None)]
+                segments += [("专辑", None), (album, "album"), ("的", None)]
             segments += [(track, "track")]
+            if has_artist:
+                segments += [("，歌手是", None), (artist, "artist")]
             family = "play_hans_word_order"
         elif variant == 3:
-            segments = [("先放", None), (track, "track")]
+            segments = [("想听歌名是", None), (track, "track")]
             if has_artist:
-                segments += [("，是", None), (artist, "artist")]
+                segments += [("，演出者标签是", None), (artist, "artist")]
             if has_album:
-                segments += [("专辑", None), (album, "album")]
+                segments += [("，专辑标签是", None), (album, "album")]
+            segments += [("，就这首就好", None)]
             family = "play_hans_particle"
         elif variant == 4:
-            segments = [("麻烦播", None)]
+            segments = [("听", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), ("那张", None)]
+                segments += [("，歌手", None), (artist, "artist")]
             if has_album:
-                segments += [(album, "album"), ("里的", None)]
-            segments += [(track, "track"), ("，谢谢", None)]
+                segments += [("，专辑", None), (album, "album")]
+            segments += [("，谢谢", None)]
             family = "play_hans_homophone"
         else:
-            segments = [("播一下", None), (track, "track"), ("，请帮我放", None)]
+            segments = [("播", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist")]
+                segments += [("，演出者", None), (artist, "artist")]
             if has_album:
                 segments += [("，专辑", None), (album, "album")]
             family = "play_hans_spacing"
     else:
         if variant == 0:
-            segments = [("幫我 play ", None), (track, "track")]
+            segments = [("播放 ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             family = "play_mixed_code_switch"
         elif variant == 1:
-            segments = [("我要聽 ", None)]
+            segments = [("我要聽 ", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), (" 的 ", None)]
-            segments += [(track, "track")]
+                segments += [("，artist 是 ", None), (artist, "artist")]
             if has_album:
                 segments += [("，album 是 ", None), (album, "album")]
             family = "play_mixed_conversational"
         elif variant == 2:
-            segments = [("Play 一下 ", None)]
+            segments = [("Play 一下 ", None), (track, "track")]
             if has_album:
-                segments += [(album, "album"), (" 裡的 ", None)]
-            segments += [(track, "track")]
+                segments += [("，album 是 ", None), (album, "album")]
             if has_artist:
                 segments += [("，artist 是 ", None), (artist, "artist")]
             family = "play_mixed_word_order"
         elif variant == 3:
-            segments = [("放 ", None), (track, "track")]
+            segments = [("聽這首歌 ", None), (track, "track")]
             if has_artist:
                 segments += [("，by ", None), (artist, "artist")]
             if has_album:
                 segments += [("，album ", None), (album, "album")]
             family = "play_mixed_particle"
         elif variant == 4:
-            segments = [("幫我播 ", None)]
+            segments = [("請播放這首音樂給我 ", None), (track, "track")]
             if has_artist:
-                segments += [(artist, "artist"), (" 的 ", None)]
-            segments += [(track, "track")]
+                segments += [("，artist ", None), (artist, "artist")]
             if has_album:
-                segments += [("，專輯 ", None), (album, "album")]
+                segments += [("，album ", None), (album, "album")]
             family = "play_mixed_asr_case"
         else:
-            segments = [("請 play ", None), (track, "track")]
+            segments = [("Put on 這首 ", None), (track, "track")]
             if has_artist:
-                segments += [(" ", None), (artist, "artist")]
+                segments += [("，artist ", None), (artist, "artist")]
             if has_album:
-                segments += [(" ", None), (album, "album")]
+                segments += [("，album ", None), (album, "album")]
             family = "play_mixed_asr_spacing"
 
+    if language_tag in {"zh-Hant", "zh-Hans"} and segments[-1][1] == "track":
+        # Some synthetic titles intentionally end in unresolved-reference
+        # suffixes such as 「的歌」.  A
+        # natural trailing particle keeps those titles distinct from the
+        # gate's unresolved-reference suffix without adding a slot carrier.
+        segments += [("吧", None)]
     utterance, spans = _render(segments)
     return utterance, spans, family
 
@@ -686,28 +750,28 @@ def _unknown_utterance(
     if language_tag == "en":
         templates = {
             "artist_only": [
-                f"Play something by {artist}",
-                f"I want {artist}",
+                f"Play songs by {artist}",
+                f"Listen to {artist}",
                 f"Put on {artist}",
-                f"Can you play {artist}",
-                f"Start music from {artist}",
                 f"Play the artist {artist}",
+                f"Listen to music from {artist}",
+                f"Play {artist} music",
             ],
             "missing_track": [
-                f"Play something from the album {album}",
-                f"I want the {album} album",
-                f"Put on {album} by {artist}",
-                f"Can you open the album {album}",
-                f"Start a song from {album}",
-                f"Find the {album} release",
+                f"Play the album {album}",
+                f"Listen to the {album} album",
+                f"Put on the {album} album",
+                f"Play {artist}'s album {album}",
+                f"Listen to music from {album}",
+                f"Play the {album} release",
             ],
             "unresolved_reference": [
-                f"Play that one by {artist}",
-                f"Play the one we mentioned from {artist}",
-                f"Put on the previous song by {artist}",
-                f"Use that track from {artist}",
-                f"Play the other one by {artist}",
-                f"Start the song I mean from {artist}",
+                f"Use the previous song by {artist}",
+                f"Start the song we mentioned from {artist}",
+                f"Choose the other track from {artist}",
+                f"Select the one we discussed by {artist}",
+                f"Queue the earlier song from {artist}",
+                f"Request the song I meant from {artist}",
             ],
             "ambiguous_version": [
                 f"Should I play {track} live or the original version",
@@ -715,7 +779,7 @@ def _unknown_utterance(
                 f"I mean {track}, maybe live, maybe studio",
                 f"Find {track} in the right version",
                 f"Use the original or live {track}",
-                f"Play {track} with the version undecided",
+                f"Play {track} live or studio",
             ],
             "unsupported_domain": [
                 f"What time is {artist} performing near me",
@@ -729,36 +793,36 @@ def _unknown_utterance(
     elif language_tag == "zh-Hans":
         templates = {
             "artist_only": [
-                f"播放{artist}的歌",
-                f"我想听{artist}",
-                f"放一下{artist}",
-                f"帮我播放{artist}",
-                f"先找{artist}的音乐",
                 f"播放歌手{artist}",
+                f"想听{artist}",
+                f"播放{artist}音乐",
+                f"请播放{artist}的音乐",
+                f"我要听{artist}的作品",
+                f"听{artist}",
             ],
             "missing_track": [
-                f"播放专辑{album}里的歌",
-                f"我想听{album}这张专辑",
-                f"放{artist}的{album}",
-                f"帮我打开专辑{album}",
-                f"找一首{album}里的歌",
-                f"查一下{album}这个发行",
+                f"播放专辑{album}",
+                f"我要听专辑{album}里面的音乐",
+                f"请播放{artist}的专辑{album}",
+                f"听专辑{album}的内容",
+                f"播{album}专辑",
+                f"我要听{album}",
             ],
             "unresolved_reference": [
                 f"播放刚才提到的{artist}那首",
                 f"就放{artist}刚刚那首",
-                f"播放之前说的{artist}",
+                f"播放之前说的{artist}的歌",
                 f"用一下{artist}的那首",
-                f"换成{artist}的另一首",
-                f"开始播放我说的{artist}歌曲",
+                f"换成{artist}那首歌",
+                f"开始播放我说的{artist}的歌",
             ],
             "ambiguous_version": [
                 f"播放{track}的现场版还是原版",
-                f"我想听{track}但版本不确定",
+                f"我想听{track}但要现场版还是原版",
                 f"{track}要现场还是录音室版",
                 f"找一下正确版本的{track}",
                 f"用{track}的原版或现场版",
-                f"播放{track}，版本先不确定",
+                f"播放{track}，要原版或现场版",
             ],
             "unsupported_domain": [
                 f"查{artist}最近的演出时间",
@@ -772,36 +836,36 @@ def _unknown_utterance(
     elif language_tag == "zh-Hant":
         templates = {
             "artist_only": [
-                f"播放{artist}的歌",
-                f"我想聽{artist}",
-                f"放一下{artist}",
-                f"幫我播放{artist}",
-                f"先找{artist}的音樂",
                 f"播放歌手{artist}",
+                f"想聽{artist}",
+                f"播放{artist}音樂",
+                f"請播放{artist}的音樂",
+                f"我要聽{artist}的作品",
+                f"聽{artist}",
             ],
             "missing_track": [
-                f"播放專輯{album}裡的歌",
-                f"我想聽{album}這張專輯",
-                f"放{artist}的{album}",
-                f"幫我打開專輯{album}",
-                f"找一首{album}裡的歌",
-                f"查一下{album}這個發行",
+                f"播放專輯{album}",
+                f"我要聽專輯{album}裡面的音樂",
+                f"請播放{artist}的專輯{album}",
+                f"聽專輯{album}的內容",
+                f"播{album}專輯",
+                f"我要聽{album}",
             ],
             "unresolved_reference": [
                 f"播放剛才提到的{artist}那首",
                 f"就放{artist}剛剛那首",
-                f"播放之前說的{artist}",
+                f"播放之前說的{artist}的歌",
                 f"用一下{artist}的那首",
-                f"換成{artist}的另一首",
-                f"開始播放我說的{artist}歌曲",
+                f"換成{artist}那首歌",
+                f"開始播放我說的{artist}的歌",
             ],
             "ambiguous_version": [
                 f"播放{track}的現場版還是原版",
-                f"我想聽{track}但版本不確定",
+                f"我想聽{track}但要現場版還是原版",
                 f"{track}要現場還是錄音室版",
                 f"找一下正確版本的{track}",
                 f"用{track}的原版或現場版",
-                f"播放{track}，版本先不確定",
+                f"播放{track}，要原版或現場版",
             ],
             "unsupported_domain": [
                 f"查{artist}最近的演出時間",
@@ -815,36 +879,36 @@ def _unknown_utterance(
     else:
         templates = {
             "artist_only": [
-                f"幫我 play something by {artist}",
+                f"播放 songs by {artist}",
                 f"我要聽 {artist}",
-                f"放一下 {artist}",
-                f"幫我播放 {artist}",
-                f"先找 {artist} 的 music",
-                f"幫我 play the artist {artist}",
+                f"Put on {artist} 的 music",
+                f"播放 the artist {artist}",
+                f"Listen to {artist} 的 music",
+                f"請播放 {artist} 的 songs",
             ],
             "missing_track": [
-                f"幫我播 {album} 裡的歌",
+                f"播放 album {album}",
                 f"我要聽 {album} album",
-                f"放 {artist} 的 {album}",
-                f"幫我打開 {album}",
-                f"找一首 {album} 裡的歌",
-                f"查一下 {album} release",
+                f"請播放 {artist} 的 album {album}",
+                f"Listen to {album} 這張 album",
+                f"Put on {album} 這張 album",
+                f"播 {album} 的 release",
             ],
             "unresolved_reference": [
-                f"播放剛才那首 from {artist}",
+                f"播放剛才那首 from {artist} 的歌",
                 f"就放 {artist} 剛剛那首",
-                f"幫我 play the one from {artist}",
+                f"播放之前說的 {artist} 的歌",
                 f"用一下 {artist} 那首",
-                f"換成 {artist} 的另一首",
-                f"請 start the song I meant from {artist}",
+                f"換成 {artist} 那首歌",
+                f"開始播放我說的 {artist} 的歌",
             ],
             "ambiguous_version": [
                 f"播放 {track} 的 live version 還是 original",
-                f"我要聽 {track} but the version is unclear",
+                f"我要聽 {track} but live or studio",
                 f"{track} 要 live 還是 studio",
                 f"幫我 find the right version of {track}",
                 f"請 use original or live {track}",
-                f"play {track}，version 先不確定",
+                f"play {track}，要 live or original 版本",
             ],
             "unsupported_domain": [
                 f"查 {artist} 的 concert date",
@@ -886,7 +950,7 @@ def _deterministic_utterance(
             f"继续播放{track}",
             f"切到{artist}的下一首",
             f"回到{artist}的上一首",
-            f"播放{artist}时把Spotify音量调到{20 + variant * 13}%",
+            f"Spotify音量调到{20 + variant * 13}%，播放{artist}",
             f"打开播放{artist}的应用",
         )
     elif language_tag == "zh-Hant":
@@ -895,7 +959,7 @@ def _deterministic_utterance(
             f"繼續播放{track}",
             f"切到{artist}的下一首",
             f"回到{artist}的上一首",
-            f"播放{artist}時把Spotify音量調到{20 + variant * 13}%",
+            f"Spotify音量調到{20 + variant * 13}%，播放{artist}",
             f"打開播放{artist}的應用程式",
         )
     else:
@@ -904,7 +968,7 @@ def _deterministic_utterance(
             f"繼續 play {track}",
             f"skip 到 {artist} 的 next song",
             f"回到 {artist} 的 previous song",
-            f"播放 {artist} 時把 Spotify volume 調到 {20 + variant * 13}%",
+            f"Spotify volume 調到 {20 + variant * 13}%，{artist} is playing",
             f"請 open the music app for {artist}",
         )
     family = "deterministic_playback_control" if variant < 5 else "deterministic_app_control"
@@ -998,11 +1062,22 @@ def _make_candidate(plan: GroupPlan, *, candidate_number: int, variant: int) -> 
         ai_scope = "supported"
         negative_reason = plan.negative_reason
     elif plan.scope == "deterministic_only":
-        utterance, family, negative_reason = _deterministic_utterance(
-            plan.entity,
-            language_tag=plan.language_tag,
-            variant=variant,
-        )
+        if plan.deterministic_profile == "controls":
+            utterance, family, negative_reason = _deterministic_utterance(
+                plan.entity,
+                language_tag=plan.language_tag,
+                variant=variant,
+            )
+        elif plan.deterministic_profile in GATE_BLOCKED_UNKNOWN_REASONS:
+            utterance, family = _unknown_utterance(
+                plan.entity,
+                language_tag=plan.language_tag,
+                variant=variant,
+                reason=plan.deterministic_profile,
+            )
+            negative_reason = plan.deterministic_profile
+        else:
+            raise CandidateCorpusError("deterministic group has an unknown profile")
         expected = {"intent": "unknown", "track": None, "artist": None, "album": None}
         status = None
         ai_scope = "deterministic_only"
@@ -1162,13 +1237,30 @@ def _build_plans() -> tuple[tuple[GroupPlan, ...], tuple[dict[str, str], ...]]:
     plans: list[GroupPlan] = []
     catalog: list[dict[str, str]] = []
     language_ordinals = Counter[str]()
+    play_group_ordinals = Counter[str]()
+    unknown_group_ordinals = Counter[str]()
+    deterministic_group_ordinals = Counter[str]()
     group_number = 0
-    play_group_number = 0
-    slot_sequence = [
-        mode
-        for mode, count in PLAY_SLOT_MODES
-        for _ in range(count)
-    ]
+    slot_sequences = {
+        language_tag: tuple(
+            mode
+            for mode, _count in PLAY_SLOT_MODES
+            for _ in range(PLAY_SLOT_MODE_MATRIX[language_tag][mode])
+        )
+        for language_tag in LANGUAGE_ORDER
+    }
+    if any(
+        len(slot_sequences[language_tag])
+        != LANGUAGE_GROUP_COUNTS["supported_play"][language_tag]
+        for language_tag in LANGUAGE_ORDER
+    ):
+        raise CandidateCorpusError("play slot matrix does not match language group counts")
+    if any(
+        len(DETERMINISTIC_PROFILE_SEQUENCE_BY_LANGUAGE[language_tag])
+        != LANGUAGE_GROUP_COUNTS["deterministic_only"][language_tag]
+        for language_tag in LANGUAGE_ORDER
+    ):
+        raise CandidateCorpusError("deterministic profile sequence does not match group counts")
     for scope in SCOPE_ORDER:
         for language_tag in LANGUAGE_ORDER:
             expected_count = LANGUAGE_GROUP_COUNTS[scope][language_tag]
@@ -1186,22 +1278,28 @@ def _build_plans() -> tuple[tuple[GroupPlan, ...], tuple[dict[str, str], ...]]:
                 )
                 catalog.append(entity.to_dict())
                 if scope == "supported_play":
-                    slot_mode = slot_sequence[play_group_number]
+                    slot_mode = slot_sequences[language_tag][play_group_ordinals[language_tag]]
                     negative_reason = None
-                    play_group_number += 1
+                    deterministic_profile = None
+                    play_group_ordinals[language_tag] += 1
                 elif scope == "supported_unknown":
                     slot_mode = None
-                    negative_reason = UNKNOWN_REASONS[(group_number - 1) % len(UNKNOWN_REASONS)]
+                    negative_reason = ELIGIBLE_UNKNOWN_REASONS[
+                        unknown_group_ordinals[language_tag] % len(ELIGIBLE_UNKNOWN_REASONS)
+                    ]
+                    deterministic_profile = None
+                    unknown_group_ordinals[language_tag] += 1
                 elif scope == "deterministic_only":
                     slot_mode = None
-                    # Deterministic reasons are selected per generated
-                    # variant in _deterministic_utterance, never per group.
+                    deterministic_profile = DETERMINISTIC_PROFILE_SEQUENCE_BY_LANGUAGE[
+                        language_tag
+                    ][deterministic_group_ordinals[language_tag]]
                     negative_reason = None
+                    deterministic_group_ordinals[language_tag] += 1
                 else:
                     slot_mode = None
-                    # Safety reasons are selected per generated safety
-                    # template in _safety_utterance, never per group.
                     negative_reason = None
+                    deterministic_profile = None
                 plans.append(
                     GroupPlan(
                         source_group_id=f"source-group-{group_number:04d}",
@@ -1210,6 +1308,7 @@ def _build_plans() -> tuple[tuple[GroupPlan, ...], tuple[dict[str, str], ...]]:
                         entity=entity,
                         slot_mode=slot_mode,
                         negative_reason=negative_reason,
+                        deterministic_profile=deterministic_profile,
                     )
                 )
     if len(plans) * VARIANTS_PER_SOURCE_GROUP != TARGET_CANDIDATE_ROWS:
@@ -1251,6 +1350,7 @@ def _entity_catalog_payload(catalog: Sequence[Mapping[str, str]]) -> dict[str, A
 
 
 def _generator_config_payload() -> dict[str, Any]:
+    frozen_near_duplicate_config = _frozen_near_duplicate_config()
     payload: dict[str, Any] = {
         "candidate_corpus_version": CANDIDATE_CORPUS_VERSION,
         "candidate_schema_version": CANDIDATE_SCHEMA_VERSION,
@@ -1263,7 +1363,17 @@ def _generator_config_payload() -> dict[str, Any]:
         "group_counts": GROUP_COUNTS,
         "language_group_counts": LANGUAGE_GROUP_COUNTS,
         "play_slot_modes": dict(PLAY_SLOT_MODES),
+        "play_slot_mode_matrix": PLAY_SLOT_MODE_MATRIX,
         "unknown_reasons": UNKNOWN_REASONS,
+        "eligible_unknown_reasons": ELIGIBLE_UNKNOWN_REASONS,
+        "gate_blocked_unknown_reasons": GATE_BLOCKED_UNKNOWN_REASONS,
+        "deterministic_profile_sequence_by_language": {
+            language_tag: list(sequence)
+            for language_tag, sequence in DETERMINISTIC_PROFILE_SEQUENCE_BY_LANGUAGE.items()
+        },
+        "production_gate_error_code": PRODUCTION_GATE_ERROR_CODE,
+        "production_gate_eligible_scopes": PRODUCTION_GATE_ELIGIBLE_SCOPES,
+        "production_gate_blocked_scopes": PRODUCTION_GATE_BLOCKED_SCOPES,
         "deterministic_reasons": DETERMINISTIC_REASONS,
         "deterministic_reason_by_variant": {
             str(variant): reason
@@ -1281,7 +1391,11 @@ def _generator_config_payload() -> dict[str, Any]:
         "training_authorized": False,
         "held_out_sealed": False,
         "near_duplicate_policy_version": protocol.NEAR_DUPLICATE_POLICY_VERSION,
-        "frozen_near_duplicate_config_sha256": protocol.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256,
+        "frozen_near_duplicate_config_sha256": protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256,
+        "near_duplicate_policy": {
+            **frozen_near_duplicate_config.to_dict(),
+            "config_sha256": protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256,
+        },
     }
     payload["generator_config_sha256"] = _sha256_json(payload)
     return payload
@@ -1299,11 +1413,97 @@ def _review_queue(rows: Sequence[StageBCandidateRecord]) -> list[dict[str, Any]]
     ]
 
 
+def _scope_for_row(row: StageBCandidateRecord) -> str:
+    if row.provisional_ai_scope == "supported":
+        return (
+            "supported_play"
+            if row.provisional_expected.intent == "spotify_play_track"
+            else "supported_unknown"
+        )
+    if row.provisional_ai_scope in {"deterministic_only", "safety_only"}:
+        return row.provisional_ai_scope
+    raise CandidateCorpusError("candidate row has an unknown AI scope")
+
+
+def audit_production_gate(
+    rows: Sequence[StageBCandidateRecord],
+) -> dict[str, Any]:
+    """Audit candidates against the real parser and semantic-retry gate.
+
+    This is an offline production-alignment check only.  It never invokes a
+    resolver, Spotify, Local AI, or an execution path; the resolver failure is
+    represented by the fixed retryable error used by the gate contract.
+    """
+
+    parser = CommandParser()
+    gate = SemanticRetryEligibilityGate()
+    reason_counts: dict[str, Counter[str]] = {
+        scope: Counter() for scope in SCOPE_ORDER
+    }
+    eligibility_counts: dict[str, Counter[str]] = {
+        scope: Counter() for scope in SCOPE_ORDER
+    }
+    expected_counts = Counter(_scope_for_row(row) for row in rows)
+    mismatches: list[str] = []
+
+    for row in rows:
+        scope = _scope_for_row(row)
+        parsed = parser.parse(row.utterance)
+        decision = gate.evaluate(
+            row.utterance,
+            parsed,
+            deterministic_success=False,
+            deterministic_error_code=PRODUCTION_GATE_ERROR_CODE,
+        )
+        reason_counts[scope][decision.reason] += 1
+        eligibility_counts[scope]["eligible" if decision.eligible else "blocked"] += 1
+        expected_eligible = scope in PRODUCTION_GATE_ELIGIBLE_SCOPES
+        if decision.eligible != expected_eligible:
+            mismatches.append(row.candidate_id)
+
+    if mismatches:
+        raise CandidateCorpusError(
+            "production gate scope contract failed for candidate rows: "
+            + ", ".join(mismatches[:5])
+        )
+
+    required_counts = {
+        scope: {
+            "rows": expected_counts.get(scope, 0),
+            "eligible": expected_counts.get(scope, 0)
+            if scope in PRODUCTION_GATE_ELIGIBLE_SCOPES
+            else 0,
+            "blocked": expected_counts.get(scope, 0)
+            if scope in PRODUCTION_GATE_BLOCKED_SCOPES
+            else 0,
+        }
+        for scope in SCOPE_ORDER
+    }
+    return {
+        "deterministic_success": False,
+        "deterministic_error_code": PRODUCTION_GATE_ERROR_CODE,
+        "required_counts_by_scope": required_counts,
+        "observed_eligibility_counts_by_scope": {
+            scope: {
+                "eligible": eligibility_counts[scope].get("eligible", 0),
+                "blocked": eligibility_counts[scope].get("blocked", 0),
+            }
+            for scope in SCOPE_ORDER
+        },
+        "eligibility_reason_counts_by_scope": {
+            scope: dict(sorted(reason_counts[scope].items()))
+            for scope in SCOPE_ORDER
+        },
+        "scope_contract_mismatch_count": 0,
+    }
+
+
 def _metric_counts(
     rows: Sequence[StageBCandidateRecord],
     *,
     stage_a_path: str | Path,
 ) -> tuple[dict[str, Any], tuple[protocol.StageBRecord, ...]]:
+    frozen_near_duplicate_config = _frozen_near_duplicate_config()
     if not rows:
         raise CandidateCorpusError("candidate pool must not be empty")
     if any(row.review_status != REVIEW_STATUS for row in rows):
@@ -1318,7 +1518,11 @@ def _metric_counts(
     # The reviewed validator accepts only its frozen split names.  Using the
     # compact ``train`` key here is an in-memory schema check only; no split
     # field is written to the candidate artifacts or assigned to any row.
-    protocol.validate_corpus({"train": records}, stage_a_path=None)
+    protocol.validate_corpus(
+        {"train": records},
+        stage_a_path=None,
+        near_duplicate_config=frozen_near_duplicate_config,
+    )
 
     stage_a_utterances = protocol.load_stage_a_utterances(stage_a_path)
     leakage_ids = [
@@ -1330,9 +1534,16 @@ def _metric_counts(
         raise CandidateCorpusError("Stage A leakage detected in generated candidates")
     # Run the approved validator's frozen-identity path after generation as a
     # second fail-closed check.  It does not participate in generation.
-    protocol.validate_corpus({"train": records}, stage_a_path=stage_a_path)
+    protocol.validate_corpus(
+        {"train": records},
+        stage_a_path=stage_a_path,
+        near_duplicate_config=frozen_near_duplicate_config,
+    )
 
-    near = protocol.inspect_near_duplicates(records)
+    near = protocol.inspect_near_duplicates(
+        records,
+        config=frozen_near_duplicate_config,
+    )
     exact_duplicate_count = sum(
         comparison.relation == "duplicate" for comparison in near.comparisons
     )
@@ -1359,17 +1570,11 @@ def _metric_counts(
             "candidate pool violates exact or cross-source-group near-duplicate policy"
         )
 
+    gate_audit = audit_production_gate(rows)
     ai_scope_counts = Counter(row.provisional_ai_scope for row in rows)
     scope_counts: Counter[str] = Counter()
     for row in rows:
-        if row.provisional_ai_scope == "supported":
-            scope_key = (
-                "supported_play"
-                if row.provisional_expected.intent == "spotify_play_track"
-                else "supported_unknown"
-            )
-        else:
-            scope_key = row.provisional_ai_scope
+        scope_key = _scope_for_row(row)
         scope_counts[scope_key] += 1
     intent_counts = Counter(row.provisional_expected.intent for row in rows)
     language_counts = Counter(row.language_tag for row in rows)
@@ -1433,6 +1638,36 @@ def _metric_counts(
             for row in supported_play
         ),
     }
+    play_group_modes: dict[tuple[str, str], str] = {}
+    for row in supported_play:
+        status = row.provisional_optional_slot_status
+        if status is None:
+            raise CandidateCorpusError("supported play row is missing slot status")
+        mode = (
+            "both"
+            if status["artist"] == "present" and status["album"] == "present"
+            else "artist_only"
+            if status["artist"] == "present"
+            else "album_only"
+            if status["album"] == "present"
+            else "neither"
+        )
+        group_key = (row.language_tag, row.source_group_id)
+        previous_mode = play_group_modes.setdefault(group_key, mode)
+        if previous_mode != mode:
+            raise CandidateCorpusError("source group changes its optional-slot mode")
+    play_slot_mode_matrix = {
+        language_tag: {
+            mode: sum(
+                group_language == language_tag and group_mode == mode
+                for (group_language, _group_id), group_mode in play_group_modes.items()
+            )
+            for mode, _count in PLAY_SLOT_MODES
+        }
+        for language_tag in LANGUAGE_ORDER
+    }
+    if play_slot_mode_matrix != PLAY_SLOT_MODE_MATRIX:
+        raise CandidateCorpusError("generated play slot matrix is not the frozen matrix")
     if slot_counts["artist_present"] + slot_counts["artist_absent"] != len(supported_play):
         raise CandidateCorpusError("artist slot partition is not exhaustive")
     if slot_counts["album_present"] + slot_counts["album_absent"] != len(supported_play):
@@ -1442,8 +1677,25 @@ def _metric_counts(
     ]
     safety_rows = [row for row in rows if row.provisional_ai_scope == "safety_only"]
     deterministic_negative_reason_mismatch_count = sum(
-        row.provisional_negative_reason
-        != DETERMINISTIC_REASON_BY_VARIANT[_variant_index(row)]
+        (
+            row.template_family == "deterministic_playback_control"
+            and row.provisional_negative_reason
+            != DETERMINISTIC_REASON_BY_VARIANT[_variant_index(row)]
+        )
+        or (
+            row.template_family == "deterministic_app_control"
+            and row.provisional_negative_reason != "unsupported_domain"
+        )
+        or (
+            row.template_family.startswith("unknown_")
+            and row.provisional_negative_reason
+            != row.template_family.removeprefix("unknown_")
+        )
+        or not (
+            row.template_family.startswith("unknown_")
+            or row.template_family
+            in {"deterministic_playback_control", "deterministic_app_control"}
+        )
         for row in deterministic_rows
     )
     safety_negative_reason_mismatch_count = sum(
@@ -1479,6 +1731,7 @@ def _metric_counts(
             },
             "supported_language_counts": supported_language_counts,
             "slot_presence_counts": slot_counts,
+            "play_slot_mode_matrix": play_slot_mode_matrix,
             "template_family_counts": dict(sorted(template_counts.items())),
             "generation_source_counts": dict(sorted(generation_source_counts.items())),
             "review_status_counts": dict(sorted(review_status_counts.items())),
@@ -1498,6 +1751,16 @@ def _metric_counts(
             "mixed_without_cjk_count": mixed_without_cjk_count,
             "mixed_without_ascii_letter_count": mixed_without_ascii_letter_count,
             "english_with_cjk_count": english_with_cjk_count,
+            "production_gate_required_counts": gate_audit["required_counts_by_scope"],
+            "production_gate_observed_eligibility_counts": gate_audit[
+                "observed_eligibility_counts_by_scope"
+            ],
+            "eligibility_reason_counts_by_scope": gate_audit[
+                "eligibility_reason_counts_by_scope"
+            ],
+            "production_gate_scope_contract_mismatch_count": gate_audit[
+                "scope_contract_mismatch_count"
+            ],
         },
         records,
     )
@@ -1530,6 +1793,7 @@ def _candidate_manifest(
     stage_a_identity: Mapping[str, Any],
     artifact_total_size_bytes: int,
 ) -> dict[str, Any]:
+    frozen_near_duplicate_config = _frozen_near_duplicate_config()
     base: dict[str, Any] = {
         "candidate_manifest_version": 1,
         "candidate_corpus_version": CANDIDATE_CORPUS_VERSION,
@@ -1546,6 +1810,7 @@ def _candidate_manifest(
         "language_slice_counts": metrics["language_slice_counts"],
         "supported_language_counts": metrics["supported_language_counts"],
         "slot_presence_counts": metrics["slot_presence_counts"],
+        "play_slot_mode_matrix": metrics["play_slot_mode_matrix"],
         "source_group_count": metrics["source_group_count"],
         "source_group_size_counts": metrics["source_group_size_counts"],
         "template_family_count": len(metrics["template_family_counts"]),
@@ -1565,6 +1830,16 @@ def _candidate_manifest(
         "mixed_without_cjk_count": metrics["mixed_without_cjk_count"],
         "mixed_without_ascii_letter_count": metrics["mixed_without_ascii_letter_count"],
         "english_with_cjk_count": metrics["english_with_cjk_count"],
+        "production_gate_required_counts": metrics["production_gate_required_counts"],
+        "production_gate_observed_eligibility_counts": metrics[
+            "production_gate_observed_eligibility_counts"
+        ],
+        "eligibility_reason_counts_by_scope": metrics[
+            "eligibility_reason_counts_by_scope"
+        ],
+        "production_gate_scope_contract_mismatch_count": metrics[
+            "production_gate_scope_contract_mismatch_count"
+        ],
         "stage_a_identity": dict(stage_a_identity),
         "review_status_counts": metrics["review_status_counts"],
         "candidate_pool_split_status": "unsplit",
@@ -1591,10 +1866,10 @@ def _candidate_manifest(
         "entity_catalog_sha256": catalog_payload["catalog_sha256"],
         "generator_config_sha256": generator_config["generator_config_sha256"],
         "review_queue_sha256": _sha256_json(list(review_queue)),
-        "frozen_near_duplicate_config_sha256": protocol.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256,
+        "frozen_near_duplicate_config_sha256": protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256,
         "near_duplicate_policy": {
-            **protocol.DEFAULT_NEAR_DUPLICATE_CONFIG.to_dict(),
-            "config_sha256": protocol.DEFAULT_NEAR_DUPLICATE_CONFIG.config_sha256,
+            **frozen_near_duplicate_config.to_dict(),
+            "config_sha256": protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256,
         },
         "artifact_total_size_bytes": artifact_total_size_bytes,
     }

@@ -8,6 +8,7 @@ import json
 import re
 import sys
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -70,10 +71,79 @@ def test_generation_is_deterministic_and_ids_are_unique() -> None:
     }
     assert len({row.candidate_id for row in first_rows}) == 3600
     assert len({row.source_group_id for row in first_rows}) == 600
-    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v2"}
+    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v3"}
     assert Counter(row.source_group_id for row in first_rows) == Counter(
         {f"source-group-{index:04d}": 6 for index in range(1, 601)}
     )
+
+
+def test_gate_aligned_scope_reasons_and_slot_matrix_are_frozen() -> None:
+    rows, _catalog = candidate.generate_candidate_records()
+
+    unknown_reasons = Counter(
+        row.provisional_negative_reason
+        for row in rows
+        if candidate._scope_for_row(row) == "supported_unknown"
+    )
+    assert unknown_reasons == {"artist_only": 630, "missing_track": 630}
+
+    deterministic_reasons = Counter(
+        row.provisional_negative_reason
+        for row in rows
+        if row.provisional_ai_scope == "deterministic_only"
+    )
+    assert deterministic_reasons == {
+        "playback_control": 150,
+        "unsupported_domain": 66,
+        "unresolved_reference": 42,
+        "ambiguous_version": 42,
+    }
+
+    metrics = candidate.audit_production_gate(rows)
+    assert metrics["required_counts_by_scope"] == {
+        "supported_play": {"rows": 1800, "eligible": 1800, "blocked": 0},
+        "supported_unknown": {"rows": 1260, "eligible": 1260, "blocked": 0},
+        "deterministic_only": {"rows": 300, "eligible": 0, "blocked": 300},
+        "safety_only": {"rows": 240, "eligible": 0, "blocked": 240},
+    }
+    assert metrics["observed_eligibility_counts_by_scope"] == {
+        scope: {"eligible": values["eligible"], "blocked": values["blocked"]}
+        for scope, values in metrics["required_counts_by_scope"].items()
+    }
+    assert metrics["scope_contract_mismatch_count"] == 0
+    assert metrics["eligibility_reason_counts_by_scope"] == {
+        "supported_play": {
+            "parser_miss": 1278,
+            "parser_success_resolver_failure": 522,
+        },
+        "supported_unknown": {
+            "parser_miss": 914,
+            "parser_success_resolver_failure": 346,
+        },
+        "deterministic_only": {
+            "unresolved_reference": 36,
+            "unsupported_domain": 221,
+            "version_marker_requires_deterministic_parser": 43,
+        },
+        "safety_only": {"hostile_input": 200, "unsupported_domain": 40},
+    }
+
+    assert candidate.PLAY_SLOT_MODE_MATRIX == {
+        "zh-Hant": {"both": 48, "artist_only": 24, "album_only": 24, "neither": 24},
+        "zh-Hans": {"both": 9, "artist_only": 5, "album_only": 5, "neither": 5},
+        "mixed": {"both": 36, "artist_only": 18, "album_only": 18, "neither": 18},
+        "en": {"both": 27, "artist_only": 13, "album_only": 13, "neither": 13},
+    }
+
+
+def test_frozen_near_duplicate_default_drift_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    drifted = replace(candidate.protocol.DEFAULT_NEAR_DUPLICATE_CONFIG, ngram_size=4)
+    monkeypatch.setattr(candidate.protocol, "DEFAULT_NEAR_DUPLICATE_CONFIG", drifted)
+
+    with pytest.raises(candidate.CandidateCorpusError):
+        candidate._generator_config_payload()
 
 
 def test_all_deterministic_rows_use_their_variant_negative_reason() -> None:
@@ -83,19 +153,36 @@ def test_all_deterministic_rows_use_their_variant_negative_reason() -> None:
     ]
 
     assert len(deterministic_rows) == 300
+    control_rows = [
+        row
+        for row in deterministic_rows
+        if row.template_family
+        in {"deterministic_playback_control", "deterministic_app_control"}
+    ]
+    blocked_rows = [
+        row
+        for row in deterministic_rows
+        if row.template_family.startswith("unknown_")
+    ]
+    assert len(control_rows) == 180
+    assert len(blocked_rows) == 120
     assert all(
         row.provisional_negative_reason
         == candidate.DETERMINISTIC_REASON_BY_VARIANT[_variant_index(row)]
-        for row in deterministic_rows
+        for row in control_rows
+    )
+    assert all(
+        row.provisional_negative_reason in candidate.GATE_BLOCKED_UNKNOWN_REASONS
+        for row in blocked_rows
     )
     assert sum(
         row.provisional_negative_reason != "playback_control"
-        for row in deterministic_rows
+        for row in control_rows
         if _variant_index(row) < 5
     ) == 0
     assert sum(
         row.provisional_negative_reason != "unsupported_domain"
-        for row in deterministic_rows
+        for row in control_rows
         if _variant_index(row) == 5
     ) == 0
 
@@ -320,7 +407,7 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     }
     assert first_manifest["source_group_count"] == 600
     assert first_manifest["template_family_count"] == 32
-    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v2"
+    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v3"
     assert first_manifest["exact_duplicate_count"] == 0
     assert first_manifest["same_group_near_duplicate_count"] == 0
     assert first_manifest["cross_group_near_duplicate_count"] == 0
@@ -331,6 +418,24 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     assert first_manifest["mixed_without_cjk_count"] == 0
     assert first_manifest["mixed_without_ascii_letter_count"] == 0
     assert first_manifest["english_with_cjk_count"] == 0
+    assert first_manifest["play_slot_mode_matrix"] == candidate.PLAY_SLOT_MODE_MATRIX
+    assert first_manifest["production_gate_required_counts"] == {
+        "supported_play": {"rows": 1800, "eligible": 1800, "blocked": 0},
+        "supported_unknown": {"rows": 1260, "eligible": 1260, "blocked": 0},
+        "deterministic_only": {"rows": 300, "eligible": 0, "blocked": 300},
+        "safety_only": {"rows": 240, "eligible": 0, "blocked": 240},
+    }
+    assert first_manifest["production_gate_observed_eligibility_counts"] == {
+        "supported_play": {"eligible": 1800, "blocked": 0},
+        "supported_unknown": {"eligible": 1260, "blocked": 0},
+        "deterministic_only": {"eligible": 0, "blocked": 300},
+        "safety_only": {"eligible": 0, "blocked": 240},
+    }
+    assert first_manifest["production_gate_scope_contract_mismatch_count"] == 0
+    assert (
+        first_manifest["frozen_near_duplicate_config_sha256"]
+        == candidate.protocol.FROZEN_STAGE_B_NEAR_DUPLICATE_CONFIG_SHA256
+    )
     assert first_manifest["review_status_counts"] == {candidate.REVIEW_STATUS: 3600}
     assert first_manifest["candidate_pool_split_status"] == "unsplit"
     assert first_manifest["final_split_assigned"] is False

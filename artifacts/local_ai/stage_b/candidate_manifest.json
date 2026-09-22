@@ -5,8 +5,8 @@
     "safety_only": 240,
     "supported": 3060
   },
-  "artifact_total_size_bytes": 3123940,
-  "candidate_corpus_sha256": "1867b3879056b6b353aa1be8a18746613c947201652e5260b5bad6282e776d06",
+  "artifact_total_size_bytes": 3122090,
+  "candidate_corpus_sha256": "271131ac4b8a07ce3bcd49b991ea241c06c74ffe501f503dbbe9aaf1d08ce93c",
   "candidate_corpus_version": "stage-b-candidate-corpus-v1",
   "candidate_manifest_version": 1,
   "candidate_pool_split_status": "unsplit",
@@ -15,6 +15,25 @@
   "cross_group_duplicate_count": 0,
   "cross_group_near_duplicate_count": 0,
   "deterministic_negative_reason_mismatch_count": 0,
+  "eligibility_reason_counts_by_scope": {
+    "deterministic_only": {
+      "unresolved_reference": 36,
+      "unsupported_domain": 221,
+      "version_marker_requires_deterministic_parser": 43
+    },
+    "safety_only": {
+      "hostile_input": 200,
+      "unsupported_domain": 40
+    },
+    "supported_play": {
+      "parser_miss": 1278,
+      "parser_success_resolver_failure": 522
+    },
+    "supported_unknown": {
+      "parser_miss": 914,
+      "parser_success_resolver_failure": 346
+    }
+  },
   "english_with_cjk_count": 0,
   "entity_catalog_sha256": "3089c6b4072e87557821f44aeb02b6f3a97ca576490a7d812197649e06b14723",
   "exact_duplicate_count": 0,
@@ -54,8 +73,8 @@
   "generation_source_counts": {
     "synthetic_local_entity_catalog_v1": 3600
   },
-  "generator_config_sha256": "1e6892a2c8aa4a05dd07ec8606a48eb6dbe47124b6f7c66881bd9458a54a157f",
-  "generator_version": "stage-b-candidate-generator-v2",
+  "generator_config_sha256": "a142f8adfe851e65795a61965ae5e896602e1803961f695a953bd5d075413c1c",
+  "generator_version": "stage-b-candidate-generator-v3",
   "held_out_sealed": false,
   "intent_counts": {
     "spotify_play_track": 1800,
@@ -73,7 +92,7 @@
     "mixed": 1140
   },
   "local_ai_fallback_approved": false,
-  "manifest_sha256": "cc675dc54219a148311863b49ffe3578a57fa31104643b7501aff33d8e6e1a9a",
+  "manifest_sha256": "eb29f80accf671fdea4647ff68f393457d7e6f02a0e7e2eff5f0b9a0d9bbbfd7",
   "mixed_without_ascii_letter_count": 0,
   "mixed_without_cjk_count": 0,
   "model_compute_authorized": false,
@@ -90,7 +109,74 @@
     "policy_version": "stage-b-near-duplicate-v1",
     "similarity_threshold": 0.85
   },
-  "review_queue_sha256": "6a9bba469b83c6bd2eaa6835a646368acac1c3bc54dccef33291d134e8be7ecd",
+  "play_slot_mode_matrix": {
+    "en": {
+      "album_only": 13,
+      "artist_only": 13,
+      "both": 27,
+      "neither": 13
+    },
+    "mixed": {
+      "album_only": 18,
+      "artist_only": 18,
+      "both": 36,
+      "neither": 18
+    },
+    "zh-Hans": {
+      "album_only": 5,
+      "artist_only": 5,
+      "both": 9,
+      "neither": 5
+    },
+    "zh-Hant": {
+      "album_only": 24,
+      "artist_only": 24,
+      "both": 48,
+      "neither": 24
+    }
+  },
+  "production_gate_observed_eligibility_counts": {
+    "deterministic_only": {
+      "blocked": 300,
+      "eligible": 0
+    },
+    "safety_only": {
+      "blocked": 240,
+      "eligible": 0
+    },
+    "supported_play": {
+      "blocked": 0,
+      "eligible": 1800
+    },
+    "supported_unknown": {
+      "blocked": 0,
+      "eligible": 1260
+    }
+  },
+  "production_gate_required_counts": {
+    "deterministic_only": {
+      "blocked": 300,
+      "eligible": 0,
+      "rows": 300
+    },
+    "safety_only": {
+      "blocked": 240,
+      "eligible": 0,
+      "rows": 240
+    },
+    "supported_play": {
+      "blocked": 0,
+      "eligible": 1800,
+      "rows": 1800
+    },
+    "supported_unknown": {
+      "blocked": 0,
+      "eligible": 1260,
+      "rows": 1260
+    }
+  },
+  "production_gate_scope_contract_mismatch_count": 0,
+  "review_queue_sha256": "7a9f54e0e76c975eab93c33e42e20e977517403530a2c022be7a42e3a32d4b3d",
   "review_status_counts": {
     "pending_independent_review": 3600
   },
@@ -136,8 +222,8 @@
   },
   "template_family_count": 32,
   "template_family_counts": {
-    "deterministic_app_control": 50,
-    "deterministic_playback_control": 250,
+    "deterministic_app_control": 30,
+    "deterministic_playback_control": 150,
     "play_en_asr_spacing": 66,
     "play_en_conversational": 66,
     "play_en_direct": 66,
@@ -163,11 +249,11 @@
     "play_mixed_particle": 90,
     "play_mixed_word_order": 90,
     "safety_hostile_text": 240,
-    "unknown_ambiguous_version": 252,
-    "unknown_artist_only": 252,
-    "unknown_missing_track": 252,
-    "unknown_unresolved_reference": 252,
-    "unknown_unsupported_domain": 252
+    "unknown_ambiguous_version": 42,
+    "unknown_artist_only": 630,
+    "unknown_missing_track": 630,
+    "unknown_unresolved_reference": 42,
+    "unknown_unsupported_domain": 36
   },
   "total_row_count": 3600,
   "training_authorized": false

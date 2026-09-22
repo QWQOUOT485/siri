@@ -3,6 +3,66 @@
   "candidate_pool_split_status": "unsplit",
   "candidate_schema_version": 1,
   "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "deterministic_profile_sequence_by_language": {
+    "en": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ],
+    "mixed": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ],
+    "zh-Hans": [
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference"
+    ],
+    "zh-Hant": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "unresolved_reference",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ]
+  },
   "deterministic_reason_by_variant": {
     "0": "playback_control",
     "1": "playback_control",
@@ -19,11 +79,20 @@
     "playback_control",
     "unsupported_domain"
   ],
+  "eligible_unknown_reasons": [
+    "artist_only",
+    "missing_track"
+  ],
   "final_stage_b_corpus": false,
   "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "gate_blocked_unknown_reasons": [
+    "unresolved_reference",
+    "ambiguous_version",
+    "unsupported_domain"
+  ],
   "generation_source": "synthetic_local_entity_catalog_v1",
-  "generator_config_sha256": "1e6892a2c8aa4a05dd07ec8606a48eb6dbe47124b6f7c66881bd9458a54a157f",
-  "generator_version": "stage-b-candidate-generator-v2",
+  "generator_config_sha256": "a142f8adfe851e65795a61965ae5e896602e1803961f695a953bd5d075413c1c",
+  "generator_version": "stage-b-candidate-generator-v3",
   "group_counts": {
     "deterministic_only": 50,
     "safety_only": 40,
@@ -57,13 +126,61 @@
       "zh-Hant": 80
     }
   },
+  "near_duplicate_policy": {
+    "algorithm": "char_ngram_jaccard_exact_v1",
+    "candidate_filter": "simhash64_hamming_v1",
+    "candidate_hamming_threshold": 12,
+    "config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+    "cross_split_only": true,
+    "hash_bits": 64,
+    "hash_seed": 1398030897,
+    "ngram_size": 3,
+    "normalization": "NFKC+casefold+remove-punctuation-and-whitespace",
+    "policy_version": "stage-b-near-duplicate-v1",
+    "similarity_threshold": 0.85
+  },
   "near_duplicate_policy_version": "stage-b-near-duplicate-v1",
+  "play_slot_mode_matrix": {
+    "en": {
+      "album_only": 13,
+      "artist_only": 13,
+      "both": 27,
+      "neither": 13
+    },
+    "mixed": {
+      "album_only": 18,
+      "artist_only": 18,
+      "both": 36,
+      "neither": 18
+    },
+    "zh-Hans": {
+      "album_only": 5,
+      "artist_only": 5,
+      "both": 9,
+      "neither": 5
+    },
+    "zh-Hant": {
+      "album_only": 24,
+      "artist_only": 24,
+      "both": 48,
+      "neither": 24
+    }
+  },
   "play_slot_modes": {
     "album_only": 60,
     "artist_only": 60,
     "both": 120,
     "neither": 60
   },
+  "production_gate_blocked_scopes": [
+    "deterministic_only",
+    "safety_only"
+  ],
+  "production_gate_eligible_scopes": [
+    "supported_play",
+    "supported_unknown"
+  ],
+  "production_gate_error_code": "SPOTIFY_TRACK_NOT_FOUND",
   "review_status": "pending_independent_review",
   "reviewed_stage_b_record_schema_version": 1,
   "safety_reason_by_variant": {
