@@ -5,8 +5,8 @@
     "safety_only": 240,
     "supported": 3060
   },
-  "artifact_total_size_bytes": 3121471,
-  "candidate_corpus_sha256": "28c4701fe92a3d34faaa521f0809f1d81d4d0243638309158a569ad20a4f9683",
+  "artifact_total_size_bytes": 3123940,
+  "candidate_corpus_sha256": "1867b3879056b6b353aa1be8a18746613c947201652e5260b5bad6282e776d06",
   "candidate_corpus_version": "stage-b-candidate-corpus-v1",
   "candidate_manifest_version": 1,
   "candidate_pool_split_status": "unsplit",
@@ -14,6 +14,8 @@
   "corpus_protocol_version": "stage-b-corpus-build-v1",
   "cross_group_duplicate_count": 0,
   "cross_group_near_duplicate_count": 0,
+  "deterministic_negative_reason_mismatch_count": 0,
+  "english_with_cjk_count": 0,
   "entity_catalog_sha256": "3089c6b4072e87557821f44aeb02b6f3a97ca576490a7d812197649e06b14723",
   "exact_duplicate_count": 0,
   "final_split_assigned": false,
@@ -52,8 +54,8 @@
   "generation_source_counts": {
     "synthetic_local_entity_catalog_v1": 3600
   },
-  "generator_config_sha256": "b6b7db70a8294edc8a80e42b9dc2ff8cff922fcb224dbe3459d70731a61038ed",
-  "generator_version": "stage-b-candidate-generator-v1",
+  "generator_config_sha256": "1e6892a2c8aa4a05dd07ec8606a48eb6dbe47124b6f7c66881bd9458a54a157f",
+  "generator_version": "stage-b-candidate-generator-v2",
   "held_out_sealed": false,
   "intent_counts": {
     "spotify_play_track": 1800,
@@ -71,7 +73,9 @@
     "mixed": 1140
   },
   "local_ai_fallback_approved": false,
-  "manifest_sha256": "59a9122c900bcff3668ee577f3288de89fb6af2a6a5e9e083879ef4b9aa67eb9",
+  "manifest_sha256": "cc675dc54219a148311863b49ffe3578a57fa31104643b7501aff33d8e6e1a9a",
+  "mixed_without_ascii_letter_count": 0,
+  "mixed_without_cjk_count": 0,
   "model_compute_authorized": false,
   "near_duplicate_policy": {
     "algorithm": "char_ngram_jaccard_exact_v1",
@@ -86,11 +90,12 @@
     "policy_version": "stage-b-near-duplicate-v1",
     "similarity_threshold": 0.85
   },
-  "review_queue_sha256": "0e1985505f5b3d8ba097d2efe34c8b1e3597437a5bd245bb762fcecf259effc3",
+  "review_queue_sha256": "6a9bba469b83c6bd2eaa6835a646368acac1c3bc54dccef33291d134e8be7ecd",
   "review_status_counts": {
     "pending_independent_review": 3600
   },
   "reviewed_stage_b_record_schema_version": 1,
+  "safety_negative_reason_mismatch_count": 0,
   "same_group_near_duplicate_count": 0,
   "scope_counts": {
     "deterministic_only": 300,
@@ -143,13 +148,13 @@
     "play_hans_direct": 24,
     "play_hans_homophone": 24,
     "play_hans_particle": 24,
-    "play_hans_transliteration": 24,
+    "play_hans_spacing": 24,
     "play_hans_word_order": 24,
     "play_hant_conversational": 120,
     "play_hant_direct": 120,
     "play_hant_homophone": 120,
     "play_hant_particle": 120,
-    "play_hant_transliteration": 120,
+    "play_hant_spacing": 120,
     "play_hant_word_order": 120,
     "play_mixed_asr_case": 90,
     "play_mixed_asr_spacing": 90,

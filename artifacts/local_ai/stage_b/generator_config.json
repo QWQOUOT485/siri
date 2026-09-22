@@ -3,6 +3,14 @@
   "candidate_pool_split_status": "unsplit",
   "candidate_schema_version": 1,
   "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "deterministic_reason_by_variant": {
+    "0": "playback_control",
+    "1": "playback_control",
+    "2": "playback_control",
+    "3": "playback_control",
+    "4": "playback_control",
+    "5": "unsupported_domain"
+  },
   "deterministic_reasons": [
     "playback_control",
     "playback_control",
@@ -14,8 +22,8 @@
   "final_stage_b_corpus": false,
   "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
   "generation_source": "synthetic_local_entity_catalog_v1",
-  "generator_config_sha256": "b6b7db70a8294edc8a80e42b9dc2ff8cff922fcb224dbe3459d70731a61038ed",
-  "generator_version": "stage-b-candidate-generator-v1",
+  "generator_config_sha256": "1e6892a2c8aa4a05dd07ec8606a48eb6dbe47124b6f7c66881bd9458a54a157f",
+  "generator_version": "stage-b-candidate-generator-v2",
   "group_counts": {
     "deterministic_only": 50,
     "safety_only": 40,
@@ -58,6 +66,14 @@
   },
   "review_status": "pending_independent_review",
   "reviewed_stage_b_record_schema_version": 1,
+  "safety_reason_by_variant": {
+    "0": "hostile_system",
+    "1": "path_or_url",
+    "2": "path_or_url",
+    "3": "hostile_system",
+    "4": "hostile_system",
+    "5": "hostile_system"
+  },
   "safety_reasons": [
     "hostile_system",
     "path_or_url",
