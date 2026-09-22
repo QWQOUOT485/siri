@@ -11,8 +11,8 @@ PR #48's reviewed candidate-corpus head was exactly
 merge commit `04dadb6ef086534ab42f84b43fc40296e2cd7df4`. The active branch
 `codex/stage-b-independent-review-workflow-20260922` starts from that merge
 commit and adds only the offline independent-review workflow and its empty
-review allocation. A follow-up PR is pending creation after this local
-verification; it must remain unmerged until independent review is complete.
+review allocation. PR #50 is OPEN, MERGEABLE, and CLEAN for independent review;
+it must remain unmerged until independent review is complete.
 
 The frozen Stage B source remains an offline, deterministic, **unsplit** pool
 of 3,600 provisional rows across 600 source groups and 32 template families.
