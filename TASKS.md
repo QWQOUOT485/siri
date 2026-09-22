@@ -149,6 +149,24 @@ control. Production Local AI authority remains unchanged, and
   clarification.
 - Roadmap only; do not implement vector storage/embeddings/RAG runtime or
   enable `LOCAL_SEMANTIC_MEMORY_ENABLED` / `LOCAL_AI_FALLBACK_APPROVED`.
+- Evaluate TencentCloud/TencentDB-Agent-Memory MemoryCore as a candidate
+  implementation for the low-trust long-term-memory layer. It must not replace
+  the current high-trust Semantic Memory or become execution authority.
+- First deliverable is a docs/PoC feasibility gate, not production integration:
+  define a project-owned `MemoryProvider` interface, a
+  `TencentMemoryProvider` adapter, local/standalone deployment assumptions,
+  version pinning, failure isolation, privacy/deletion controls, provenance and
+  stale-memory handling, backup/restore expectations, and bounded recall
+  contracts.
+- Prefer direct MemoryCore SDK/HTTP integration for the Python Agent during the
+  feasibility phase. MemoryProxy is not required for the first Siri-Agent PoC.
+- Retrieved Tencent memory remains untrusted evidence only. It cannot provide
+  trusted provider IDs, confirm aliases, bypass grounding/policy, create a
+  `ValidatedAction`, or authorize Local AI fallback. Memory unavailability
+  must degrade to the existing deterministic/high-trust path.
+- No production dependency, daemon, embedding model, migration, or runtime
+  enablement is authorized until the separate feasibility/security/acceptance
+  gate passes.
 - Design notes: [Memory RAG / Personal RAG](docs/FUTURE_ROADMAP.md#memory-rag--personal-rag--future-research).
 
 ### P3 — Project infrastructure
