@@ -9,6 +9,7 @@
 Issue #53's five confirmed v4 generator defects are addressed by
 `stage-b-candidate-generator-v5` on branch `codex/stage-b-v5-issue-53` from
 exact main `68a71ed420467f1eebdf686f9268905af37e8146`. The new candidate
+pool is proposed in PR #55, which remains open and unmerged. The new candidate
 and review artifacts live under `artifacts/local_ai/stage_b/v5/`; the v4
 artifacts remain at `artifacts/local_ai/stage_b/` as historical audit evidence.
 No v4 review decision was imported. The review workflow is bound to the v5
