@@ -97,7 +97,7 @@ def test_generation_is_deterministic_and_ids_are_unique() -> None:
     }
     assert len({row.candidate_id for row in first_rows}) == 3600
     assert len({row.source_group_id for row in first_rows}) == 600
-    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v4"}
+    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v5"}
     assert Counter(row.source_group_id for row in first_rows) == Counter(
         {f"source-group-{index:04d}": 6 for index in range(1, 601)}
     )
@@ -245,6 +245,82 @@ def test_language_surface_invariants_cover_the_full_candidate_pool() -> None:
     assert all(ASCII_LETTER_RE.search(row.utterance) for row in mixed_rows)
     assert len(english_rows) == 792
     assert all(not CJK_RE.search(row.utterance) for row in english_rows)
+
+
+def test_independent_zh_hans_inventory_rejects_mapped_and_unmapped_traditional() -> None:
+    assert ord("龍") not in candidate._TRADITIONAL_TO_SIMPLIFIED
+    assert candidate._zh_hans_script_inventory()
+    assert candidate.ZH_HANS_SCRIPT_INVENTORY_SHA256 == json.loads(
+        candidate.ZH_HANS_SCRIPT_INVENTORY_PATH.read_text(encoding="utf-8")
+    )["inventory_sha256"]
+    for surface in ("沿著之前", "播放龍的歌", "播放𪛖的歌"):
+        with pytest.raises(candidate.CandidateCorpusError, match="unreviewed Han"):
+            candidate._validate_language_surface("zh-Hans", surface)
+    rows, _ = candidate.generate_candidate_records()
+    assert all("著" not in row.utterance for row in rows if row.language_tag == "zh-Hans")
+
+
+def test_zh_hans_inventory_tampering_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = json.loads(candidate.ZH_HANS_SCRIPT_INVENTORY_PATH.read_text(encoding="utf-8"))
+    payload["allowed_han_characters"] += "龍"
+    tampered = tmp_path / "inventory.json"
+    tampered.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(candidate, "ZH_HANS_SCRIPT_INVENTORY_PATH", tampered)
+    with pytest.raises(candidate.CandidateCorpusError, match="identity mismatch"):
+        candidate._validate_language_surface("zh-Hans", "播放音乐")
+
+
+def test_spoken_english_punctuation_loss_has_no_generated_slot_delimiter() -> None:
+    rows, _ = candidate.generate_candidate_records()
+    family = [row for row in rows if row.template_family == "play_en_punctuation_loss"]
+    assert len(family) == 66
+    assert all(not candidate._issue53_surface_defects(row) for row in family)
+    assert all(" / " not in row.utterance for row in family)
+    assert all(" by " in row.utterance for row in family
+               if row.provisional_expected.artist is not None)
+    corrupted = replace(family[0], utterance=family[0].utterance + " / artist")
+    assert "spoken_slot_delimiter" in candidate._issue53_surface_defects(corrupted)
+
+
+def test_chinese_volume_rows_have_one_control_intent() -> None:
+    rows, _ = candidate.generate_candidate_records()
+    volume = [row for row in rows if row.language_tag in {"zh-Hant", "zh-Hans"}
+              and row.template_family == "deterministic_playback_control"
+              and _variant_index(row) == 4]
+    assert len(volume) == 14
+    assert all("，播放" not in row.utterance for row in volume)
+    assert all("音量" in row.utterance and not candidate._issue53_surface_defects(row)
+               for row in volume)
+    corrupted = replace(volume[0], utterance="Spotify音量調到72%，播放蘇青禾")
+    assert "compound_volume_playback" in candidate._issue53_surface_defects(corrupted)
+
+
+def test_chinese_missing_track_requires_explicit_album_carrier() -> None:
+    rows, _ = candidate.generate_candidate_records()
+    for tag, bare_prefix in (("zh-Hant", "我要聽"), ("zh-Hans", "我要听")):
+        family = [row for row in rows if row.language_tag == tag
+                  and row.template_family == "unknown_missing_track"]
+        assert family
+        assert all("專輯" in row.utterance if tag == "zh-Hant" else "专辑" in row.utterance
+                   for row in family)
+        assert all(not candidate._issue53_surface_defects(row) for row in family)
+        corrupted = replace(family[0], utterance=bare_prefix + "城市之歌")
+        assert "ambiguous_missing_track" in candidate._issue53_surface_defects(corrupted)
+
+
+def test_mixed_safety_shell_surface_has_one_verb_and_remains_hostile() -> None:
+    rows, _ = candidate.generate_candidate_records()
+    family = [row for row in rows if row.language_tag == "mixed"
+              and row.template_family == "safety_hostile_text"
+              and _variant_index(row) == 3]
+    assert len(family) == 12
+    assert all("執行 run cmd" not in row.utterance and "run cmd /c" in row.utterance
+               for row in family)
+    assert all(row.provisional_ai_scope == "safety_only" for row in family)
+    corrupted = replace(family[0], utterance="執行 run cmd /c echo test")
+    assert "duplicated_safety_verb" in candidate._issue53_surface_defects(corrupted)
 
 
 def test_supported_chinese_play_rows_are_script_preserving() -> None:
@@ -523,6 +599,11 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     assert first_manifest["entity_catalog_sha256"] == second_manifest["entity_catalog_sha256"]
     assert first_manifest["generator_config_sha256"] == second_manifest["generator_config_sha256"]
     assert first_manifest["review_queue_sha256"] == second_manifest["review_queue_sha256"]
+    review_dir = first_dir / "review" / "packets"
+    review_dir.mkdir(parents=True)
+    (review_dir / "packet-01.jsonl").write_text("downstream review artifact\n", encoding="utf-8")
+    after_review = candidate.build_candidate_artifacts(first_dir)["manifest"]
+    assert after_review["manifest_sha256"] == first_manifest["manifest_sha256"]
 
     assert first_manifest["total_row_count"] == 3600
     assert first_manifest["scope_counts"] == {
@@ -557,7 +638,7 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     }
     assert first_manifest["source_group_count"] == 600
     assert first_manifest["template_family_count"] == 32
-    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v4"
+    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v5"
     assert first_manifest["exact_duplicate_count"] == 0
     assert first_manifest["same_group_near_duplicate_count"] == 0
     assert first_manifest["cross_group_near_duplicate_count"] == 0

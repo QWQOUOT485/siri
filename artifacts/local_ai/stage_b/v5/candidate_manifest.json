@@ -1,0 +1,877 @@
+{
+  "FINAL_STAGE_B_CORPUS": false,
+  "ai_scope_counts": {
+    "deterministic_only": 300,
+    "safety_only": 240,
+    "supported": 3060
+  },
+  "artifact_total_size_bytes": 3157691,
+  "candidate_corpus_sha256": "658628de9659c91688415f9aa3c29292d89037954a213f6f5a49e6e6fa1258bd",
+  "candidate_corpus_version": "stage-b-candidate-corpus-v5",
+  "candidate_manifest_version": 1,
+  "candidate_pool_split_status": "unsplit",
+  "candidate_schema_version": 1,
+  "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "cross_group_duplicate_count": 0,
+  "cross_group_near_duplicate_count": 0,
+  "deterministic_negative_reason_mismatch_count": 0,
+  "eligibility_reason_counts_by_scope": {
+    "deterministic_only": {
+      "unresolved_reference": 36,
+      "unsupported_domain": 221,
+      "version_marker_requires_deterministic_parser": 43
+    },
+    "safety_only": {
+      "hostile_input": 200,
+      "unsupported_domain": 40
+    },
+    "supported_play": {
+      "parser_miss": 1278,
+      "parser_success_resolver_failure": 522
+    },
+    "supported_unknown": {
+      "parser_miss": 914,
+      "parser_success_resolver_failure": 346
+    }
+  },
+  "english_with_cjk_count": 0,
+  "entity_catalog_sha256": "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb",
+  "entity_morphology": {
+    "en": {
+      "album_word_count_buckets": {
+        "1": 34,
+        "2": 32,
+        "3": 43,
+        "4+": 23
+      },
+      "apostrophe_bearing_count": {
+        "album": 6,
+        "any_entity": 18,
+        "artist": 6,
+        "track": 6
+      },
+      "artist_starts_the_count": 13,
+      "artist_word_count_buckets": {
+        "1": 27,
+        "2": 40,
+        "3": 39,
+        "4+": 26
+      },
+      "digit_bearing_entity_counts": {
+        "album": 23,
+        "any_entity": 49,
+        "artist": 13,
+        "track": 16
+      },
+      "entity_count": 132,
+      "hyphen_bearing_count": {
+        "album": 17,
+        "any_entity": 43,
+        "artist": 13,
+        "track": 16
+      },
+      "parenthesis_bearing_count": {
+        "album": 5,
+        "any_entity": 10,
+        "artist": 0,
+        "track": 5
+      },
+      "period_bearing_count": {
+        "album": 6,
+        "any_entity": 17,
+        "artist": 7,
+        "track": 5
+      },
+      "punctuation_bearing_entity_counts": {
+        "album": 34,
+        "any_entity": 80,
+        "artist": 26,
+        "track": 32
+      },
+      "safe_punctuation_bearing_entity_counts": {
+        "album": 34,
+        "any_entity": 80,
+        "artist": 26,
+        "track": 32
+      },
+      "track_word_count_buckets": {
+        "1": 32,
+        "2": 38,
+        "3": 45,
+        "4+": 17
+      }
+    },
+    "mixed": {
+      "album_word_count_buckets": {
+        "1": 48,
+        "2": 48,
+        "3": 60,
+        "4+": 34
+      },
+      "apostrophe_bearing_count": {
+        "album": 8,
+        "any_entity": 25,
+        "artist": 9,
+        "track": 8
+      },
+      "artist_starts_the_count": 19,
+      "artist_word_count_buckets": {
+        "1": 38,
+        "2": 57,
+        "3": 57,
+        "4+": 38
+      },
+      "digit_bearing_entity_counts": {
+        "album": 32,
+        "any_entity": 70,
+        "artist": 19,
+        "track": 24
+      },
+      "entity_count": 190,
+      "hyphen_bearing_count": {
+        "album": 24,
+        "any_entity": 62,
+        "artist": 19,
+        "track": 24
+      },
+      "parenthesis_bearing_count": {
+        "album": 8,
+        "any_entity": 16,
+        "artist": 0,
+        "track": 8
+      },
+      "period_bearing_count": {
+        "album": 8,
+        "any_entity": 25,
+        "artist": 10,
+        "track": 8
+      },
+      "punctuation_bearing_entity_counts": {
+        "album": 48,
+        "any_entity": 116,
+        "artist": 38,
+        "track": 48
+      },
+      "safe_punctuation_bearing_entity_counts": {
+        "album": 48,
+        "any_entity": 116,
+        "artist": 38,
+        "track": 48
+      },
+      "track_word_count_buckets": {
+        "1": 47,
+        "2": 55,
+        "3": 64,
+        "4+": 24
+      }
+    },
+    "profile_slot_mode_coverage": {
+      "en": {
+        "album": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "mixed": {
+        "album": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "2": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "zh-Hans": {
+        "album": {
+          "1-3": {
+            "slot_mode_count": 3,
+            "slot_modes": [
+              "album_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "band_suffix": {
+            "slot_mode_count": 3,
+            "slot_modes": [
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "group_no_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "solo_style": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      },
+      "zh-Hant": {
+        "album": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "artist": {
+          "band_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "group_no_suffix": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "solo_style": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        },
+        "track": {
+          "1-3": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "4-6": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          },
+          "7+": {
+            "slot_mode_count": 4,
+            "slot_modes": [
+              "album_only",
+              "artist_only",
+              "both",
+              "neither"
+            ]
+          }
+        }
+      }
+    },
+    "zh-Hans": {
+      "album_length_bucket_counts": {
+        "1-3": 14,
+        "4-6": 24,
+        "7+": 10
+      },
+      "artist_band_suffix_count": 15,
+      "artist_band_suffix_rate": 0.3125,
+      "artist_group_no_suffix_count": 13,
+      "artist_profile_counts": {
+        "band_suffix": 15,
+        "group_no_suffix": 13,
+        "solo_style": 20
+      },
+      "artist_solo_style_count": 20,
+      "digit_bearing_entity_counts": {
+        "album": 6,
+        "any_entity": 12,
+        "artist": 0,
+        "track": 6
+      },
+      "entity_count": 48,
+      "punctuation_bearing_entity_counts": {
+        "album": 6,
+        "any_entity": 12,
+        "artist": 0,
+        "track": 6
+      },
+      "track_length_bucket_counts": {
+        "1-3": 15,
+        "4-6": 23,
+        "7+": 10
+      }
+    },
+    "zh-Hant": {
+      "album_length_bucket_counts": {
+        "1-3": 35,
+        "4-6": 141,
+        "7+": 54
+      },
+      "artist_band_suffix_count": 69,
+      "artist_band_suffix_rate": 0.3,
+      "artist_group_no_suffix_count": 69,
+      "artist_profile_counts": {
+        "band_suffix": 69,
+        "group_no_suffix": 69,
+        "solo_style": 92
+      },
+      "artist_solo_style_count": 92,
+      "digit_bearing_entity_counts": {
+        "album": 29,
+        "any_entity": 58,
+        "artist": 0,
+        "track": 29
+      },
+      "entity_count": 230,
+      "punctuation_bearing_entity_counts": {
+        "album": 29,
+        "any_entity": 58,
+        "artist": 0,
+        "track": 29
+      },
+      "track_length_bucket_counts": {
+        "1-3": 35,
+        "4-6": 140,
+        "7+": 55
+      }
+    }
+  },
+  "exact_duplicate_count": 0,
+  "final_split_assigned": false,
+  "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "future_final_split_matrix": {
+    "held_out": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_semantic_unknown": 240,
+      "total": 600
+    },
+    "train": {
+      "deterministic_only": 180,
+      "safety_only": 120,
+      "supported_play": 900,
+      "supported_semantic_unknown": 600,
+      "total": 1800
+    },
+    "validation": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_semantic_unknown": 240,
+      "total": 600
+    }
+  },
+  "future_final_stage_b_target": {
+    "deterministic_only": 240,
+    "safety_only": 180,
+    "supported_play": 1500,
+    "supported_semantic_unknown": 1080,
+    "total": 3000
+  },
+  "generation_source": "synthetic_local_entity_catalog_v2",
+  "generation_source_counts": {
+    "synthetic_local_entity_catalog_v2": 3600
+  },
+  "generator_config_sha256": "ddb44af17a7f2ce81ef413ce122f8d2d5664755f0be8495b5c319e850215412e",
+  "generator_version": "stage-b-candidate-generator-v5",
+  "held_out_sealed": false,
+  "intent_counts": {
+    "spotify_play_track": 1800,
+    "unknown": 1800
+  },
+  "issue53_residual_counts": {
+    "chinese_unknown_bare_missing_track": 0,
+    "deterministic_volume_compound_playback": 0,
+    "mixed_safety_duplicated_verb": 0,
+    "spoken_en_added_slot_delimiter": 0,
+    "zh_hans_traditional_zhe": 0
+  },
+  "language_counts": {
+    "en": 792,
+    "mixed": 1140,
+    "zh-Hans": 288,
+    "zh-Hant": 1380
+  },
+  "language_slice_counts": {
+    "chinese": 1668,
+    "english": 792,
+    "mixed": 1140
+  },
+  "local_ai_fallback_approved": false,
+  "manifest_sha256": "ff1e4a89524be878c9aaa491cb978c753728ef45baed1051512ec0954e838950",
+  "mixed_without_ascii_letter_count": 0,
+  "mixed_without_cjk_count": 0,
+  "model_compute_authorized": false,
+  "near_duplicate_policy": {
+    "algorithm": "char_ngram_jaccard_exact_v1",
+    "candidate_filter": "simhash64_hamming_v1",
+    "candidate_hamming_threshold": 12,
+    "config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+    "cross_split_only": true,
+    "hash_bits": 64,
+    "hash_seed": 1398030897,
+    "ngram_size": 3,
+    "normalization": "NFKC+casefold+remove-punctuation-and-whitespace",
+    "policy_version": "stage-b-near-duplicate-v1",
+    "similarity_threshold": 0.85
+  },
+  "play_slot_mode_matrix": {
+    "en": {
+      "album_only": 13,
+      "artist_only": 13,
+      "both": 27,
+      "neither": 13
+    },
+    "mixed": {
+      "album_only": 18,
+      "artist_only": 18,
+      "both": 36,
+      "neither": 18
+    },
+    "zh-Hans": {
+      "album_only": 5,
+      "artist_only": 5,
+      "both": 9,
+      "neither": 5
+    },
+    "zh-Hant": {
+      "album_only": 24,
+      "artist_only": 24,
+      "both": 48,
+      "neither": 24
+    }
+  },
+  "production_gate_observed_eligibility_counts": {
+    "deterministic_only": {
+      "blocked": 300,
+      "eligible": 0
+    },
+    "safety_only": {
+      "blocked": 240,
+      "eligible": 0
+    },
+    "supported_play": {
+      "blocked": 0,
+      "eligible": 1800
+    },
+    "supported_unknown": {
+      "blocked": 0,
+      "eligible": 1260
+    }
+  },
+  "production_gate_required_counts": {
+    "deterministic_only": {
+      "blocked": 300,
+      "eligible": 0,
+      "rows": 300
+    },
+    "safety_only": {
+      "blocked": 240,
+      "eligible": 0,
+      "rows": 240
+    },
+    "supported_play": {
+      "blocked": 0,
+      "eligible": 1800,
+      "rows": 1800
+    },
+    "supported_unknown": {
+      "blocked": 0,
+      "eligible": 1260,
+      "rows": 1260
+    }
+  },
+  "production_gate_scope_contract_mismatch_count": 0,
+  "review_queue_sha256": "afbf77cc94e9b49920d6b66893865654d207183a6d28f72b3c179b5d90b30aff",
+  "review_status_counts": {
+    "pending_independent_review": 3600
+  },
+  "reviewed_stage_b_record_schema_version": 1,
+  "safety_negative_reason_mismatch_count": 0,
+  "same_group_near_duplicate_count": 0,
+  "scope_counts": {
+    "deterministic_only": 300,
+    "safety_only": 240,
+    "supported_play": 1800,
+    "supported_unknown": 1260
+  },
+  "semantic_memory_enabled": false,
+  "slot_presence_counts": {
+    "album_absent": 720,
+    "album_present": 1080,
+    "artist_absent": 720,
+    "artist_and_album_present": 720,
+    "artist_present": 1080,
+    "neither_optional_slot_present": 360,
+    "supported_play_rows": 1800
+  },
+  "source_group_count": 600,
+  "source_group_size_counts": {
+    "6": 600
+  },
+  "stage_a_identity": {
+    "case_count": 109,
+    "sha256": "60ebad4bcafeae7821986ac454ff2e730da7661537b11879aba6f725675bee55"
+  },
+  "stage_a_leakage_count": 0,
+  "supported_language_counts": {
+    "mixed": {
+      "supported_play": 540,
+      "supported_total": 960,
+      "supported_unknown": 420
+    },
+    "zh-Hant": {
+      "supported_play": 720,
+      "supported_total": 1200,
+      "supported_unknown": 480
+    }
+  },
+  "template_family_count": 32,
+  "template_family_counts": {
+    "deterministic_app_control": 30,
+    "deterministic_playback_control": 150,
+    "play_en_asr_spacing": 66,
+    "play_en_conversational": 66,
+    "play_en_direct": 66,
+    "play_en_polite": 66,
+    "play_en_punctuation_loss": 66,
+    "play_en_word_order": 66,
+    "play_hans_conversational": 24,
+    "play_hans_direct": 24,
+    "play_hans_homophone": 24,
+    "play_hans_particle": 24,
+    "play_hans_spacing": 24,
+    "play_hans_word_order": 24,
+    "play_hant_conversational": 120,
+    "play_hant_direct": 120,
+    "play_hant_homophone": 120,
+    "play_hant_particle": 120,
+    "play_hant_spacing": 120,
+    "play_hant_word_order": 120,
+    "play_mixed_asr_case": 90,
+    "play_mixed_asr_spacing": 90,
+    "play_mixed_code_switch": 90,
+    "play_mixed_conversational": 90,
+    "play_mixed_particle": 90,
+    "play_mixed_word_order": 90,
+    "safety_hostile_text": 240,
+    "unknown_ambiguous_version": 42,
+    "unknown_artist_only": 630,
+    "unknown_missing_track": 630,
+    "unknown_unresolved_reference": 42,
+    "unknown_unsupported_domain": 36
+  },
+  "total_row_count": 3600,
+  "training_authorized": false,
+  "zh_hans_script_inventory_sha256": "0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36",
+  "zh_hans_script_validation": "passed"
+}

@@ -4,6 +4,38 @@
 
 ## Current Phase
 
+### 2026-09-23 Stage B v5 candidate pool frozen for independent review
+
+Issue #53's five confirmed v4 generator defects are addressed by
+`stage-b-candidate-generator-v5` on branch `codex/stage-b-v5-issue-53` from
+exact main `68a71ed420467f1eebdf686f9268905af37e8146`. The new candidate
+pool is proposed in PR #55, which remains open and unmerged. The new candidate
+and review artifacts live under `artifacts/local_ai/stage_b/v5/`; the v4
+artifacts remain at `artifacts/local_ai/stage_b/` as historical audit evidence.
+No v4 review decision was imported. The review workflow is bound to the v5
+candidate/source identities and starts with zero decisions and 3,600 pending.
+
+The v5 pool has 3,600 rows, 600 source groups, and 32 template families;
+scope counts remain 1,800 supported play, 1,260 supported unknown, 300
+deterministic-only, and 240 safety-only. Language counts are 1,380 zh-Hant,
+288 zh-Hans, 1,140 mixed, and 792 en. Stage A leakage, exact duplicates,
+same-group near duplicates, cross-group near duplicates, cross-group exact
+duplicates, production-gate scope mismatches, and all five Issue #53 residual
+counts are zero. Stage A and near-duplicate config hashes remain frozen.
+The independent zh-Hans script inventory is versioned and hashed separately
+from the generation conversion map; an unreviewed Han character fails closed.
+The five focused defect checks plus inventory-tamper coverage pass (6 tests),
+the full unit suite passes (553 tests, 2 dependency deprecation warnings),
+and `compileall -q app scripts tests` plus `git diff --check` pass.
+
+The 12 packets each contain 300 candidates, exactly once, and are review
+allocations only. Independent semantic review is pending. There is no final
+3,000-row selection, train/validation/held-out split, held-out seal, model
+compute, training, production fallback approval, or Semantic Memory enablement.
+`LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
+remain mandatory. Full offline evidence and file hashes are in
+[`docs/LOCAL_AI_STAGE_B_V5_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V5_CANDIDATE_EVIDENCE.md).
+
 ### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 
 The branch `codex/issue-52-first-four-fixes` starts from exact `main`
@@ -19,17 +51,16 @@ Blocking `/action` and `/command` orchestration runs as sync FastAPI endpoints.
 
 The four code fixes passed independent source review at implementation commit
 `8b2ab5cef21e14d6bd87ca68c597bb3a05e8649e`; the reviewed code is unchanged.
-Subsequent PR commits update `PROJECT_STATUS.md` only. PR #54 remains open and
-unmerged. Source/mock independent review passed, but no live Windows
-process-close or MMC launch acceptance, real Spotify playback, or Siri
-acceptance has been performed; the installed Agent was not changed. Issue #52
-and its other findings remain open, with its checkboxes untouched. Next: merge
-PR #54, then perform separately authorized real Windows/Spotify/Siri
-acceptance where relevant.
+Subsequent PR commits updated `PROJECT_STATUS.md` only. PR #54 is merged in
+the required main baseline `68a71ed420467f1eebdf686f9268905af37e8146`.
+Source/mock independent review passed. Live acceptance and installed-Agent
+state must be read from the separate runtime acceptance report; this Stage B
+task does not make a new Windows/Spotify/Siri runtime claim. Issue #52 and its
+other findings remain open, with its checkboxes untouched.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
 remain unchanged.
 
-### 2026-09-23 Stage B independent-review workflow merged / independent review pending
+### 2026-09-23 Stage B v4 historical workflow and audit evidence
 
 PR #48's reviewed candidate-corpus head was exactly
 `c5481a7d7d4b08f29b77e3ed65afaacd68a2ea85`; it is merged into `main` with
@@ -58,11 +89,10 @@ coverage depended on the known conversion mapping. Additional affected
 generator families are English slash-delimited punctuation-loss surfaces;
 Chinese deterministic-volume rows that became compound playback intent;
 Chinese `unknown_missing_track` bare direct-play surfaces; and artificial
-mixed-language surfaces combining `執行 run cmd`. A v5 or equivalent
-regenerated candidate corpus is required before independent review resumes.
+mixed-language surfaces combining `執行 run cmd`. These defects caused v4 to
+be blocked; v5 was regenerated separately and awaits independent review.
 V4 review decisions are audit evidence only and must not be blindly reused
-after regeneration because record text or hashes may change. V5 has not been
-implemented.
+after regeneration because record text or hashes changed.
 The offline production-alignment audit reports supported play/unknown as
 1,800/1,260 eligible, deterministic-only/safety-only as 300/240 blocked, and
 zero scope-contract mismatches. Leakage, exact duplicates, same-group near
@@ -117,9 +147,10 @@ are accepted, otherwise partial review or unreviewed. No decision is
 fabricated, propagated, adjudicated, or automatically resolved.
 
 [`docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
-records the reviewer boundary and offline validation commands. This is **not**
+now targets the frozen v5 source identities while preserving the same review
+workflow. The historical v4 manifest remains in its original directory. This is **not**
 the final Stage B corpus: v4 cannot progress to final selection, and review of
-a regenerated v5 or equivalent remains pending. No final 3,000-row selection
+the separate v5 pool remains pending. No final 3,000-row selection
 exists, no split is assigned, held-out data is not sealed, and no correction,
 training, fine-tuning, inference, model compute, RX 9070 XT qualification,
 deployment, production-parser authority, RAG, vector storage, embeddings,
