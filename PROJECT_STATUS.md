@@ -31,7 +31,7 @@ and regression evidence are in
 Gemini 3.8 High independently reviewed all 3,600 v6 rows. Before packaging,
 the gatekeeper independently matched the 12 decision files against frozen
 candidate IDs and record hashes. This branch packages those raw files and a
-separate deterministic review aggregate; its PR is pending independent review.
+separate deterministic review aggregate; PR #57 is open for independent review.
 Repository-native validation reports 12 packets of 300 decisions, 3,600
 unique candidate IDs, and 3,600 accepted / 0 rejected / 0 needs correction /
 0 conflict / 0 pending. The original `review_manifest.json` remains the frozen
