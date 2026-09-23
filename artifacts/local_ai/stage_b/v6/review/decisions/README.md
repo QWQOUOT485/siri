@@ -1,11 +1,15 @@
 # Independent review decisions
 
-This directory starts empty: no independent reviewer decision has been
-submitted. `review_manifest.json` records `decision_count=0`, `reviewed=0`,
-`conflict=0`, and `pending=3600`. Raw reviewer submissions are preserved;
-candidate progress is aggregated separately.
+This directory initially contained no submissions. The frozen
+`review_manifest.json` still records the original allocation state:
+`decision_count=0`, `reviewed=0`, `conflict=0`, and `pending=3600`.
+The 12 `packet-*.decisions.jsonl` files now preserve the Gemini 3.8 High v6
+reviewer's raw row-level decisions. `../decision_manifest.json` records
+package provenance and SHA-256 integrity; `../review_progress.json` records
+the deterministic aggregate. These derived files do not change the initial
+manifest or authorize final selection, split assignment, or training.
 
-A future submission must be JSONL with one object per line and exactly these
+A submission must be JSONL with one object per line and exactly these
 required fields:
 
 ```json
@@ -46,9 +50,9 @@ rows remain excluded from later selection until a separate reviewed correction
 workflow exists.
 
 `conflict` remains unresolved and is ineligible for any future final selection
-until a separately reviewed adjudication workflow exists. This PR does not
-implement adjudication, a final acceptance ledger, or a final 3,000-row
-selector.
+until a separately reviewed adjudication workflow exists. This package does
+not implement adjudication, final selection, or a final 3,000-row selector.
+Packets are review allocations, never split assignments.
 
 This is a human/external-reviewer input boundary. Passing unit tests or the
 production-alignment gate is supporting evidence only and never creates an
@@ -62,3 +66,11 @@ To validate a local JSONL submission without writing a ledger:
 
 The validator is offline-only and fails closed if the candidate artifact
 identity differs from the frozen v6 hashes in the review manifest.
+
+To reproduce this package from the same 12 external decision files, run:
+
+```text
+.venv\Scripts\python.exe scripts\local_ai_stage_b_independent_review.py --package-decisions <external-decision-directory>
+```
+
+Identical reruns succeed. Conflicting existing evidence is never overwritten.

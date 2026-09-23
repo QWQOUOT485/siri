@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-23 Stage B v6 carrier correction pending gatekeeper re-review
+### 2026-09-23 Stage B v6 independent decisions packaged for PR review
 
 PR #55 merged the mechanically frozen v5 pool at main
 `75a94cb1f081e0fa0a25f5571b85dafc05d6eb18`. An external Gemini 3.8 High
@@ -15,34 +15,35 @@ systematic carrier-naturalness misses in at least 210 rows: English ASR spacing
 audit evidence only, along with v4. The v6 candidate/review artifacts are
 under `artifacts/local_ai/stage_b/v6/`; no earlier artifact was overwritten.
 
-The `stage-b-candidate-generator-v6` branch
-`codex/stage-b-v6-naturalness-correction` fixes those three carriers and eight
-additional documented carrier-level defects found in a review of all 32
-families. In total, 858 candidate utterances were rephrased. PR #56 is open
-and unmerged. Gatekeeper inspection at reviewed head
-`f269a90401fb66ecb277927b88bfa0713879c3e8` then found a dangling album
-modifier in 54 `play_mixed_asr_spacing` rows. The follow-up changed exactly
-those 54 album-present utterances and regenerated their source-bound review
-artifacts; the other 3,546 utterances and entity catalog are unchanged.
-PR #56 is pending gatekeeper re-review before full independent semantic
-review. V6 has 3,600 rows, 600
+The `stage-b-candidate-generator-v6` branch fixed three carrier-naturalness
+defects and eight additional carrier-level defects across the 32 families.
+Gatekeeper inspection of its first reviewed head found a dangling album
+modifier in 54 `play_mixed_asr_spacing` rows. The follow-up corrected those
+54 rows. PR #56 merged exact reviewed head
+`d3b71f9f02871f64191c924621f35f9bc4b2f9a4` at main
+`8790491de6da591330b5e8d29749f43754d2260a`. V6 has 3,600 rows, 600
 source groups, 32 families, and the unchanged scope, language,
 optional-slot, Stage A, near-duplicate, and production-gate contracts. The
 independent zh-Hans script inventory remains fail-closed and is separately
 versioned for the newly used Simplified character `唱`. Mechanical validation
 and regression evidence are in
 [`docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md).
-The focused candidate-generator tests passed (32), focused review tests passed
-(25), and the full unit suite passed (561, 2 existing dependency deprecation
-warnings). `compileall -q app scripts tests` and `git diff --check` passed.
-Corpus, identity, and packet gates pass. These mechanical checks do not replace
-gatekeeper or independent semantic review.
-
-The 12 v6 packets each contain 300 candidates exactly once. The v6 review
-manifest begins with zero decisions and 3,600 pending. Independent semantic
-review has **not** accepted v6. There is no final 3,000-row selection,
-train/validation/held-out split, held-out seal, model compute, training,
-production fallback approval, or Semantic Memory enablement.
+Gemini 3.8 High independently reviewed all 3,600 v6 rows. Before packaging,
+the gatekeeper independently matched the 12 decision files against frozen
+candidate IDs and record hashes. This branch packages those raw files and a
+separate deterministic review aggregate; its PR is pending independent review.
+Repository-native validation reports 12 packets of 300 decisions, 3,600
+unique candidate IDs, and 3,600 accepted / 0 rejected / 0 needs correction /
+0 conflict / 0 pending. The original `review_manifest.json` remains the frozen
+initial allocation with zero decisions and 3,600 pending. Raw submissions are
+under `artifacts/local_ai/stage_b/v6/review/decisions/`;
+`decision_manifest.json` binds their bytes and source identities, while
+`review_progress.json` records the post-review aggregate. This review result
+does not select a final 3,000, assign a train/validation/held-out split, seal
+held-out data, or authorize training or model compute. Production fallback and
+Semantic Memory remain disabled. Packaging/review/corpus focused tests passed
+(78), the full unit suite passed (582, two existing dependency deprecation
+warnings), and `compileall -q app scripts tests` plus `git diff --check` passed.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
 remain mandatory.
 
@@ -161,7 +162,8 @@ fabricated, propagated, adjudicated, or automatically resolved.
 now targets the frozen v6 source identities while preserving the same review
 workflow. The historical v4 and v5 manifests remain in their original
 directories. This is **not** the final Stage B corpus: v4 and v5 cannot
-progress to final selection, and review of v6 is pending. No final 3,000-row selection
+progress to final selection. V6 reviewer decisions have been packaged for
+independent PR review, with no final 3,000-row selection
 exists, no split is assigned, held-out data is not sealed, and no correction,
 training, fine-tuning, inference, model compute, RX 9070 XT qualification,
 deployment, production-parser authority, RAG, vector storage, embeddings,

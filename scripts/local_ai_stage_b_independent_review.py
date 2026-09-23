@@ -1,10 +1,9 @@
 """Prepare deterministic packets for independent review of Stage B candidates.
 
-This module is deliberately downstream of the frozen candidate artifacts.  It
+This module is deliberately downstream of the frozen candidate artifacts. It
 does not generate, relabel, rewrite, accept, reject, split, or train on a
-candidate.  The only writes it performs are review packets, a review manifest,
-and reviewer-facing schema documentation under the separate ``review``
-directory.
+candidate. It writes review allocations separately from validated raw external
+decisions and their deterministic post-review aggregates.
 
 The source identity is fail-closed against the frozen v6 artifact hashes.
 A regenerated candidate corpus cannot silently reuse an old decision ledger.
@@ -139,6 +138,12 @@ POSITIVE_REASON_CODE_SET = frozenset(POSITIVE_REASON_CODES)
 NEGATIVE_REASON_CODE_SET = frozenset(NEGATIVE_REASON_CODES)
 REVIEWER_ROLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 RECORD_HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+DECISION_PACKAGE_VERSION = "stage-b-independent-decision-package-v1"
+REVIEW_PROGRESS_VERSION = "stage-b-review-progress-v1"
+REVIEWED_V6_GIT_HEAD = "d3b71f9f02871f64191c924621f35f9bc4b2f9a4"
+V6_MERGED_MAIN_BASELINE = "8790491de6da591330b5e8d29749f43754d2260a"
+EXTERNAL_REVIEW_REPORT_NAME = "GEMINI_3_8_HIGH_STAGE_B_V6_REVIEW_REPORT.md"
+MAX_DECISION_PACKET_BYTES = 5 * 1024 * 1024
 
 
 class ReviewWorkflowError(ValueError):
@@ -155,6 +160,10 @@ class ReviewPacketError(ReviewWorkflowError):
 
 class ReviewDecisionError(ReviewWorkflowError):
     """A reviewer decision violates the closed submission schema."""
+
+
+class ReviewDecisionPackageError(ReviewWorkflowError):
+    """A complete external decision package fails closed validation."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1171,6 +1180,202 @@ def source_group_report(
     return report
 
 
+def _decision_jsonl_from_bytes(data: bytes, *, filename: str) -> list[Mapping[str, Any]]:
+    """Parse exactly the bytes later preserved as raw reviewer evidence."""
+
+    if len(data) > MAX_DECISION_PACKET_BYTES:
+        raise ReviewDecisionPackageError(f"decision packet is too large: {filename}")
+    try:
+        lines = data.decode("utf-8").splitlines()
+    except UnicodeError as exc:
+        raise ReviewDecisionPackageError(f"decision packet is not UTF-8: {filename}") from exc
+
+    def unique_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ReviewDecisionPackageError(f"duplicate JSON key in {filename}")
+            value[key] = item
+        return value
+
+    rows: list[Mapping[str, Any]] = []
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line, object_pairs_hook=unique_object_keys)
+        except json.JSONDecodeError as exc:
+            raise ReviewDecisionPackageError(
+                f"malformed decision JSONL at {filename}:{line_number}"
+            ) from exc
+        if not isinstance(row, Mapping):
+            raise ReviewDecisionPackageError(
+                f"decision JSONL row is not an object at {filename}:{line_number}"
+            )
+        rows.append(row)
+    return rows
+
+
+def _deterministic_json_bytes(value: Mapping[str, Any]) -> bytes:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8") + b"\n"
+
+
+def package_independent_decisions(
+    source_dir: str | Path,
+    *,
+    artifacts_dir: str | Path = DEFAULT_STAGE_B_ARTIFACT_DIR,
+    review_dir: str | Path = DEFAULT_REVIEW_DIR,
+) -> dict[str, Any]:
+    """Validate and preserve one exact-once, 12-packet external review set.
+
+    Every input and every existing output is checked before a missing file is
+    created. Identical reruns are allowed; conflicting raw or derived bytes
+    are never overwritten. The initial review manifest is read, not modified.
+    """
+
+    source = load_review_source(artifacts_dir)
+    safe_source_dir = protocol.validate_local_path(source_dir, field="source_dir")
+    safe_review_dir = protocol.validate_local_path(review_dir, field="review_dir")
+    if not safe_source_dir.is_dir() or not safe_review_dir.is_dir():
+        raise ReviewDecisionPackageError("source or frozen review directory is missing")
+    if safe_review_dir.resolve() != (source.artifact_dir / "review").resolve():
+        raise ReviewDecisionPackageError("review target is not the source's frozen review directory")
+
+    packets, prepared = _packet_assignments(source)
+    expected_initial_manifest = _review_manifest(source, packets, prepared)
+    actual_initial_manifest = _read_json(safe_review_dir / "review_manifest.json")
+    if dict(actual_initial_manifest) != expected_initial_manifest:
+        raise ReviewDecisionPackageError("initial review manifest identity or state mismatch")
+    for packet_id, packet_rows in packets.items():
+        frozen_path = safe_review_dir / "packets" / f"{packet_id}.jsonl"
+        if _read_jsonl(frozen_path) != packet_rows:
+            raise ReviewDecisionPackageError(f"frozen source packet mismatch: {packet_id}")
+
+    expected_filenames = {
+        f"packet-{number:02d}.decisions.jsonl" for number in range(1, PACKET_COUNT + 1)
+    }
+    found_filenames = {path.name for path in safe_source_dir.iterdir() if path.suffix == ".jsonl"}
+    if found_filenames != expected_filenames:
+        raise ReviewDecisionPackageError("external decision packet file set mismatch")
+
+    packet_by_candidate = _packet_map(source)
+    raw_by_filename: dict[str, bytes] = {}
+    file_entries: dict[str, dict[str, Any]] = {}
+    all_decisions: list[Mapping[str, Any]] = []
+    for number in range(1, PACKET_COUNT + 1):
+        packet_id = f"packet-{number:02d}"
+        filename = f"{packet_id}.decisions.jsonl"
+        source_path = safe_source_dir / filename
+        if not source_path.is_file():
+            raise ReviewDecisionPackageError(f"missing decision packet: {filename}")
+        raw = source_path.read_bytes()
+        rows = _decision_jsonl_from_bytes(raw, filename=filename)
+        if len(rows) != ROWS_PER_PACKET:
+            raise ReviewDecisionPackageError(f"decision packet row count mismatch: {filename}")
+        candidate_ids = [row.get("candidate_id") for row in rows]
+        if any(not isinstance(candidate_id, str) for candidate_id in candidate_ids):
+            raise ReviewDecisionPackageError(f"invalid decision candidate_id: {filename}")
+        if len(set(candidate_ids)) != ROWS_PER_PACKET or {
+            candidate_id for candidate_id, assigned in packet_by_candidate.items()
+            if assigned == packet_id
+        } != set(candidate_ids):
+            raise ReviewDecisionPackageError(f"decision/source packet assignment mismatch: {filename}")
+        raw_by_filename[filename] = raw
+        digest = hashlib.sha256(raw).hexdigest()
+        file_entries[packet_id] = {
+            "filename": filename,
+            "row_count": len(rows),
+            "external_source_sha256": digest,
+            "packaged_sha256": digest,
+            "frozen_packet_canonical_sha256": expected_initial_manifest["packet_hashes"][packet_id],
+        }
+        all_decisions.extend(rows)
+
+    validated = _validate_decisions_against_source(all_decisions, source)
+    candidate_ids = [decision["candidate_id"] for decision in validated]
+    duplicate_candidates = len(candidate_ids) - len(set(candidate_ids))
+    if (
+        len(validated) != EXPECTED_CANDIDATE_COUNT
+        or duplicate_candidates
+        or set(candidate_ids) != set(source.rows_by_id)
+    ):
+        raise ReviewDecisionPackageError("complete exact-once candidate coverage failed")
+
+    progress = review_progress(validated, artifacts_dir=source.artifact_dir)
+    report_path = safe_source_dir / EXTERNAL_REVIEW_REPORT_NAME
+    report_sha256 = hashlib.sha256(report_path.read_bytes()).hexdigest() if report_path.is_file() else None
+    manifest: dict[str, Any] = {
+        "decision_package_version": DECISION_PACKAGE_VERSION,
+        "source_identities": dict(source.identities),
+        "initial_review_manifest_sha256": expected_initial_manifest["review_manifest_sha256"],
+        "reviewed_git_head": REVIEWED_V6_GIT_HEAD,
+        "merged_main_baseline": V6_MERGED_MAIN_BASELINE,
+        "reviewer_role_ids": sorted({decision["reviewer_role_id"] for decision in validated}),
+        "packet_assignment": dict(expected_initial_manifest["packet_assignment"]),
+        "packet_files": file_entries,
+        "external_review_report": (
+            {"logical_name": EXTERNAL_REVIEW_REPORT_NAME, "sha256": report_sha256}
+            if report_sha256 is not None else None
+        ),
+        "decision_count": len(validated),
+        "unique_candidate_count": len(set(candidate_ids)),
+        "duplicate_candidate_count": duplicate_candidates,
+        "coverage_exact": True,
+        "raw_decision_counts": progress["raw_decision_counts"],
+        "package_status": "complete_exact_once",
+        "packets_are_not_splits": True,
+        "final_selection_authorized": False,
+        "final_split_assigned": False,
+        "held_out_sealed": False,
+        "training_authorized": False,
+        "model_compute_authorized": False,
+        "semantic_memory_enabled": False,
+        "local_ai_fallback_approved": False,
+    }
+    manifest["decision_manifest_sha256"] = _sha256_json(manifest)
+    progress_artifact: dict[str, Any] = {
+        "review_progress_version": REVIEW_PROGRESS_VERSION,
+        "source_identities": dict(source.identities),
+        "decision_manifest_sha256": manifest["decision_manifest_sha256"],
+        "packets_are_not_splits": True,
+        "final_selection_authorized": False,
+        "training_authorized": False,
+        "model_compute_authorized": False,
+        **progress,
+    }
+    progress_artifact["review_progress_sha256"] = _sha256_json(progress_artifact)
+
+    decision_dir = safe_review_dir / "decisions"
+    if decision_dir.is_symlink() or (decision_dir.exists() and not decision_dir.is_dir()):
+        raise ReviewDecisionPackageError("decision target is not a directory")
+    if decision_dir.exists():
+        unexpected = {
+            path.name for path in decision_dir.iterdir()
+            if path.name not in expected_filenames | {"README.md"}
+        }
+        if unexpected:
+            raise ReviewDecisionPackageError("unexpected existing decision submission")
+    desired: dict[Path, bytes] = {
+        decision_dir / filename: raw for filename, raw in raw_by_filename.items()
+    }
+    desired[safe_review_dir / "decision_manifest.json"] = _deterministic_json_bytes(manifest)
+    desired[safe_review_dir / "review_progress.json"] = _deterministic_json_bytes(progress_artifact)
+    for target, data in desired.items():
+        if target.is_symlink() or (target.exists() and (not target.is_file() or target.read_bytes() != data)):
+            raise ReviewDecisionPackageError(f"refusing to overwrite conflicting evidence: {target.name}")
+    if any((safe_source_dir / name).read_bytes() != raw for name, raw in raw_by_filename.items()):
+        raise ReviewDecisionPackageError("external decision bytes changed during validation")
+
+    decision_dir.mkdir(exist_ok=True)
+    for target, data in desired.items():
+        if not target.exists():
+            with target.open("xb") as stream:
+                stream.write(data)
+    if any(target.read_bytes() != data for target, data in desired.items()):
+        raise ReviewDecisionPackageError("packaged evidence failed byte readback")
+    return {"decision_manifest": manifest, "review_progress": progress_artifact}
+
+
 def _load_decision_jsonl(path: Path) -> list[Mapping[str, Any]]:
     return _read_jsonl(path)
 
@@ -1192,13 +1397,38 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=None,
         help="validate an external JSONL decision file without writing it",
     )
+    parser.add_argument(
+        "--package-decisions",
+        default=None,
+        help="validate and preserve one complete external 12-packet decision directory",
+    )
     args = parser.parse_args(argv)
+    if args.validate_decisions is not None and args.package_decisions is not None:
+        parser.error("--validate-decisions and --package-decisions are mutually exclusive")
     if args.validate_decisions is not None:
         decisions = _load_decision_jsonl(
             protocol.validate_local_path(args.validate_decisions, field="decision_path")
         )
         validated = validate_decisions(decisions, artifacts_dir=args.artifacts_dir)
         print(json.dumps(review_progress(validated, artifacts_dir=args.artifacts_dir), ensure_ascii=False, sort_keys=True, indent=2))
+        return 0
+    if args.package_decisions is not None:
+        result = package_independent_decisions(
+            args.package_decisions,
+            artifacts_dir=args.artifacts_dir,
+            review_dir=(
+                args.review_dir
+                if args.review_dir is not None
+                else protocol.validate_local_path(args.artifacts_dir, field="artifacts_dir") / "review"
+            ),
+        )
+        print(json.dumps({
+            "decision_manifest_sha256": result["decision_manifest"]["decision_manifest_sha256"],
+            "review_progress_sha256": result["review_progress"]["review_progress_sha256"],
+            "decision_count": result["review_progress"]["decision_count"],
+            "accepted": result["review_progress"]["accepted"],
+            "pending": result["review_progress"]["pending"],
+        }, sort_keys=True, indent=2))
         return 0
     review_dir = (
         Path(args.review_dir)

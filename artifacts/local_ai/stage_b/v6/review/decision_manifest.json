@@ -1,0 +1,130 @@
+{
+  "coverage_exact": true,
+  "decision_count": 3600,
+  "decision_manifest_sha256": "a6bce0eaba3b2e68f7ee11b0f6cd3318664e277df5430be0ef187d94b23fa39d",
+  "decision_package_version": "stage-b-independent-decision-package-v1",
+  "duplicate_candidate_count": 0,
+  "external_review_report": {
+    "logical_name": "GEMINI_3_8_HIGH_STAGE_B_V6_REVIEW_REPORT.md",
+    "sha256": "da52ca958bdcb9936aa9e7d0f2069473a3d3d754952d0b34cb1e7e6de823f323"
+  },
+  "final_selection_authorized": false,
+  "final_split_assigned": false,
+  "held_out_sealed": false,
+  "initial_review_manifest_sha256": "d7d63ba83a73ab9d8f9a259975175538012eedf0834ce7c01a70e12dbadfa56a",
+  "local_ai_fallback_approved": false,
+  "merged_main_baseline": "8790491de6da591330b5e8d29749f43754d2260a",
+  "model_compute_authorized": false,
+  "package_status": "complete_exact_once",
+  "packet_assignment": {
+    "algorithm": "stratified_round_robin_v1",
+    "packet_count": 12,
+    "packets_are_not_splits": true,
+    "rows_per_packet": 300
+  },
+  "packet_files": {
+    "packet-01": {
+      "external_source_sha256": "d42eb494bd175f5658a60129e378eeb99e320618faa1ff3fbb4c9c16c190ddf0",
+      "filename": "packet-01.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "b2bca0ae1bf7a3d3e366b26abcc892929c029e47e2a969d40d348b0b902620f5",
+      "packaged_sha256": "d42eb494bd175f5658a60129e378eeb99e320618faa1ff3fbb4c9c16c190ddf0",
+      "row_count": 300
+    },
+    "packet-02": {
+      "external_source_sha256": "14af01441bf71319a724808600c8831b2b95e2abc3bb7ef7d0dfe4fd009063d7",
+      "filename": "packet-02.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "e62efdcd540d6120685e6cfb5cc3429945f8b12a32ac2c158e63a8f873ce8d27",
+      "packaged_sha256": "14af01441bf71319a724808600c8831b2b95e2abc3bb7ef7d0dfe4fd009063d7",
+      "row_count": 300
+    },
+    "packet-03": {
+      "external_source_sha256": "1e85471dc40c13f3aa1aaf1fe6911d1d057076a57a959c6a9d5f028354ebaa1f",
+      "filename": "packet-03.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "e6325c84f34dbe589357e808ccf68f5766af9335c4409370820089d3114bf3d0",
+      "packaged_sha256": "1e85471dc40c13f3aa1aaf1fe6911d1d057076a57a959c6a9d5f028354ebaa1f",
+      "row_count": 300
+    },
+    "packet-04": {
+      "external_source_sha256": "e5445b4dfdae5bc8c2e65e24050bef3d1d77c5e821f732c6e40d32e36208348c",
+      "filename": "packet-04.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "1a044d65b48b66cc93dc42bd9e4c6409756b881677289a9f34358e0169c45bb3",
+      "packaged_sha256": "e5445b4dfdae5bc8c2e65e24050bef3d1d77c5e821f732c6e40d32e36208348c",
+      "row_count": 300
+    },
+    "packet-05": {
+      "external_source_sha256": "807e667cb1978c9a477abd2601bfdf5c076bbd08f346fed4c6ace243dbea249c",
+      "filename": "packet-05.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "725acd5e031272f40380971250bca516b52f5b1ce1acdff69b99419b88157ab1",
+      "packaged_sha256": "807e667cb1978c9a477abd2601bfdf5c076bbd08f346fed4c6ace243dbea249c",
+      "row_count": 300
+    },
+    "packet-06": {
+      "external_source_sha256": "3f4f9fbd92fae35d398f39bf1c60621df02436ab39ec514bb755fd5cca721cf9",
+      "filename": "packet-06.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "8780014a4b2ac53bc046c8973689ca26120d3e08725c241072e237322f0ed0c4",
+      "packaged_sha256": "3f4f9fbd92fae35d398f39bf1c60621df02436ab39ec514bb755fd5cca721cf9",
+      "row_count": 300
+    },
+    "packet-07": {
+      "external_source_sha256": "7161c5b9b1026084ce226d23160ea35517cf27533e7c0548ec64bf92d19c41da",
+      "filename": "packet-07.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "c725bda3133ca3b50fffff85e8a9c6d1d432f281c832f94eec9c2ba13cda09dd",
+      "packaged_sha256": "7161c5b9b1026084ce226d23160ea35517cf27533e7c0548ec64bf92d19c41da",
+      "row_count": 300
+    },
+    "packet-08": {
+      "external_source_sha256": "2ad2d2d82dc2eadff481bb3f260131f41d1d5855ea259544777d1f548e24ed0f",
+      "filename": "packet-08.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "bd976063f5f7736a794ad52e3019bffcab5bce2a7cd32561894754199606cd26",
+      "packaged_sha256": "2ad2d2d82dc2eadff481bb3f260131f41d1d5855ea259544777d1f548e24ed0f",
+      "row_count": 300
+    },
+    "packet-09": {
+      "external_source_sha256": "d0383826d2fe9851608e779b3461a912cd25b057cae36a9b4bf7c853a7eba8a4",
+      "filename": "packet-09.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "f9675611e735e6b429973b69569821fabc19d574049747492d1a8c75a9a5796c",
+      "packaged_sha256": "d0383826d2fe9851608e779b3461a912cd25b057cae36a9b4bf7c853a7eba8a4",
+      "row_count": 300
+    },
+    "packet-10": {
+      "external_source_sha256": "28b420d46c9ef39139e6842f0a4620f4b33f996fc81260185781ae0bc8608677",
+      "filename": "packet-10.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "2ab1e17f975f7f75127d7b690744a153a3a7155a4b3d7e3d4fdc9ff1fcdbf96f",
+      "packaged_sha256": "28b420d46c9ef39139e6842f0a4620f4b33f996fc81260185781ae0bc8608677",
+      "row_count": 300
+    },
+    "packet-11": {
+      "external_source_sha256": "e5e6f79a6bed481bbc6577cd125b5088e7426f94c40483121e845a97df506021",
+      "filename": "packet-11.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "65ffbe6d257363099f91ff1f75b0d5bc77b39e3fb58f34dc278657635dcf82ff",
+      "packaged_sha256": "e5e6f79a6bed481bbc6577cd125b5088e7426f94c40483121e845a97df506021",
+      "row_count": 300
+    },
+    "packet-12": {
+      "external_source_sha256": "08d86d4267c271084be5b75b82cecc3ea20e32bf0b512a12475e79a602cd4978",
+      "filename": "packet-12.decisions.jsonl",
+      "frozen_packet_canonical_sha256": "16ffefe98b6304af12655b8f88ac3ad16342b81e30dec41e84b1a545ac91516c",
+      "packaged_sha256": "08d86d4267c271084be5b75b82cecc3ea20e32bf0b512a12475e79a602cd4978",
+      "row_count": 300
+    }
+  },
+  "packets_are_not_splits": true,
+  "raw_decision_counts": {
+    "accept": 3600,
+    "needs_correction": 0,
+    "reject": 0
+  },
+  "reviewed_git_head": "d3b71f9f02871f64191c924621f35f9bc4b2f9a4",
+  "reviewer_role_ids": [
+    "gemini-3-8-high-v6-independent"
+  ],
+  "semantic_memory_enabled": false,
+  "source_identities": {
+    "candidate_corpus_sha256": "fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238",
+    "candidate_manifest_sha256": "83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6",
+    "entity_catalog_sha256": "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb",
+    "generator_config_sha256": "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e"
+  },
+  "training_authorized": false,
+  "unique_candidate_count": 3600
+}

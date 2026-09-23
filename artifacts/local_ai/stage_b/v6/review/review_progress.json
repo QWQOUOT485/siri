@@ -1,0 +1,1310 @@
+{
+  "accepted": 3600,
+  "by_language": {
+    "en": {
+      "accepted": 792,
+      "candidate_count": 792,
+      "candidate_state_counts": {
+        "accepted": 792,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 792,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 792,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 792
+    },
+    "mixed": {
+      "accepted": 1140,
+      "candidate_count": 1140,
+      "candidate_state_counts": {
+        "accepted": 1140,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 1140,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 1140,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 1140
+    },
+    "zh-Hans": {
+      "accepted": 288,
+      "candidate_count": 288,
+      "candidate_state_counts": {
+        "accepted": 288,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 288,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 288,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 288
+    },
+    "zh-Hant": {
+      "accepted": 1380,
+      "candidate_count": 1380,
+      "candidate_state_counts": {
+        "accepted": 1380,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 1380,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 1380,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 1380
+    }
+  },
+  "by_packet": {
+    "packet-01": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-02": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-03": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-04": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-05": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-06": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-07": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-08": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-09": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-10": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-11": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "packet-12": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    }
+  },
+  "by_reviewer_role": {
+    "gemini-3-8-high-v6-independent": {
+      "decision_count": 3600,
+      "raw_decision_counts": {
+        "accept": 3600,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "reviewed_candidates": 3600
+    }
+  },
+  "by_scope": {
+    "deterministic_only": {
+      "accepted": 300,
+      "candidate_count": 300,
+      "candidate_state_counts": {
+        "accepted": 300,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 300,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 300,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 300
+    },
+    "safety_only": {
+      "accepted": 240,
+      "candidate_count": 240,
+      "candidate_state_counts": {
+        "accepted": 240,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 240,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 240,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 240
+    },
+    "supported_play": {
+      "accepted": 1800,
+      "candidate_count": 1800,
+      "candidate_state_counts": {
+        "accepted": 1800,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 1800,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 1800,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 1800
+    },
+    "supported_unknown": {
+      "accepted": 1260,
+      "candidate_count": 1260,
+      "candidate_state_counts": {
+        "accepted": 1260,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 1260,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 1260,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 1260
+    }
+  },
+  "by_slot_mode": {
+    "album_only": {
+      "accepted": 360,
+      "candidate_count": 360,
+      "candidate_state_counts": {
+        "accepted": 360,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 360,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 360,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 360
+    },
+    "artist_only": {
+      "accepted": 360,
+      "candidate_count": 360,
+      "candidate_state_counts": {
+        "accepted": 360,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 360,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 360,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 360
+    },
+    "both": {
+      "accepted": 720,
+      "candidate_count": 720,
+      "candidate_state_counts": {
+        "accepted": 720,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 720,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 720,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 720
+    },
+    "neither": {
+      "accepted": 360,
+      "candidate_count": 360,
+      "candidate_state_counts": {
+        "accepted": 360,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 360,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 360,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 360
+    },
+    "not_applicable": {
+      "accepted": 1800,
+      "candidate_count": 1800,
+      "candidate_state_counts": {
+        "accepted": 1800,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 1800,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 1800,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 1800
+    }
+  },
+  "by_template_family": {
+    "deterministic_app_control": {
+      "accepted": 30,
+      "candidate_count": 30,
+      "candidate_state_counts": {
+        "accepted": 30,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 30,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 30,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 30
+    },
+    "deterministic_playback_control": {
+      "accepted": 150,
+      "candidate_count": 150,
+      "candidate_state_counts": {
+        "accepted": 150,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 150,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 150,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 150
+    },
+    "play_en_asr_spacing": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_en_conversational": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_en_direct": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_en_polite": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_en_punctuation_loss": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_en_word_order": {
+      "accepted": 66,
+      "candidate_count": 66,
+      "candidate_state_counts": {
+        "accepted": 66,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 66,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 66,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 66
+    },
+    "play_hans_conversational": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hans_direct": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hans_homophone": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hans_particle": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hans_spacing": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hans_word_order": {
+      "accepted": 24,
+      "candidate_count": 24,
+      "candidate_state_counts": {
+        "accepted": 24,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 24,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 24,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 24
+    },
+    "play_hant_conversational": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_hant_direct": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_hant_homophone": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_hant_particle": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_hant_spacing": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_hant_word_order": {
+      "accepted": 120,
+      "candidate_count": 120,
+      "candidate_state_counts": {
+        "accepted": 120,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 120,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 120,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 120
+    },
+    "play_mixed_asr_case": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "play_mixed_asr_spacing": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "play_mixed_code_switch": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "play_mixed_conversational": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "play_mixed_particle": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "play_mixed_word_order": {
+      "accepted": 90,
+      "candidate_count": 90,
+      "candidate_state_counts": {
+        "accepted": 90,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 90,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 90,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 90
+    },
+    "safety_hostile_text": {
+      "accepted": 240,
+      "candidate_count": 240,
+      "candidate_state_counts": {
+        "accepted": 240,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 240,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 240,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 240
+    },
+    "unknown_ambiguous_version": {
+      "accepted": 42,
+      "candidate_count": 42,
+      "candidate_state_counts": {
+        "accepted": 42,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 42,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 42,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 42
+    },
+    "unknown_artist_only": {
+      "accepted": 630,
+      "candidate_count": 630,
+      "candidate_state_counts": {
+        "accepted": 630,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 630,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 630,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 630
+    },
+    "unknown_missing_track": {
+      "accepted": 630,
+      "candidate_count": 630,
+      "candidate_state_counts": {
+        "accepted": 630,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 630,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 630,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 630
+    },
+    "unknown_unresolved_reference": {
+      "accepted": 42,
+      "candidate_count": 42,
+      "candidate_state_counts": {
+        "accepted": 42,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 42,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 42,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 42
+    },
+    "unknown_unsupported_domain": {
+      "accepted": 36,
+      "candidate_count": 36,
+      "candidate_state_counts": {
+        "accepted": 36,
+        "conflict": 0,
+        "needs_correction": 0,
+        "pending": 0,
+        "rejected": 0
+      },
+      "conflict": 0,
+      "decision_count": 36,
+      "needs_correction": 0,
+      "pending": 0,
+      "raw_decision_counts": {
+        "accept": 36,
+        "needs_correction": 0,
+        "reject": 0
+      },
+      "rejected": 0,
+      "reviewed_candidates": 36
+    }
+  },
+  "candidate_state_counts": {
+    "accepted": 3600,
+    "conflict": 0,
+    "needs_correction": 0,
+    "pending": 0,
+    "rejected": 0
+  },
+  "conflict": 0,
+  "decision_count": 3600,
+  "decision_manifest_sha256": "a6bce0eaba3b2e68f7ee11b0f6cd3318664e277df5430be0ef187d94b23fa39d",
+  "final_selection_authorized": false,
+  "model_compute_authorized": false,
+  "needs_correction": 0,
+  "packets_are_not_splits": true,
+  "pending": 0,
+  "raw_decision_counts": {
+    "accept": 3600,
+    "needs_correction": 0,
+    "reject": 0
+  },
+  "rejected": 0,
+  "review_progress_sha256": "4defbb52301054d0a82c99939e930094ed2be3fe89512cb7959a3349287ec5ce",
+  "review_progress_version": "stage-b-review-progress-v1",
+  "reviewed": 3600,
+  "source_identities": {
+    "candidate_corpus_sha256": "fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238",
+    "candidate_manifest_sha256": "83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6",
+    "entity_catalog_sha256": "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb",
+    "generator_config_sha256": "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e"
+  },
+  "total_candidates": 3600,
+  "training_authorized": false
+}

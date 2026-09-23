@@ -1,0 +1,4 @@
+# Preserve exact reviewed bytes across Windows checkouts and repeat packaging.
+artifacts/local_ai/stage_b/v6/review/decisions/packet-*.decisions.jsonl -text
+artifacts/local_ai/stage_b/v6/review/decision_manifest.json -text
+artifacts/local_ai/stage_b/v6/review/review_progress.json -text
