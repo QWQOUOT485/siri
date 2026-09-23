@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/action")
-async def action(request: Request, body: ActionRequest, _=Depends(require_api_key)):
+def action(request: Request, body: ActionRequest, _=Depends(require_api_key)):
     started = time.perf_counter()
     result = request.app.state.runtime.command_service.execute(body.to_validated())
     target = body.app_name or body.app_id or body.website_name or body.website_id or body.track or body.artist or body.album

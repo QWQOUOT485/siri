@@ -423,31 +423,21 @@ class SpotifyClarificationStore:
     def _selection_index(cls, text: str, candidates: tuple[SpotifyTrackRef, ...]) -> int | None:
         normalized = normalize_chinese_text(text or "")
         compact = re.sub(r"[\s,，。.!！?？:：]", "", normalized)
-        recovery_forms = {
-            "都不是",
-            "不是这些",
-            "换一批",
-            "再一批",
-            "noneofthese",
-            "notthese",
-            "anotherbatch",
-            "nextbatch",
-            "differentones",
-        }
-        if any(form in compact and compact != form for form in recovery_forms if len(form) >= 3):
-            return None
-        ordinal = {
-            0: {"一", "1", "第一首", "第1首", "第一個", "第1個", "first", "thefirst"},
-            1: {"二", "2", "第二首", "第2首", "第二個", "第2個", "second", "thesecond"},
-            2: {"三", "3", "第三首", "第3首", "第三個", "第3個", "third", "thethird"},
-        }
-        for index, forms in ordinal.items():
-            normalized_forms = {
-                re.sub(r"[\s,，。.!！?？:：]", "", normalize_chinese_text(form))
-                for form in forms
-            }
-            if compact in normalized_forms or any(compact.endswith(form) for form in normalized_forms if len(form) > 1):
-                return index if index < len(candidates) else None
+        # Exact positive forms only. Suffix matching made "不要第一首" and
+        # "don't choose the first" executable selections.
+        for index, (chinese, english) in enumerate((("一", "first"), ("二", "second"), ("三", "third"))):
+            if index >= len(candidates):
+                continue
+            number = str(index + 1)
+            ordinal = {chinese, number}
+            ordinal.update(f"第{value}{unit}" for value in (chinese, number) for unit in ("首", "個", "个"))
+            positive = {prefix + value for value in ordinal for prefix in ("", "選", "选", "就", "我要")}
+            positive.update({
+                english, f"the{english}", f"{english}one", f"the{english}one",
+                f"choose{english}", f"choosethe{english}",
+            })
+            if compact in {re.sub(r"\s", "", normalize_chinese_text(form)) for form in positive}:
+                return index
 
         query = normalized.strip()
         if not query:
@@ -457,7 +447,10 @@ class SpotifyClarificationStore:
             labels = [normalize_chinese_text(name) for name in candidate.artist_names]
             if candidate.album_name:
                 labels.append(normalize_chinese_text(candidate.album_name))
-            if any(label and len(label) >= 2 and label in query for label in labels):
+            if any(
+                label and len(label) >= 2 and query in {label, f"choose {label}", f"選{label}", f"我要{label}"}
+                for label in labels
+            ):
                 matches.append(index)
         return matches[0] if len(matches) == 1 else None
 

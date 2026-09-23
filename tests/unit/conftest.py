@@ -19,7 +19,7 @@ def entry(name: str, *, aliases=(), target: str | None = None, source: str = "te
         launch_method=LaunchMethod.EXECUTABLE if target else None,
         launch_target=target,
         executable_path=target,
-        process=ProcessSpec(executable_names=tuple(process_names), reliable=bool(process_names)) if process_names else None,
+        process=ProcessSpec(executable_paths=(target,), reliable=True) if process_names and target else None,
         source=source,
         app_type=AppType.DESKTOP if launch_source is not LaunchSource.METADATA_ONLY else AppType.METADATA,
         confidence=0.95 if launch_source is not LaunchSource.METADATA_ONLY else 0.4,

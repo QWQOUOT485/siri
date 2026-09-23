@@ -35,9 +35,9 @@ def test_force_close_terminates_each_pid_only_once(monkeypatch):
         "_find_windowed_processes",
         lambda _process: [(123, 1001), (123, 1002), (456, 1003)],
     )
-    monkeypatch.setattr(controller, "_terminate", lambda pid: terminated.append(pid) or True)
+    monkeypatch.setattr(controller, "_terminate", lambda pid, _process: terminated.append(pid) or True)
 
-    result = controller.close(ProcessSpec(executable_names=("app.exe",), reliable=True), force=True)
+    result = controller.close(ProcessSpec(executable_paths=(r"C:\Apps\app.exe",), reliable=True), force=True)
 
     assert result.success is True
     assert terminated == [123, 456]
@@ -49,9 +49,10 @@ class _FakeKernel32:
     WAIT_TIMEOUT = 0x102
     WAIT_FAILED = 0xFFFFFFFF
 
-    def __init__(self, *, wait_sequences=None, open_fail_for=()):
+    def __init__(self, *, wait_sequences=None, open_fail_for=(), image_path=r"C:\Apps\app.exe"):
         self.wait_sequences = {pid: list(sequence) for pid, sequence in (wait_sequences or {}).items()}
         self.open_fail_for = set(open_fail_for)
+        self.image_path = image_path
         self.open_calls = []
         self.wait_calls = []
         self.closed_handles = []
@@ -81,6 +82,10 @@ class _FakeKernel32:
         self.events.append(("close", handle))
         return 1
 
+    def QueryFullProcessImageNameW(self, handle, _flags, buffer, _size):
+        buffer.value = self.image_path
+        return 1
+
 
 def _run_graceful_close_with_wait(
     monkeypatch,
@@ -88,12 +93,15 @@ def _run_graceful_close_with_wait(
     targets=((123, 1001),),
     wait_sequences=None,
     open_fail_for=(),
+    image_path=r"C:\Apps\app.exe",
     clock=(0.0, 0.0, 6.0),
 ):
     controller = WindowsProcessController()
-    kernel32 = _FakeKernel32(wait_sequences=wait_sequences, open_fail_for=open_fail_for)
+    kernel32 = _FakeKernel32(wait_sequences=wait_sequences, open_fail_for=open_fail_for, image_path=image_path)
     monkeypatch.setattr(process_module.sys, "platform", "win32")
     monkeypatch.setattr(controller, "_find_windowed_processes", lambda _process: list(targets))
+    monkeypatch.setattr(controller, "_current_session_id", lambda: 1)
+    monkeypatch.setattr(controller, "_process_session_id", lambda _pid: 1)
 
     def post_message(_hwnd, *_args):
         kernel32.events.append(("post", _hwnd))
@@ -108,7 +116,7 @@ def _run_graceful_close_with_wait(
     times = iter(clock)
     monkeypatch.setattr(process_module.time, "monotonic", lambda: next(times))
     monkeypatch.setattr(process_module.time, "sleep", lambda _seconds: None)
-    result = controller.close(ProcessSpec(executable_names=("app.exe",), reliable=True))
+    result = controller.close(ProcessSpec(executable_paths=(r"C:\Apps\app.exe",), reliable=True))
     return result, kernel32
 
 
@@ -120,7 +128,7 @@ def test_graceful_close_checks_alive_target_before_sending_wm_close_and_closes_h
     )
     assert result.success is True
     assert result.error_code is None
-    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE, 123)]
+    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE | WindowsProcessController.PROCESS_QUERY_LIMITED_INFORMATION, 123)]
     assert len(kernel32.wait_calls) == 2
     assert kernel32.events.index(("wait", 123)) < kernel32.events.index(("post", 1001))
     assert kernel32.closed_handles == [100]
@@ -189,5 +197,14 @@ def test_graceful_close_opens_one_wait_handle_for_multiple_windows_of_one_pid(mo
     )
 
     assert result.success is True
-    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE, 123)]
+    assert kernel32.open_calls == [(WindowsProcessController.SYNCHRONIZE | WindowsProcessController.PROCESS_QUERY_LIMITED_INFORMATION, 123)]
+    assert kernel32.closed_handles == [100]
+
+
+def test_graceful_close_rechecks_identity_before_sending_wm_close(monkeypatch):
+    result, kernel32 = _run_graceful_close_with_wait(
+        monkeypatch, image_path=r"C:\Other\app.exe",
+    )
+    assert result.error_code == "GRACEFUL_CLOSE_INSPECTION_FAILED"
+    assert all(event[0] != "post" for event in kernel32.events)
     assert kernel32.closed_handles == [100]

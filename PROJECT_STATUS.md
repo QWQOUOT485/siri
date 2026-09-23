@@ -4,6 +4,27 @@
 
 ## Current Phase
 
+### 2026-09-23 Issue #52 first four high-risk fixes — source review pending
+
+The branch `codex/issue-52-first-four-fixes` starts from exact `main`
+`bdd3468457ee2a2caa434d4c41091cafd8f45594` and changes only the first
+four high-risk findings tracked in issue #52. Discovered/manual process-close
+mapping now carries canonical executable paths; fixed system entries mark
+name-only hints explicitly, and the existing service still refuses to close
+system apps. Graceful close rechecks identity on its retained wait handle;
+force close rechecks identity on the termination handle. Spotify clarification
+uses closed positive selection forms. Fixed `.msc` tools resolve through the
+Windows system-directory API and the launcher rechecks the trusted path.
+Blocking `/action` and `/command` orchestration runs as sync FastAPI endpoints.
+
+These are source and mock-test changes pending independent PR review. No live
+Windows process-close or MMC launch acceptance, real Spotify playback, or Siri
+acceptance was performed; the installed Agent was not changed. Issue #52 and
+its other findings remain open, with its checkboxes untouched. Next: review
+the PR and perform separately authorized real Windows/Spotify acceptance.
+`LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
+remain unchanged.
+
 ### 2026-09-23 Stage B independent-review workflow merged / independent review pending
 
 PR #48's reviewed candidate-corpus head was exactly

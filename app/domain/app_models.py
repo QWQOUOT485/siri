@@ -35,7 +35,9 @@ class LaunchMethod(str, Enum):
 class ProcessSpec(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    executable_paths: tuple[str, ...] = Field(default_factory=tuple)
     executable_names: tuple[str, ...] = Field(default_factory=tuple)
+    name_only_system: bool = False
     reliable: bool = False
 
 

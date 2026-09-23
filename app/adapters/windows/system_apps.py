@@ -12,6 +12,8 @@ import shutil
 from app.domain.app_models import AppEntry, AppType, LaunchMethod, LaunchSource, ProcessSpec
 from app.domain.matching import aliases_for, normalize_app_name
 
+from .system_paths import trusted_msc_path
+
 
 SYSTEM_APP_DEFINITIONS: tuple[dict[str, object], ...] = (
     {"name": "Task Manager", "aliases": ("task manager", "工作管理員"), "method": LaunchMethod.EXECUTABLE, "target": "taskmgr.exe", "process": ("taskmgr.exe",)},
@@ -45,19 +47,21 @@ def system_app_entries() -> list[AppEntry]:
         target = str(item["target"])
         method = item["method"]
         resolved_target = shutil.which(target) if method is LaunchMethod.EXECUTABLE else None
-        launch_target = resolved_target or target
+        launch_target = (trusted_msc_path(target) if method is LaunchMethod.SHELL_EXECUTE else None) or resolved_target or target
         aliases = aliases_for(name, tuple(str(value) for value in item.get("aliases", ())))
         process_names = tuple(str(value).casefold() for value in item.get("process", ()))
         entries.append(
             AppEntry(
-                app_id=stable_app_id("system_apps", name, launch_target),
+                # Keep the historical ID when a relative MMC target becomes an
+                # OS-resolved System32 path.
+                app_id=stable_app_id("system_apps", name, target if method is LaunchMethod.SHELL_EXECUTE else launch_target),
                 display_name=name,
                 normalized_name=normalize_app_name(name),
                 aliases=aliases,
                 launch_method=method,
                 launch_target=launch_target,
                 executable_path=launch_target if method is LaunchMethod.EXECUTABLE else None,
-                process=ProcessSpec(executable_names=process_names, reliable=bool(process_names)),
+                process=ProcessSpec(executable_names=process_names, name_only_system=True, reliable=bool(process_names)),
                 source="system_apps",
                 app_type=AppType.SYSTEM,
                 confidence=0.99,

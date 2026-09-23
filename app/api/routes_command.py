@@ -18,7 +18,7 @@ def _record_command_latency(runtime, started: float) -> None:
 
 
 @router.post("/command")
-async def command(request: Request, body: CommandRequest, _=Depends(require_api_key)):
+def command(request: Request, body: CommandRequest, _=Depends(require_api_key)):
     runtime = request.app.state.runtime
     started = time.perf_counter()
     if body.clarification_token:
