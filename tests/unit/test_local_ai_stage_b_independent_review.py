@@ -56,12 +56,14 @@ def _first_packet_row(tmp_path: Path) -> dict[str, object]:
     return json.loads(packet_path.read_text(encoding="utf-8").splitlines()[0])
 
 
-def test_review_source_binds_exact_reviewed_pr48_identities() -> None:
+def test_review_source_binds_exact_frozen_v5_identities() -> None:
     source = review.load_review_source()
 
     assert dict(source.identities) == dict(review.REVIEWED_SOURCE_IDENTITIES)
     assert len(source.rows) == 3600
     assert len(source.entities_by_key) == 600
+    assert source.manifest["generator_version"] == "stage-b-candidate-generator-v5"
+    assert source.manifest["zh_hans_script_inventory_sha256"] == review.ZH_HANS_SCRIPT_INVENTORY_SHA256
 
 
 def test_source_identity_mismatch_fails_closed(tmp_path: Path) -> None:
@@ -104,6 +106,11 @@ def test_packet_ids_and_hashes_are_deterministic(tmp_path: Path) -> None:
 
     assert first["manifest"] == second["manifest"]
     assert first["packet_hashes"] == second["packet_hashes"]
+    for relative_path in ("review_manifest.json", "decisions/README.md"):
+        first_bytes = (Path(first["review_dir"]) / relative_path).read_bytes()
+        second_bytes = (Path(second["review_dir"]) / relative_path).read_bytes()
+        assert first_bytes == second_bytes
+        assert b"\r\n" not in first_bytes
     for packet_number in range(1, 13):
         first_bytes = (
             Path(first["review_dir"]) / "packets" / f"packet-{packet_number:02d}.jsonl"

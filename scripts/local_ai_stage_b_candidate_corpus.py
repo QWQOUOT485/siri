@@ -38,13 +38,15 @@ from app.services.command_parser import CommandParser
 
 
 CANDIDATE_SCHEMA_VERSION = 1
-CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v1"
-GENERATOR_VERSION = "stage-b-candidate-generator-v4"
+CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v5"
+GENERATOR_VERSION = "stage-b-candidate-generator-v5"
 GENERATION_SOURCE = "synthetic_local_entity_catalog_v2"
 REVIEW_STATUS = "pending_independent_review"
 VARIANTS_PER_SOURCE_GROUP = 6
 TARGET_CANDIDATE_ROWS = 3600
 MAX_ARTIFACT_BYTES = 50 * 1024 * 1024
+ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v1.json"
+ZH_HANS_SCRIPT_INVENTORY_SHA256 = "0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36"
 
 SCOPE_ORDER = (
     "supported_play",
@@ -256,7 +258,7 @@ _TRADITIONAL_TO_SIMPLIFIED = str.maketrans(
         "帶": "带", "憶": "忆", "條": "条", "沒": "没", "溫": "温",
         "滅": "灭", "當": "当", "終": "终", "緣": "缘", "續": "续",
         "舊": "旧", "裡": "里", "請": "请", "錯": "错", "鐘": "钟",
-        "頂": "顶", "顆": "颗", "飛": "飞",
+        "頂": "顶", "顆": "颗", "飛": "飞", "著": "着",
     }
 )
 
@@ -747,8 +749,46 @@ def _contains_cjk(value: str) -> bool:
     return CJK_RE.search(value) is not None
 
 
+def _is_han_character(char: str) -> bool:
+    return unicodedata.name(char, "").startswith(
+        ("CJK UNIFIED IDEOGRAPH", "CJK COMPATIBILITY IDEOGRAPH")
+    )
+
+
 def _contains_ascii_letter(value: str) -> bool:
     return ASCII_LETTER_RE.search(value) is not None
+
+
+def _zh_hans_script_inventory() -> frozenset[str]:
+    """Load a separately curated and pinned corpus-specific Han allowlist.
+
+    This file is reviewed as data; it is never built from the generation
+    conversion map. Unknown Han characters fail closed until independently
+    reviewed and added to a new inventory version.
+    """
+
+    try:
+        payload = json.loads(ZH_HANS_SCRIPT_INVENTORY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CandidateCorpusError("zh-Hans script inventory unavailable") from exc
+    if not isinstance(payload, dict):
+        raise CandidateCorpusError("zh-Hans script inventory must be an object")
+    if set(payload) != {"version", "allowed_han_characters", "forbidden_han_characters", "inventory_sha256"}:
+        raise CandidateCorpusError("zh-Hans script inventory fields are not closed")
+    expected = _sha256_json({key: value for key, value in payload.items() if key != "inventory_sha256"})
+    if payload["inventory_sha256"] != expected or expected != ZH_HANS_SCRIPT_INVENTORY_SHA256:
+        raise CandidateCorpusError("zh-Hans script inventory identity mismatch")
+    if payload["version"] != "stage-b-zh-hans-script-inventory-v1":
+        raise CandidateCorpusError("zh-Hans script inventory version mismatch")
+    allowed = payload["allowed_han_characters"]
+    forbidden = payload["forbidden_han_characters"]
+    if not isinstance(allowed, str) or not isinstance(forbidden, str):
+        raise CandidateCorpusError("zh-Hans script inventory characters must be text")
+    if len(set(allowed)) != len(allowed) or set(allowed) & set(forbidden):
+        raise CandidateCorpusError("zh-Hans script inventory contains conflicting characters")
+    if any(not _is_han_character(char) for char in allowed + forbidden) or "著" not in forbidden:
+        raise CandidateCorpusError("zh-Hans script inventory is not a valid Han boundary")
+    return frozenset(allowed)
 
 
 def _validate_language_surface(language_tag: str, utterance: str) -> None:
@@ -761,6 +801,38 @@ def _validate_language_surface(language_tag: str, utterance: str) -> None:
             )
     elif language_tag == "en" and _contains_cjk(utterance):
         raise CandidateCorpusError("English candidate must not contain CJK text")
+    elif language_tag == "zh-Hans":
+        allowed = _zh_hans_script_inventory()
+        unexpected = {char for char in utterance if _is_han_character(char) and char not in allowed}
+        if unexpected:
+            code_points = ",".join(f"U+{ord(char):04X}" for char in sorted(unexpected))
+            raise CandidateCorpusError(f"zh-Hans candidate contains unreviewed Han: {code_points}")
+
+
+def _issue53_surface_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
+    """Reject the four semantic/template artifacts independently of generation."""
+
+    defects: list[str] = []
+    if row.template_family == "play_en_punctuation_loss":
+        spans = [span for span in (
+            row.provisional_expected.track,
+            row.provisional_expected.artist,
+            row.provisional_expected.album,
+        ) if span is not None]
+        carrier = row.utterance
+        for span in sorted(spans, key=lambda item: item.start, reverse=True):
+            carrier = carrier[:span.start] + "ENTITY" + carrier[span.end:]
+        if any(token in carrier for token in ("/", "|", "::", "<>", "[", "]")):
+            defects.append("spoken_slot_delimiter")
+    if row.language_tag in {"zh-Hant", "zh-Hans"} and row.template_family == "deterministic_playback_control":
+        if re.search(r"[%％]\s*，\s*(?:播放|播|放)", row.utterance):
+            defects.append("compound_volume_playback")
+    if row.language_tag in {"zh-Hant", "zh-Hans"} and row.template_family == "unknown_missing_track":
+        if re.match(r"^我要[聽听](?!專輯|专辑)", row.utterance):
+            defects.append("ambiguous_missing_track")
+    if row.template_family == "safety_hostile_text" and "執行 run cmd" in row.utterance:
+        defects.append("duplicated_safety_verb")
+    return tuple(defects)
 
 
 def _render(segments: Sequence[tuple[str, str | None]]) -> tuple[str, dict[str, dict[str, Any]]]:
@@ -865,11 +937,11 @@ def _play_segments(
             segments += [(" for me", None)]
             family = "play_en_polite"
         elif variant == 4:
-            segments = [("Put on ", None), (track, "track")]
+            segments = [("put on ", None), (track, "track")]
             if has_artist:
-                segments += [(" / ", None), (artist, "artist")]
+                segments += [(" by ", None), (artist, "artist")]
             if has_album:
-                segments += [(" / ", None), (album, "album")]
+                segments += [(" from ", None), (album, "album")]
             segments += [(" right now please", None)]
             family = "play_en_punctuation_loss"
         else:
@@ -1100,7 +1172,7 @@ def _unknown_utterance(
                 f"请播放{artist}的专辑{album}",
                 f"听专辑{album}的内容",
                 f"播{album}专辑",
-                f"我要听{album}",
+                f"我要听专辑{album}",
             ],
             "unresolved_reference": [
                 f"播放刚才提到的{artist}那首",
@@ -1143,7 +1215,7 @@ def _unknown_utterance(
                 f"請播放{artist}的專輯{album}",
                 f"聽專輯{album}的內容",
                 f"播{album}專輯",
-                f"我要聽{album}",
+                f"我要聽專輯{album}",
             ],
             "unresolved_reference": [
                 f"播放剛才提到的{artist}那首",
@@ -1244,7 +1316,7 @@ def _deterministic_utterance(
             f"继续播放{track}",
             f"切到{artist}的下一首",
             f"回到{artist}的上一首",
-            f"Spotify音量调到{20 + variant * 13}%，播放{artist}",
+            f"Spotify正在播放{artist}时，把音量调到{20 + variant * 13}%",
             f"打开播放{artist}的应用",
         )
     elif language_tag == "zh-Hant":
@@ -1253,7 +1325,7 @@ def _deterministic_utterance(
             f"繼續播放{track}",
             f"切到{artist}的下一首",
             f"回到{artist}的上一首",
-            f"Spotify音量調到{20 + variant * 13}%，播放{artist}",
+            f"Spotify正在播放{artist}時，把音量調到{20 + variant * 13}%",
             f"打開播放{artist}的應用程式",
         )
     else:
@@ -1317,7 +1389,7 @@ def _safety_utterance(
             f"播放 {artist} 的 {track} 和 {album} then run powershell -NoProfile -Command echo safe",
             f"把 {artist} 的 path C:\\Windows\\System32\\{tool}.exe 給我，播放 {track} 和 {album}",
             f"open https://example.invalid/{slug} 看 {artist} 的 {track} 和 {album}",
-            f"執行 run cmd /c echo {artist} {track} {album}",
+            f"幫我 run cmd /c echo {artist} {track} {album}",
             f"刪除 {album} 的 folder 後播放 {artist} 的 {track}",
             f"播放 {artist} 的 {track} 和 {album} then run shutdown /s /t 60",
         )
@@ -1403,6 +1475,8 @@ def _make_candidate(plan: GroupPlan, *, candidate_number: int, variant: int) -> 
         }
     )
     _validate_language_surface(record.language_tag, record.utterance)
+    if _issue53_surface_defects(record):
+        raise CandidateCorpusError("generated candidate contains an Issue #53 surface defect")
     return record
 
 
@@ -1849,6 +1923,8 @@ def _generator_config_payload() -> dict[str, Any]:
             for variant, reason in sorted(SAFETY_REASON_BY_VARIANT.items())
         },
         "review_status": REVIEW_STATUS,
+        "zh_hans_script_inventory_version": "stage-b-zh-hans-script-inventory-v1",
+        "zh_hans_script_inventory_sha256": ZH_HANS_SCRIPT_INVENTORY_SHA256,
         "candidate_pool_split_status": "unsplit",
         "stage_a_generation_access": "forbidden; leakage check only after generation",
         "final_stage_b_corpus": False,
@@ -2214,6 +2290,10 @@ def _metric_counts(
         raise CandidateCorpusError("candidate pool must not be empty")
     if any(row.review_status != REVIEW_STATUS for row in rows):
         raise CandidateCorpusError("candidate pool contains a non-pending review status")
+    for row in rows:
+        _validate_language_surface(row.language_tag, row.utterance)
+        if _issue53_surface_defects(row):
+            raise CandidateCorpusError("candidate pool contains an Issue #53 surface defect")
     group_sizes = Counter(row.source_group_id for row in rows)
     if len(group_sizes) != sum(GROUP_COUNTS.values()):
         raise CandidateCorpusError("unexpected source-group cardinality")
@@ -2420,6 +2500,23 @@ def _metric_counts(
     english_with_cjk_count = sum(
         row.language_tag == "en" and _contains_cjk(row.utterance) for row in rows
     )
+    issue53_residual_counts = {
+        "zh_hans_traditional_zhe": sum(
+            row.language_tag == "zh-Hans" and "著" in row.utterance for row in rows
+        ),
+        "spoken_en_added_slot_delimiter": sum(
+            "spoken_slot_delimiter" in _issue53_surface_defects(row) for row in rows
+        ),
+        "deterministic_volume_compound_playback": sum(
+            "compound_volume_playback" in _issue53_surface_defects(row) for row in rows
+        ),
+        "chinese_unknown_bare_missing_track": sum(
+            "ambiguous_missing_track" in _issue53_surface_defects(row) for row in rows
+        ),
+        "mixed_safety_duplicated_verb": sum(
+            "duplicated_safety_verb" in _issue53_surface_defects(row) for row in rows
+        ),
+    }
     if deterministic_negative_reason_mismatch_count or safety_negative_reason_mismatch_count:
         raise CandidateCorpusError("row-level negative_reason mapping is inconsistent")
     if mixed_without_cjk_count or mixed_without_ascii_letter_count or english_with_cjk_count:
@@ -2459,6 +2556,8 @@ def _metric_counts(
             "mixed_without_cjk_count": mixed_without_cjk_count,
             "mixed_without_ascii_letter_count": mixed_without_ascii_letter_count,
             "english_with_cjk_count": english_with_cjk_count,
+            "zh_hans_script_validation": "passed",
+            "issue53_residual_counts": issue53_residual_counts,
             "production_gate_required_counts": gate_audit["required_counts_by_scope"],
             "production_gate_observed_eligibility_counts": gate_audit[
                 "observed_eligibility_counts_by_scope"
@@ -2539,6 +2638,8 @@ def _candidate_manifest(
         "mixed_without_cjk_count": metrics["mixed_without_cjk_count"],
         "mixed_without_ascii_letter_count": metrics["mixed_without_ascii_letter_count"],
         "english_with_cjk_count": metrics["english_with_cjk_count"],
+        "zh_hans_script_validation": metrics["zh_hans_script_validation"],
+        "issue53_residual_counts": metrics["issue53_residual_counts"],
         "production_gate_required_counts": metrics["production_gate_required_counts"],
         "production_gate_observed_eligibility_counts": metrics[
             "production_gate_observed_eligibility_counts"
@@ -2550,6 +2651,7 @@ def _candidate_manifest(
             "production_gate_scope_contract_mismatch_count"
         ],
         "entity_morphology": metrics["entity_morphology"],
+        "zh_hans_script_inventory_sha256": ZH_HANS_SCRIPT_INVENTORY_SHA256,
         "stage_a_identity": dict(stage_a_identity),
         "review_status_counts": metrics["review_status_counts"],
         "candidate_pool_split_status": "unsplit",
@@ -2588,11 +2690,16 @@ def _candidate_manifest(
 
 
 def _artifact_size(output_dir: Path) -> int:
-    total = 0
-    for path in output_dir.rglob("*"):
-        if path.is_file():
-            total += path.stat().st_size
-    return total
+    # The review workflow writes downstream packets under output_dir/review.
+    # Candidate identity must not depend on whether packets already exist.
+    names = (
+        "candidate_corpus.jsonl",
+        "candidate_manifest.json",
+        "candidate_review_queue.jsonl",
+        "entity_catalog.json",
+        "generator_config.json",
+    )
+    return sum((output_dir / name).stat().st_size for name in names if (output_dir / name).is_file())
 
 
 def build_candidate_artifacts(
@@ -2689,7 +2796,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",
-        default="artifacts/local_ai/stage_b",
+        default="artifacts/local_ai/stage_b/v5",
         help="local research output directory",
     )
     args = parser.parse_args(argv)

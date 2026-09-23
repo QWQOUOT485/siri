@@ -6,9 +6,8 @@ candidate.  The only writes it performs are review packets, a review manifest,
 and reviewer-facing schema documentation under the separate ``review``
 directory.
 
-The source identity is fail-closed against the reviewed PR #48 artifact
-hashes.  A regenerated candidate corpus therefore cannot silently reuse an
-old review workflow or decision ledger.
+The source identity is fail-closed against the frozen v5 artifact hashes.
+A regenerated candidate corpus cannot silently reuse an old decision ledger.
 """
 
 from __future__ import annotations
@@ -38,26 +37,28 @@ REVIEW_STATUS = "pending_independent_review"
 PACKET_COUNT = 12
 ROWS_PER_PACKET = 300
 EXPECTED_CANDIDATE_COUNT = PACKET_COUNT * ROWS_PER_PACKET
-DEFAULT_STAGE_B_ARTIFACT_DIR = _REPO_ROOT / "artifacts" / "local_ai" / "stage_b"
+DEFAULT_STAGE_B_ARTIFACT_DIR = _REPO_ROOT / "artifacts" / "local_ai" / "stage_b" / "v5"
 DEFAULT_REVIEW_DIR = DEFAULT_STAGE_B_ARTIFACT_DIR / "review"
+ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v1.json"
+ZH_HANS_SCRIPT_INVENTORY_SHA256 = "0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36"
 
-# These are the reviewed PR #48 source identities.  They are intentionally
+# These are the frozen v5 source identities.  They are intentionally
 # literal and independent of the current candidate manifest.  The manifest is
 # also recomputed and compared so a stale or hand-edited manifest cannot bless
 # a different source corpus.
 REVIEWED_SOURCE_IDENTITIES = MappingProxyType(
     {
         "candidate_corpus_sha256": (
-            "c7e0a44b69d4033c960a8a1af20b0f4c71ad5674ece4b9a44953a1bea40e68d2"
+            "658628de9659c91688415f9aa3c29292d89037954a213f6f5a49e6e6fa1258bd"
         ),
         "entity_catalog_sha256": (
-            "5deb5bd5a5c7d02b0f2eb864d0bfc4063161c62697d19fc2363f9d3e458b502a"
+            "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb"
         ),
         "generator_config_sha256": (
-            "d263bd9ec97a897134e9fc5bf1121f16b86a84ff9a361d7046c68f10670d4435"
+            "ddb44af17a7f2ce81ef413ce122f8d2d5664755f0be8495b5c319e850215412e"
         ),
         "candidate_manifest_sha256": (
-            "a2ceef6205a3bf1a92c31a6ad12d34ac5a1d9aee467ace101532ba9ddfae074f"
+            "ff1e4a89524be878c9aaa491cb978c753728ef45baed1051512ec0954e838950"
         ),
     }
 )
@@ -199,9 +200,9 @@ def _sha256_json(value: Any) -> str:
 
 
 def _write_json(path: Path, value: Any) -> None:
-    path.write_text(
-        json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
+    path.write_bytes(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
+        + b"\n"
     )
 
 
@@ -286,8 +287,8 @@ def _validate_source_row(payload: Mapping[str, Any]) -> dict[str, Any]:
         raise ReviewSourceIdentityError("candidate row failed source-schema validation") from exc
     if payload["review_status"] != REVIEW_STATUS:
         raise ReviewSourceIdentityError("candidate row is not pending independent review")
-    if payload["generator_version"] != "stage-b-candidate-generator-v4":
-        raise ReviewSourceIdentityError("candidate row generator version is not v4")
+    if payload["generator_version"] != "stage-b-candidate-generator-v5":
+        raise ReviewSourceIdentityError("candidate row generator version is not v5")
     if not isinstance(payload["generation_source"], str) or not payload["generation_source"]:
         raise ReviewSourceIdentityError("candidate row generation_source is invalid")
     return dict(payload)
@@ -306,7 +307,7 @@ def _source_group_number(source_group_id: str) -> str:
 def load_review_source(
     artifacts_dir: str | Path = DEFAULT_STAGE_B_ARTIFACT_DIR,
 ) -> ReviewSource:
-    """Load and fail-closed validate the reviewed PR #48 source artifacts."""
+    """Load and fail-closed validate the frozen v5 source artifacts."""
 
     safe_dir = protocol.validate_local_path(artifacts_dir, field="artifacts_dir")
     manifest = _read_json(safe_dir / "candidate_manifest.json")
@@ -344,6 +345,17 @@ def load_review_source(
         field="generator_config_sha256",
     ):
         raise ReviewSourceIdentityError("generator config self-hash does not verify")
+    script_inventory = _read_json(ZH_HANS_SCRIPT_INVENTORY_PATH)
+    if (
+        _hash_without_field(script_inventory, "inventory_sha256")
+        != ZH_HANS_SCRIPT_INVENTORY_SHA256
+        or script_inventory.get("inventory_sha256") != ZH_HANS_SCRIPT_INVENTORY_SHA256
+        or generator_config.get("zh_hans_script_inventory_sha256")
+        != ZH_HANS_SCRIPT_INVENTORY_SHA256
+        or manifest.get("zh_hans_script_inventory_sha256")
+        != ZH_HANS_SCRIPT_INVENTORY_SHA256
+    ):
+        raise ReviewSourceIdentityError("zh-Hans script inventory identity mismatch")
 
     raw_rows = _read_jsonl(safe_dir / "candidate_corpus.jsonl")
     rows = [_validate_source_row(row) for row in raw_rows]
@@ -389,7 +401,7 @@ def load_review_source(
     }
     if actual_identities != dict(REVIEWED_SOURCE_IDENTITIES):
         raise ReviewSourceIdentityError(
-            "source artifacts do not match the reviewed PR #48 identities"
+            "source artifacts do not match the frozen v5 identities"
         )
     for field, expected in dict(REVIEWED_SOURCE_IDENTITIES).items():
         manifest_field = "manifest_sha256" if field == "candidate_manifest_sha256" else field
@@ -725,7 +737,7 @@ required fields:
 `needs_correction`; pending is not a submitted decision. An accept requires
 all five positive reason codes. A reject or needs-correction decision requires
 at least one negative reason code. The offline validator also binds every
-decision to the reviewed PR #48 source identities and rejects duplicate
+decision to the frozen v5 source identities and rejects duplicate
 decisions from the same reviewer for the same candidate.
 
 Multiple reviewers may review the same candidate. For each candidate, the
@@ -758,7 +770,7 @@ To validate a local JSONL submission without writing a ledger:
 ```
 
 The validator is offline-only and fails closed if the candidate artifact
-identity differs from the reviewed PR #48 hashes in the review manifest.
+identity differs from the frozen v5 hashes in the review manifest.
 """
 
 
@@ -791,10 +803,7 @@ def build_review_artifacts(
     for packet_id, rows in packets.items():
         _write_jsonl(safe_review_dir / "packets" / f"{packet_id}.jsonl", rows)
     _write_json(safe_review_dir / "review_manifest.json", manifest)
-    (decision_dir / "README.md").write_text(
-        _decisions_readme(manifest),
-        encoding="utf-8",
-    )
+    (decision_dir / "README.md").write_bytes(_decisions_readme(manifest).encode("utf-8"))
     return {
         "review_dir": str(safe_review_dir),
         "manifest": manifest,
