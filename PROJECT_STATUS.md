@@ -4,16 +4,20 @@
 
 ## Current Phase
 
-### 2026-09-23 Stage B independent-review workflow / conflict-aware aggregation, review pending
+### 2026-09-23 Stage B independent-review workflow merged / independent review pending
 
 PR #48's reviewed candidate-corpus head was exactly
 `c5481a7d7d4b08f29b77e3ed65afaacd68a2ea85`; it is merged into `main` with
-merge commit `04dadb6ef086534ab42f84b43fc40296e2cd7df4`. The active branch
-`codex/stage-b-independent-review-workflow-20260922` starts from that merge
-commit and adds the offline independent-review workflow with conflict-aware
-candidate aggregation. PR #50 remains OPEN for independent review and must
-remain unmerged; the implementation commit is
-`8d135e37d6a196bd2d1f630e51e8095d8c797613`.
+merge commit `04dadb6ef086534ab42f84b43fc40296e2cd7df4`. PR #50 was reviewed
+at exact head `c59ae2b0aba1f0ddec42d02e28f01e40d02512f1` and is now merged into
+`main` with merge commit `84c778b702d8ca469882aa5e06a6f3602ceffdcd`. The
+independent-review workflow is now in `main`; its 12 deterministic review
+packets of 300 rows each remain frozen. Review decisions remain zero at
+workflow creation, so all 3,600 candidates remain pending independent review.
+Conflict-aware candidate aggregation exists, but automatic conflict
+adjudication does not exist. The final 3,000 rows are not selected, no final
+split exists, held-out data is not sealed, and training is not authorized.
+The implementation commit is `8d135e37d6a196bd2d1f630e51e8095d8c797613`.
 
 The frozen Stage B source remains an offline, deterministic, **unsplit** pool
 of 3,600 provisional rows across 600 source groups and 32 template families.
