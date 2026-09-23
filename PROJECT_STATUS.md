@@ -18,8 +18,9 @@ under `artifacts/local_ai/stage_b/v6/`; no earlier artifact was overwritten.
 The `stage-b-candidate-generator-v6` branch
 `codex/stage-b-v6-naturalness-correction` fixes those three carriers and eight
 additional documented carrier-level defects found in a review of all 32
-families. In total, 858 candidate utterances were rephrased. V6 has 3,600
-rows, 600 source groups, 32 families, and the unchanged scope, language,
+families. In total, 858 candidate utterances were rephrased. PR #56 is open
+for independent review and has not been merged. V6 has 3,600 rows, 600
+source groups, 32 families, and the unchanged scope, language,
 optional-slot, Stage A, near-duplicate, and production-gate contracts. The
 independent zh-Hans script inventory remains fail-closed and is separately
 versioned for the newly used Simplified character `唱`. Mechanical validation
