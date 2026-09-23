@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-23 Stage B v6 carrier correction pending independent review
+### 2026-09-23 Stage B v6 carrier correction pending gatekeeper re-review
 
 PR #55 merged the mechanically frozen v5 pool at main
 `75a94cb1f081e0fa0a25f5571b85dafc05d6eb18`. An external Gemini 3.8 High
@@ -19,16 +19,24 @@ The `stage-b-candidate-generator-v6` branch
 `codex/stage-b-v6-naturalness-correction` fixes those three carriers and eight
 additional documented carrier-level defects found in a review of all 32
 families. In total, 858 candidate utterances were rephrased. PR #56 is open
-for independent review and has not been merged. V6 has 3,600 rows, 600
+and unmerged. Gatekeeper inspection at reviewed head
+`f269a90401fb66ecb277927b88bfa0713879c3e8` then found a dangling album
+modifier in 54 `play_mixed_asr_spacing` rows. The follow-up changed exactly
+those 54 album-present utterances and regenerated their source-bound review
+artifacts; the other 3,546 utterances and entity catalog are unchanged.
+PR #56 is pending gatekeeper re-review before full independent semantic
+review. V6 has 3,600 rows, 600
 source groups, 32 families, and the unchanged scope, language,
 optional-slot, Stage A, near-duplicate, and production-gate contracts. The
 independent zh-Hans script inventory remains fail-closed and is separately
 versioned for the newly used Simplified character `唱`. Mechanical validation
 and regression evidence are in
 [`docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md).
-The focused Stage B candidate/review tests passed (55), the full unit suite
-passed (559, 2 dependency deprecation warnings), and `compileall -q app scripts tests`
-plus `git diff --check` passed. These checks do not replace semantic review.
+The focused candidate-generator tests passed (32), focused review tests passed
+(25), and the full unit suite passed (561, 2 existing dependency deprecation
+warnings). `compileall -q app scripts tests` and `git diff --check` passed.
+Corpus, identity, and packet gates pass. These mechanical checks do not replace
+gatekeeper or independent semantic review.
 
 The 12 v6 packets each contain 300 candidates exactly once. The v6 review
 manifest begins with zero decisions and 3,600 pending. Independent semantic

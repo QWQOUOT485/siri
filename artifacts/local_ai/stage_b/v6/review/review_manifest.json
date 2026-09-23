@@ -1148,18 +1148,18 @@
     }
   },
   "packet_hashes": {
-    "packet-01": "00244bb54915448cc3ac01c84f85257d50aee8d862774d5887473e252e0b15c9",
-    "packet-02": "79f770debf9be1ad70e8cdbac8246c0cdf3227dc46382f83f159fa38cc01b52b",
-    "packet-03": "34b13624b6fcada5d9a81930027ed8bd57dff4e97e1a9643c9246d789ae36dbf",
-    "packet-04": "08ccaab7d679402d24b61035ffdcaf0231dcc8266a87223adeefb2c7c54b02b6",
-    "packet-05": "2ad6f5aaa9d40b53d7d682ba207afc217efe4c278bf8d0a190dda643112f5340",
-    "packet-06": "ea071a34e8ffeb7b58cd331b4a06a92631b7934cb7f5980cdb3d9f5754d70fb9",
-    "packet-07": "4bc3e2b5fd76bd6181f3f83a3dd7815a40c1b8aafc0d2c57260776e3c0f0b47f",
-    "packet-08": "1292d125c1281f089be3d1e8cdcc4675dfc57593832f0dd980ebdf2bba317262",
-    "packet-09": "09818cd7c15686ee118b6ff568b7d3e17b54ba66961f4d19a00cc25339b874b2",
-    "packet-10": "5a73dc9ac072dda38d2e33813fc7de2451222fef62f024fb3b4cba11b3fa0a2d",
-    "packet-11": "57158913c3a5882dabbef23585f51868cfceb9c802f4f81769ce31625cf712ec",
-    "packet-12": "fe684a630d33997a654a8eb68275c8e30856d8cfb0b266690354244ef5516f0d"
+    "packet-01": "b2bca0ae1bf7a3d3e366b26abcc892929c029e47e2a969d40d348b0b902620f5",
+    "packet-02": "e62efdcd540d6120685e6cfb5cc3429945f8b12a32ac2c158e63a8f873ce8d27",
+    "packet-03": "e6325c84f34dbe589357e808ccf68f5766af9335c4409370820089d3114bf3d0",
+    "packet-04": "1a044d65b48b66cc93dc42bd9e4c6409756b881677289a9f34358e0169c45bb3",
+    "packet-05": "725acd5e031272f40380971250bca516b52f5b1ce1acdff69b99419b88157ab1",
+    "packet-06": "8780014a4b2ac53bc046c8973689ca26120d3e08725c241072e237322f0ed0c4",
+    "packet-07": "c725bda3133ca3b50fffff85e8a9c6d1d432f281c832f94eec9c2ba13cda09dd",
+    "packet-08": "bd976063f5f7736a794ad52e3019bffcab5bce2a7cd32561894754199606cd26",
+    "packet-09": "f9675611e735e6b429973b69569821fabc19d574049747492d1a8c75a9a5796c",
+    "packet-10": "2ab1e17f975f7f75127d7b690744a153a3a7155a4b3d7e3d4fdc9ff1fcdbf96f",
+    "packet-11": "65ffbe6d257363099f91ff1f75b0d5bc77b39e3fb58f34dc278657635dcf82ff",
+    "packet-12": "16ffefe98b6304af12655b8f88ac3ad16342b81e30dec41e84b1a545ac91516c"
   },
   "packet_ids": [
     "packet-01",
@@ -1189,7 +1189,7 @@
     "packet-11": 300,
     "packet-12": 300
   },
-  "review_manifest_sha256": "b25117e3ad48eee0332cf2dde634a1ee01c154895ae2df3b82a8898d72870d4a",
+  "review_manifest_sha256": "d7d63ba83a73ab9d8f9a259975175538012eedf0834ce7c01a70e12dbadfa56a",
   "review_manifest_version": 2,
   "review_status": "pending_independent_review",
   "review_workflow_version": "stage-b-independent-review-v2",
@@ -1214,8 +1214,8 @@
     "row_level_decisions": true
   },
   "source_identities": {
-    "candidate_corpus_sha256": "a5671cbd8c3b28c3d14994786b800b70797aac19d0392931fa3f8c29e9628d0d",
-    "candidate_manifest_sha256": "13e50c4ccc336cc46c62d9a45654d2783d981dbcad0ea807869a9379d4fe3e18",
+    "candidate_corpus_sha256": "fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238",
+    "candidate_manifest_sha256": "83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6",
     "entity_catalog_sha256": "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb",
     "generator_config_sha256": "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e"
   },

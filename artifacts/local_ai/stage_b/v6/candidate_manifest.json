@@ -5,8 +5,8 @@
     "safety_only": 240,
     "supported": 3060
   },
-  "artifact_total_size_bytes": 3149198,
-  "candidate_corpus_sha256": "a5671cbd8c3b28c3d14994786b800b70797aac19d0392931fa3f8c29e9628d0d",
+  "artifact_total_size_bytes": 3149603,
+  "candidate_corpus_sha256": "fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238",
   "candidate_corpus_version": "stage-b-candidate-corpus-v6",
   "candidate_manifest_version": 1,
   "candidate_pool_split_status": "unsplit",
@@ -707,7 +707,7 @@
     "mixed": 1140
   },
   "local_ai_fallback_approved": false,
-  "manifest_sha256": "13e50c4ccc336cc46c62d9a45654d2783d981dbcad0ea807869a9379d4fe3e18",
+  "manifest_sha256": "83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6",
   "mixed_without_ascii_letter_count": 0,
   "mixed_without_cjk_count": 0,
   "model_compute_authorized": false,
@@ -793,7 +793,7 @@
     }
   },
   "production_gate_scope_contract_mismatch_count": 0,
-  "review_queue_sha256": "1e0c1cd5ad00e6766c1a0c9f94ac546ccbc5c6974e727761f1d454ce80092fd8",
+  "review_queue_sha256": "7f7e4e63b9243a6d2e8bde86689a42f52bb36af215f4a6a1fa0ae2be72ce4230",
   "review_status_counts": {
     "pending_independent_review": 3600
   },
@@ -880,6 +880,9 @@
     "hant_particle_meta_label": 0,
     "mixed_field_label": 0,
     "other_en_meta_request": 0
+  },
+  "v6_carrier_residual_counts": {
+    "mixed_asr_spacing_dangling_album": 0
   },
   "zh_hans_script_inventory_sha256": "733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8",
   "zh_hans_script_validation": "passed"

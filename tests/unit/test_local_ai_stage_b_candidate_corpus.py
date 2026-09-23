@@ -612,6 +612,65 @@ def test_v6_chinese_particle_carriers_support_all_optional_modes(
     }
 
 
+def test_v6_mixed_asr_spacing_album_carrier_has_no_dangling_modifier() -> None:
+    rows, catalog = candidate.generate_candidate_records()
+    entities = {entry["entity_key"]: entry for entry in catalog}
+    family_rows = [row for row in rows if row.template_family == "play_mixed_asr_spacing"]
+    assert len(family_rows) == 90
+    expected_carriers = {
+        ("absent", "absent"): "想聽聽 ENTITY，謝謝",
+        ("present", "absent"): "想聽聽 ENTITY，ENTITY 的歌，謝謝",
+        ("absent", "present"): "想聽聽 ENTITY，收錄在 ENTITY 這張專輯裡，謝謝",
+        ("present", "present"): "想聽聽 ENTITY，ENTITY 的歌，收錄在 ENTITY 這張專輯裡，謝謝",
+    }
+    mode_counts: Counter[tuple[str, str]] = Counter()
+    for row in family_rows:
+        status = row.provisional_optional_slot_status
+        assert status is not None
+        mode = (status["artist"], status["album"])
+        mode_counts[mode] += 1
+        carrier = candidate._play_carrier(row)
+        assert carrier == expected_carriers[mode]
+        assert " 那張 album 裡的" not in carrier
+        assert not candidate._v6_carrier_defects(row)
+        entity_number = row.source_group_id.rsplit("-", 1)[1]
+        entity = entities[f"synthetic-entity-{entity_number}"]
+        expected = row.provisional_expected
+        assert expected.track is not None
+        assert expected.track.text == entity["track"].replace(" ", "")
+        assert (expected.artist is None) == (status["artist"] == "absent")
+        assert (expected.album is None) == (status["album"] == "absent")
+        if expected.artist is not None:
+            assert expected.artist.text == entity["artist"]
+        if expected.album is not None:
+            assert expected.album.text == entity["album"]
+    assert mode_counts == {
+        ("absent", "present"): 18,
+        ("present", "absent"): 18,
+        ("present", "present"): 36,
+        ("absent", "absent"): 18,
+    }
+    assert sum(row.provisional_expected.album is not None for row in family_rows) == 54
+    assert candidate.audit_play_span_alignment(family_rows) == {
+        "span_error_count": 0,
+        "optional_slot_status_error_count": 0,
+    }
+
+
+def test_v6_mixed_asr_spacing_guard_rejects_dangling_album_carrier() -> None:
+    rows, _catalog = candidate.generate_candidate_records()
+    row = next(
+        row for row in rows
+        if row.template_family == "play_mixed_asr_spacing"
+        and row.provisional_expected.album is not None
+    )
+    poisoned = replace(
+        row,
+        utterance=row.utterance.replace(" 這張專輯裡", " 那張 album 裡的"),
+    )
+    assert candidate._v6_carrier_defects(poisoned) == ("mixed_asr_spacing_dangling_album",)
+
+
 def test_all_play_spans_and_optional_slot_statuses_align_after_rephrasing() -> None:
     rows, _catalog = candidate.generate_candidate_records()
     play_rows = [row for row in rows if row.provisional_expected.intent == "spotify_play_track"]
@@ -740,6 +799,11 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     assert first_manifest["cross_group_near_duplicate_count"] == 0
     assert first_manifest["cross_group_duplicate_count"] == 0
     assert first_manifest["stage_a_leakage_count"] == 0
+    assert not any(first_manifest["issue53_residual_counts"].values())
+    assert not any(first_manifest["v5_carrier_residual_counts"].values())
+    assert first_manifest["v6_carrier_residual_counts"] == {
+        "mixed_asr_spacing_dangling_album": 0,
+    }
     assert first_manifest["deterministic_negative_reason_mismatch_count"] == 0
     assert first_manifest["safety_negative_reason_mismatch_count"] == 0
     assert first_manifest["mixed_without_cjk_count"] == 0

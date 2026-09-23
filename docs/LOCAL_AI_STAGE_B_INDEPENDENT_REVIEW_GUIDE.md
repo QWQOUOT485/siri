@@ -50,10 +50,10 @@ The validator fails closed unless all four frozen v6 identities match:
 
 | artifact | SHA-256 |
 | --- | --- |
-| candidate corpus | `a5671cbd8c3b28c3d14994786b800b70797aac19d0392931fa3f8c29e9628d0d` |
+| candidate corpus | `fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238` |
 | entity catalog | `7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb` |
 | generator config | `132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e` |
-| candidate manifest | `13e50c4ccc336cc46c62d9a45654d2783d981dbcad0ea807869a9379d4fe3e18` |
+| candidate manifest | `83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6` |
 
 The current source files are under `artifacts/local_ai/stage_b/v6/`. The v4
 files at `artifacts/local_ai/stage_b/` and v5 files at

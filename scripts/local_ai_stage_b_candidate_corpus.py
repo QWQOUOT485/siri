@@ -879,6 +879,16 @@ def _v5_carrier_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
     return tuple(defects)
 
 
+def _v6_carrier_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
+    """Reject the reviewed mixed ASR-spacing dangling album modifier."""
+
+    if row.template_family != "play_mixed_asr_spacing":
+        return ()
+    if " 那張 album 裡的" in _play_carrier(row):
+        return ("mixed_asr_spacing_dangling_album",)
+    return ()
+
+
 def _render(segments: Sequence[tuple[str, str | None]]) -> tuple[str, dict[str, dict[str, Any]]]:
     pieces: list[str] = []
     spans: dict[str, dict[str, Any]] = {}
@@ -1132,7 +1142,7 @@ def _play_segments(
             if has_artist:
                 segments += [("，", None), (artist, "artist"), (" 的歌", None)]
             if has_album:
-                segments += [("，", None), (album, "album"), (" 那張 album 裡的", None)]
+                segments += [("，收錄在 ", None), (album, "album"), (" 這張專輯裡", None)]
             segments += [("，謝謝", None)]
             family = "play_mixed_asr_spacing"
 
@@ -1527,6 +1537,8 @@ def _make_candidate(plan: GroupPlan, *, candidate_number: int, variant: int) -> 
         raise CandidateCorpusError("generated candidate contains an Issue #53 surface defect")
     if _v5_carrier_defects(record):
         raise CandidateCorpusError("generated candidate contains a v5 meta carrier defect")
+    if _v6_carrier_defects(record):
+        raise CandidateCorpusError("generated candidate contains a v6 dangling album carrier")
     return record
 
 
@@ -2373,6 +2385,8 @@ def _metric_counts(
             raise CandidateCorpusError("candidate pool contains an Issue #53 surface defect")
         if _v5_carrier_defects(row):
             raise CandidateCorpusError("candidate pool contains a v5 meta carrier defect")
+        if _v6_carrier_defects(row):
+            raise CandidateCorpusError("candidate pool contains a v6 dangling album carrier")
     group_sizes = Counter(row.source_group_id for row in rows)
     if len(group_sizes) != sum(GROUP_COUNTS.values()):
         raise CandidateCorpusError("unexpected source-group cardinality")
@@ -2606,6 +2620,12 @@ def _metric_counts(
             "hans_particle_meta_label", "other_en_meta_request", "mixed_field_label",
         )
     }
+    v6_carrier_residual_counts = {
+        "mixed_asr_spacing_dangling_album": sum(
+            "mixed_asr_spacing_dangling_album" in _v6_carrier_defects(row)
+            for row in rows
+        ),
+    }
     if deterministic_negative_reason_mismatch_count or safety_negative_reason_mismatch_count:
         raise CandidateCorpusError("row-level negative_reason mapping is inconsistent")
     if mixed_without_cjk_count or mixed_without_ascii_letter_count or english_with_cjk_count:
@@ -2652,6 +2672,7 @@ def _metric_counts(
             "zh_hans_script_validation": "passed",
             "issue53_residual_counts": issue53_residual_counts,
             "v5_carrier_residual_counts": v5_carrier_residual_counts,
+            "v6_carrier_residual_counts": v6_carrier_residual_counts,
             "production_gate_required_counts": gate_audit["required_counts_by_scope"],
             "production_gate_observed_eligibility_counts": gate_audit[
                 "observed_eligibility_counts_by_scope"
@@ -2739,6 +2760,7 @@ def _candidate_manifest(
         "zh_hans_script_validation": metrics["zh_hans_script_validation"],
         "issue53_residual_counts": metrics["issue53_residual_counts"],
         "v5_carrier_residual_counts": metrics["v5_carrier_residual_counts"],
+        "v6_carrier_residual_counts": metrics["v6_carrier_residual_counts"],
         "production_gate_required_counts": metrics["production_gate_required_counts"],
         "production_gate_observed_eligibility_counts": metrics[
             "production_gate_observed_eligibility_counts"
