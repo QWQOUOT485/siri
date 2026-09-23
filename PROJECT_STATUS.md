@@ -4,15 +4,16 @@
 
 ## Current Phase
 
-### 2026-09-22 Stage B independent-review workflow / source frozen, review pending
+### 2026-09-23 Stage B independent-review workflow / conflict-aware aggregation, review pending
 
 PR #48's reviewed candidate-corpus head was exactly
 `c5481a7d7d4b08f29b77e3ed65afaacd68a2ea85`; it is merged into `main` with
 merge commit `04dadb6ef086534ab42f84b43fc40296e2cd7df4`. The active branch
 `codex/stage-b-independent-review-workflow-20260922` starts from that merge
-commit and adds only the offline independent-review workflow and its empty
-review allocation. PR #50 is OPEN, MERGEABLE, and CLEAN for independent review;
-it must remain unmerged until independent review is complete.
+commit and adds the offline independent-review workflow with conflict-aware
+candidate aggregation. PR #50 remains OPEN for independent review and must
+remain unmerged; the implementation commit is
+`8d135e37d6a196bd2d1f630e51e8095d8c797613`.
 
 The frozen Stage B source remains an offline, deterministic, **unsplit** pool
 of 3,600 provisional rows across 600 source groups and 32 template families.
@@ -41,15 +42,38 @@ and the 3,600-row/600-group source shape.
 Review artifacts under
 [`artifacts/local_ai/stage_b/review/`](artifacts/local_ai/stage_b/review/)
 contain a self-hashed review manifest
-`e13978aff58258f052be95947e55712960792c3e98ac9686fe3b0a6eba59078a` and 12
+`b59f493a25b34f5e1926321712229c94ea466dccc1bfaa53c4851107e63ed3c6` and 12
 deterministic packets of 300 rows each. Every candidate ID appears exactly
 once; packets are review allocations, not train/validation/held-out splits.
-The decisions directory contains only the reviewer README: submitted,
-reviewed, accepted, rejected, and needs-correction counts are all zero, with
-3,600 pending. The closed decision schema requires an opaque reviewer role,
-matching record hash, one of `accept`/`reject`/`needs_correction`, and explicit
-positive or negative reason codes. Group reporting remains row-level; a group
-is fully accepted only when all six rows have direct accepts.
+The packet hashes are unchanged:
+
+```text
+packet-01 9247d3fa2981fb896c38a8a9d61c8f76638a82e1309d605f39eb9afc88c8e902
+packet-02 f6495bab08c86ece8effa565384ed208be0fb233e5a6a15afe26e15a324a5ca6
+packet-03 f41b40ba64b83bfad1620ce0c071fbb8a15eefb90a5b3efa81419597177a72bc
+packet-04 87f60aec287ca4b9d3071d240670a2081b1486d0003a57a04ed6e9d949d50202
+packet-05 710785f922e529ea4467999a5825de57f8e2c18fef367ae3b33ef492abf2a8ed
+packet-06 cd4b636a0d6f650555f22d7fe5dd42f5ff541e4717fc9a5cf2ae5b289ddf5b57
+packet-07 a04c0358b68c75b470701bed6f3892498eabb3c69c557181ee1b662fc0f600a1
+packet-08 280f5d14be348d9c430d9a766b10b974d4de2e6a831e219c0ca0ccef0ca1325f
+packet-09 d63a10fbfbf579155e0f9fa5669ad2389598604c9f955cec1167e39fb3c20829
+packet-10 cf6a68319a2172e7423aa77255da3f8e78b4b5a5c793d3c697c3293fa14044bf
+packet-11 fe315f9592195bb81691e260a8f3a4fa6bcc6577367f0e5afcdce34c2e09650d
+packet-12 2e46a81f007d5287e5d9c1653684f8c547159d55d12bf657e1a9b8ebf449783a
+```
+
+The review manifest now documents candidate aggregate states
+`pending`/`accepted`/`rejected`/`needs_correction`/`conflict` and
+`conflict_resolution.automatic=false`. Raw reviewer submissions remain
+separate (`decision_count` and `raw_decision_counts`); candidate progress and
+packet/language/scope/template-family/slot-mode dimensions count each
+candidate once. The initial state is decision_count=0, reviewed=0, accepted=0,
+rejected=0, needs_correction=0, conflict=0, pending=3,600. A same-reviewer
+duplicate is still rejected; multi-reviewer disagreement becomes `conflict`.
+Source-group health is aggregate-based: conflict wins, then
+needs_correction, partial rejection, full acceptance only when all six rows
+are accepted, otherwise partial review or unreviewed. No decision is
+fabricated, propagated, adjudicated, or automatically resolved.
 
 [`docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
 records the reviewer boundary and offline validation commands. This is **not**
@@ -60,7 +84,7 @@ qualification, deployment, production-parser authority, RAG, vector storage,
 embeddings, Semantic Memory, Local AI fallback, or live
 Windows/Spotify/Siri/network operation is authorized.
 
-The focused independent-review suite passes (**19 passed**), the full unit
+The focused independent-review suite passes (**24 passed**), the full unit
 suite passes (**496 passed, 2 existing dependency deprecation warnings**), and
 `compileall -q app scripts tests` plus `git diff --check` pass. No hosted CI
 claim is made. `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
