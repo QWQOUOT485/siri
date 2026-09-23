@@ -40,6 +40,16 @@ def _reject_decision(row: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _needs_correction_decision(row: dict[str, object], *, reviewer: str = "human-reviewer-2") -> dict[str, object]:
+    return {
+        "candidate_id": row["candidate_id"],
+        "record_sha256": row["record_sha256"],
+        "reviewer_role_id": reviewer,
+        "decision": "needs_correction",
+        "reason_codes": ["wrong_track_span"],
+    }
+
+
 def _first_packet_row(tmp_path: Path) -> dict[str, object]:
     result = review.build_review_artifacts(tmp_path / "review")
     packet_path = Path(result["review_dir"]) / "packets" / "packet-01.jsonl"
@@ -141,13 +151,29 @@ def test_initial_manifest_has_zero_decisions_and_no_final_selection(tmp_path: Pa
     assert manifest["decision_storage"] == {
         "directory": "decisions",
         "format": "JSONL",
-        "submitted_decision_count": 0,
-        "reviewed_candidate_count": 0,
+        "decision_count": 0,
+        "raw_decision_counts": {
+            "accept": 0,
+            "reject": 0,
+            "needs_correction": 0,
+        },
+        "reviewed": 0,
         "accepted": 0,
         "rejected": 0,
         "needs_correction": 0,
+        "conflict": 0,
         "pending": 3600,
     }
+    assert manifest["candidate_aggregate_states"] == [
+        "pending",
+        "accepted",
+        "rejected",
+        "needs_correction",
+        "conflict",
+    ]
+    assert manifest["review_manifest_version"] == 2
+    assert manifest["review_workflow_version"] == "stage-b-independent-review-v2"
+    assert manifest["conflict_resolution"] == {"automatic": False}
     assert manifest["final_split_assigned"] is False
     assert manifest["held_out_sealed"] is False
     assert manifest["training_authorized"] is False
@@ -275,13 +301,114 @@ def test_progress_is_zero_reviewed_and_3600_pending() -> None:
     assert progress["accepted"] == 0
     assert progress["rejected"] == 0
     assert progress["needs_correction"] == 0
+    assert progress["conflict"] == 0
     assert progress["pending"] == 3600
+    assert progress["raw_decision_counts"] == {
+        "accept": 0,
+        "reject": 0,
+        "needs_correction": 0,
+    }
+    assert (
+        progress["accepted"]
+        + progress["rejected"]
+        + progress["needs_correction"]
+        + progress["conflict"]
+        + progress["pending"]
+        == progress["total_candidates"]
+    )
+    assert progress["reviewed"] == (
+        progress["accepted"]
+        + progress["rejected"]
+        + progress["needs_correction"]
+        + progress["conflict"]
+    )
     assert progress["by_packet"]
     assert progress["by_language"]
     assert progress["by_scope"]
     assert progress["by_template_family"]
     assert progress["by_slot_mode"]
     assert progress["by_reviewer_role"] == {}
+    for dimension_name in (
+        "by_packet",
+        "by_language",
+        "by_scope",
+        "by_template_family",
+        "by_slot_mode",
+    ):
+        for dimension in progress[dimension_name].values():
+            assert sum(dimension["candidate_state_counts"].values()) == dimension["candidate_count"]
+            assert dimension["reviewed_candidates"] == (
+                dimension["candidate_count"] - dimension["pending"]
+            )
+
+
+def test_two_agreeing_accepts_count_once_as_one_accepted_candidate(tmp_path: Path) -> None:
+    row = _first_packet_row(tmp_path)
+    decisions = [
+        _accept_decision(row, reviewer="independent-reviewer-a"),
+        _accept_decision(row, reviewer="independent-reviewer-b"),
+    ]
+
+    progress = review.review_progress(decisions)
+
+    assert progress["decision_count"] == 2
+    assert progress["raw_decision_counts"] == {
+        "accept": 2,
+        "reject": 0,
+        "needs_correction": 0,
+    }
+    assert progress["reviewed"] == 1
+    assert progress["accepted"] == 1
+    assert progress["rejected"] == 0
+    assert progress["needs_correction"] == 0
+    assert progress["conflict"] == 0
+    assert progress["pending"] == 3599
+
+
+def test_accept_reject_disagreement_is_one_conflict_not_two_outcomes(tmp_path: Path) -> None:
+    row = _first_packet_row(tmp_path)
+    decisions = [
+        _accept_decision(row, reviewer="independent-reviewer-a"),
+        _reject_decision(row),
+    ]
+
+    progress = review.review_progress(decisions)
+    packet = progress["by_packet"]["packet-01"]
+
+    assert progress["decision_count"] == 2
+    assert progress["raw_decision_counts"] == {
+        "accept": 1,
+        "reject": 1,
+        "needs_correction": 0,
+    }
+    assert progress["reviewed"] == 1
+    assert progress["accepted"] == 0
+    assert progress["rejected"] == 0
+    assert progress["needs_correction"] == 0
+    assert progress["conflict"] == 1
+    assert progress["pending"] == 3599
+    assert packet["decision_count"] == 2
+    assert packet["raw_decision_counts"] == {
+        "accept": 1,
+        "reject": 1,
+        "needs_correction": 0,
+    }
+    assert packet["candidate_state_counts"]["conflict"] == 1
+    assert packet["candidate_state_counts"]["accepted"] == 0
+    assert packet["candidate_state_counts"]["rejected"] == 0
+
+
+def test_reject_needs_correction_disagreement_is_conflict(tmp_path: Path) -> None:
+    row = _first_packet_row(tmp_path)
+    progress = review.review_progress(
+        [_reject_decision(row), _needs_correction_decision(row)]
+    )
+
+    assert progress["reviewed"] == 1
+    assert progress["accepted"] == 0
+    assert progress["rejected"] == 0
+    assert progress["needs_correction"] == 0
+    assert progress["conflict"] == 1
 
 
 def test_source_group_report_does_not_propagate_one_row_decision(tmp_path: Path) -> None:
@@ -291,7 +418,7 @@ def test_source_group_report_does_not_propagate_one_row_decision(tmp_path: Path)
     group_id = str(row["source_group_id"])
 
     group = report[group_id]
-    assert group["health"] == "unreviewed"
+    assert group["health"] == "partially_reviewed"
     assert group["direct_decision_count"] == 1
     assert group["reviewed_candidate_ids"] == [row["candidate_id"]]
     assert len(group["unreviewed_candidate_ids"]) == 5
@@ -300,6 +427,48 @@ def test_source_group_report_does_not_propagate_one_row_decision(tmp_path: Path)
         for other_id, other in report.items()
         if other_id != group_id
     )
+
+
+def test_source_group_conflict_has_review_conflict_health(tmp_path: Path) -> None:
+    row = _first_packet_row(tmp_path)
+    report = review.source_group_report(
+        [_accept_decision(row), _reject_decision(row)]
+    )
+
+    group = report[str(row["source_group_id"])]
+
+    assert group["health"] == "review_conflict"
+    assert group["candidate_states"][row["candidate_id"]] == "conflict"
+    assert group["candidate_state_counts"]["conflict"] == 1
+    assert group["direct_decision_count"] == 2
+    assert group["raw_decision_counts"] == {"accept": 1, "reject": 1}
+
+
+def test_source_group_full_acceptance_allows_agreeing_multiple_reviewers(tmp_path: Path) -> None:
+    source = review.load_review_source()
+    group_id = str(source.rows[0]["source_group_id"])
+    rows = [row for row in source.rows if str(row["source_group_id"]) == group_id]
+    packet_rows = {
+        row["candidate_id"]: {
+            "candidate_id": row["candidate_id"],
+            "record_sha256": review._sha256_json(row),
+        }
+        for row in rows
+    }
+    decisions = [
+        _accept_decision(packet_rows[rows[0]["candidate_id"]], reviewer="independent-reviewer-a"),
+        _accept_decision(packet_rows[rows[0]["candidate_id"]], reviewer="independent-reviewer-b"),
+        *[_accept_decision(packet_rows[row["candidate_id"]]) for row in rows[1:]],
+    ]
+
+    group = review.source_group_report(decisions)[group_id]
+
+    assert len(rows) == 6
+    assert group["health"] == "fully_accepted"
+    assert group["candidate_state_counts"]["accepted"] == 6
+    assert group["candidate_state_counts"]["pending"] == 0
+    assert group["direct_decision_count"] == 7
+    assert group["raw_decision_counts"] == {"accept": 7}
 
 
 def test_build_does_not_rewrite_original_candidate_artifacts(tmp_path: Path) -> None:

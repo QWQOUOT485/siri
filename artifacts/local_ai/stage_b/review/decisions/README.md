@@ -1,8 +1,9 @@
 # Independent review decisions
 
 This directory starts empty: no independent reviewer decision has been
-submitted. `review_manifest.json` records `reviewed_candidate_count=0` and
-`pending=3600`.
+submitted. `review_manifest.json` records `decision_count=0`, `reviewed=0`,
+`conflict=0`, and `pending=3600`. Raw reviewer submissions are preserved;
+candidate progress is aggregated separately.
 
 A future submission must be JSONL with one object per line and exactly these
 required fields:
@@ -30,11 +31,24 @@ at least one negative reason code. The offline validator also binds every
 decision to the reviewed PR #48 source identities and rejects duplicate
 decisions from the same reviewer for the same candidate.
 
+Multiple reviewers may review the same candidate. For each candidate, the
+aggregate state is `pending` when there is no submitted decision, the matching
+state (`accepted`, `rejected`, or `needs_correction`) when all submitted
+decisions have the same value, and `conflict` when submitted values disagree.
+There is no majority vote, reviewer precedence, reject-wins rule, or automatic
+adjudication. Raw decisions remain available in `decision_count` and
+`raw_decision_counts`; aggregate progress counts each candidate once.
+
 Do not add provider IDs, credentials, OAuth data, private paths, user IDs,
 clarification tokens, production authority data, or split labels. Do not edit
 the candidate corpus or silently rewrite a candidate. `needs_correction`
 rows remain excluded from later selection until a separate reviewed correction
 workflow exists.
+
+`conflict` remains unresolved and is ineligible for any future final selection
+until a separately reviewed adjudication workflow exists. This PR does not
+implement adjudication, a final acceptance ledger, or a final 3,000-row
+selector.
 
 This is a human/external-reviewer input boundary. Passing unit tests or the
 production-alignment gate is supporting evidence only and never creates an

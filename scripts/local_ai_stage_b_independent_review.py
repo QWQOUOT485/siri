@@ -33,7 +33,7 @@ if str(_REPO_ROOT) not in sys.path:
 import local_ai_stage_b_corpus as protocol
 
 
-REVIEW_WORKFLOW_VERSION = "stage-b-independent-review-v1"
+REVIEW_WORKFLOW_VERSION = "stage-b-independent-review-v2"
 REVIEW_STATUS = "pending_independent_review"
 PACKET_COUNT = 12
 ROWS_PER_PACKET = 300
@@ -101,6 +101,13 @@ DECISION_REQUIRED_FIELDS = frozenset(
 DECISION_OPTIONAL_FIELDS = frozenset({"reviewer_note"})
 DECISION_FIELDS = DECISION_REQUIRED_FIELDS | DECISION_OPTIONAL_FIELDS
 DECISION_VALUES = ("accept", "reject", "needs_correction")
+CANDIDATE_AGGREGATE_STATES = (
+    "pending",
+    "accepted",
+    "rejected",
+    "needs_correction",
+    "conflict",
+)
 POSITIVE_REASON_CODES = (
     "label_correct",
     "natural_language_ok",
@@ -601,6 +608,8 @@ def _decision_schema_payload() -> dict[str, Any]:
         "reject_or_needs_correction_requires_any": list(NEGATIVE_REASON_CODES),
         "reviewer_role_id_pattern": REVIEWER_ROLE_RE.pattern,
         "pending_decisions_allowed": False,
+        "candidate_aggregate_states": list(CANDIDATE_AGGREGATE_STATES),
+        "conflict_resolution": {"automatic": False},
     }
 
 
@@ -619,7 +628,7 @@ def _review_manifest(
         for packet_id, rows in packets.items()
     }
     base: dict[str, Any] = {
-        "review_manifest_version": 1,
+        "review_manifest_version": 2,
         "review_workflow_version": REVIEW_WORKFLOW_VERSION,
         "review_status": REVIEW_STATUS,
         "source_artifacts": {
@@ -643,18 +652,32 @@ def _review_manifest(
         "decision_storage": {
             "directory": "decisions",
             "format": "JSONL",
-            "submitted_decision_count": 0,
-            "reviewed_candidate_count": 0,
+            "decision_count": 0,
+            "raw_decision_counts": {
+                decision_value: 0 for decision_value in DECISION_VALUES
+            },
+            "reviewed": 0,
             "accepted": 0,
             "rejected": 0,
             "needs_correction": 0,
+            "conflict": 0,
             "pending": EXPECTED_CANDIDATE_COUNT,
         },
         "decision_schema": _decision_schema_payload(),
+        "candidate_aggregate_states": list(CANDIDATE_AGGREGATE_STATES),
+        "conflict_resolution": {"automatic": False},
         "source_group_reporting": {
             "row_level_decisions": True,
             "auto_propagate_decisions": False,
             "fully_accepted_requires_each_row": True,
+            "health_states": [
+                "unreviewed",
+                "partially_reviewed",
+                "fully_accepted",
+                "partially_rejected",
+                "needs_correction",
+                "review_conflict",
+            ],
         },
         "final_split_assigned": False,
         "held_out_sealed": False,
@@ -675,8 +698,9 @@ def _decisions_readme(manifest: Mapping[str, Any]) -> str:
     return """# Independent review decisions
 
 This directory starts empty: no independent reviewer decision has been
-submitted. `review_manifest.json` records `reviewed_candidate_count=0` and
-`pending=3600`.
+submitted. `review_manifest.json` records `decision_count=0`, `reviewed=0`,
+`conflict=0`, and `pending=3600`. Raw reviewer submissions are preserved;
+candidate progress is aggregated separately.
 
 A future submission must be JSONL with one object per line and exactly these
 required fields:
@@ -704,11 +728,24 @@ at least one negative reason code. The offline validator also binds every
 decision to the reviewed PR #48 source identities and rejects duplicate
 decisions from the same reviewer for the same candidate.
 
+Multiple reviewers may review the same candidate. For each candidate, the
+aggregate state is `pending` when there is no submitted decision, the matching
+state (`accepted`, `rejected`, or `needs_correction`) when all submitted
+decisions have the same value, and `conflict` when submitted values disagree.
+There is no majority vote, reviewer precedence, reject-wins rule, or automatic
+adjudication. Raw decisions remain available in `decision_count` and
+`raw_decision_counts`; aggregate progress counts each candidate once.
+
 Do not add provider IDs, credentials, OAuth data, private paths, user IDs,
 clarification tokens, production authority data, or split labels. Do not edit
 the candidate corpus or silently rewrite a candidate. `needs_correction`
 rows remain excluded from later selection until a separate reviewed correction
 workflow exists.
+
+`conflict` remains unresolved and is ineligible for any future final selection
+until a separately reviewed adjudication workflow exists. This PR does not
+implement adjudication, a final acceptance ledger, or a final 3,000-row
+selector.
 
 This is a human/external-reviewer input boundary. Passing unit tests or the
 production-alignment gate is supporting evidence only and never creates an
@@ -865,24 +902,101 @@ def _packet_map(source: ReviewSource) -> Mapping[str, str]:
     )
 
 
+def _candidate_aggregate_state(decision_values: Sequence[str]) -> str:
+    if not decision_values:
+        return "pending"
+    if len(set(decision_values)) != 1:
+        return "conflict"
+    return {
+        "accept": "accepted",
+        "reject": "rejected",
+        "needs_correction": "needs_correction",
+    }[decision_values[0]]
+
+
+def _candidate_aggregate_states(
+    decisions: Sequence[Mapping[str, Any]],
+    candidate_ids: Sequence[str],
+) -> dict[str, str]:
+    decisions_by_candidate: dict[str, list[str]] = defaultdict(list)
+    for decision in decisions:
+        decisions_by_candidate[decision["candidate_id"]].append(decision["decision"])
+    return {
+        candidate_id: _candidate_aggregate_state(decisions_by_candidate[candidate_id])
+        for candidate_id in candidate_ids
+    }
+
+
+def _candidate_state_counts(candidate_states: Mapping[str, str]) -> dict[str, int]:
+    counts = Counter(candidate_states.values())
+    return {
+        state: counts[state]
+        for state in CANDIDATE_AGGREGATE_STATES
+    }
+
+
+def _raw_decision_counts(
+    decisions: Sequence[Mapping[str, Any]],
+) -> dict[str, int]:
+    counts = Counter(decision["decision"] for decision in decisions)
+    return {
+        decision_value: counts[decision_value]
+        for decision_value in DECISION_VALUES
+    }
+
+
 def _progress_dimension(
     decisions: Sequence[Mapping[str, Any]],
     key_for_candidate: Mapping[str, str],
+    candidate_states: Mapping[str, str],
 ) -> dict[str, dict[str, int]]:
-    decision_counts: dict[str, Counter[str]] = defaultdict(Counter)
-    reviewed: dict[str, set[str]] = defaultdict(set)
+    raw_decision_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    candidate_counts: dict[str, Counter[str]] = defaultdict(Counter)
     for decision in decisions:
         key = key_for_candidate[decision["candidate_id"]]
-        decision_counts[key][decision["decision"]] += 1
-        reviewed[key].add(decision["candidate_id"])
+        raw_decision_counts[key][decision["decision"]] += 1
+    for candidate_id, key in key_for_candidate.items():
+        candidate_counts[key][candidate_states[candidate_id]] += 1
     keys = sorted(set(key_for_candidate.values()))
+    for key in keys:
+        candidate_count = sum(candidate_counts[key].values())
+        reviewed_count = candidate_count - candidate_counts[key]["pending"]
+        if (
+            candidate_count != sum(candidate_counts[key][state] for state in CANDIDATE_AGGREGATE_STATES)
+            or reviewed_count
+            != sum(
+                candidate_counts[key][state]
+                for state in CANDIDATE_AGGREGATE_STATES
+                if state != "pending"
+            )
+            or raw_decision_counts[key].total()
+            != sum(raw_decision_counts[key][decision_value] for decision_value in DECISION_VALUES)
+        ):
+            raise ReviewWorkflowError(
+                f"candidate aggregate dimension invariant failed for {key}"
+            )
     return {
         key: {
-            "decision_count": decision_counts[key].total(),
-            "reviewed_candidates": len(reviewed[key]),
-            "accepted": decision_counts[key]["accept"],
-            "rejected": decision_counts[key]["reject"],
-            "needs_correction": decision_counts[key]["needs_correction"],
+            "candidate_count": sum(candidate_counts[key].values()),
+            "decision_count": raw_decision_counts[key].total(),
+            "raw_decision_counts": {
+                decision_value: raw_decision_counts[key][decision_value]
+                for decision_value in DECISION_VALUES
+            },
+            "reviewed_candidates": sum(
+                candidate_counts[key][state]
+                for state in CANDIDATE_AGGREGATE_STATES
+                if state != "pending"
+            ),
+            "accepted": candidate_counts[key]["accepted"],
+            "rejected": candidate_counts[key]["rejected"],
+            "needs_correction": candidate_counts[key]["needs_correction"],
+            "conflict": candidate_counts[key]["conflict"],
+            "pending": candidate_counts[key]["pending"],
+            "candidate_state_counts": {
+                state: candidate_counts[key][state]
+                for state in CANDIDATE_AGGREGATE_STATES
+            },
         }
         for key in keys
     }
@@ -900,10 +1014,11 @@ def _progress_by_reviewer_role(
     return {
         role: {
             "decision_count": decision_counts[role].total(),
+            "raw_decision_counts": {
+                decision_value: decision_counts[role][decision_value]
+                for decision_value in DECISION_VALUES
+            },
             "reviewed_candidates": len(reviewed[role]),
-            "accepted": decision_counts[role]["accept"],
-            "rejected": decision_counts[role]["reject"],
-            "needs_correction": decision_counts[role]["needs_correction"],
         }
         for role in sorted(decision_counts)
     }
@@ -914,7 +1029,7 @@ def review_progress(
     *,
     artifacts_dir: str | Path = DEFAULT_STAGE_B_ARTIFACT_DIR,
 ) -> dict[str, Any]:
-    """Return row-level progress dimensions without creating a ledger."""
+    """Return raw submission and unique candidate aggregate progress."""
 
     source = load_review_source(artifacts_dir)
     validated = _validate_decisions_against_source(decisions, source)
@@ -923,24 +1038,48 @@ def review_progress(
     prepared_by_id = {
         item.row["candidate_id"]: item for item in _prepared_candidates(source)
     }
-    reviewed_ids = {decision["candidate_id"] for decision in validated}
-    decision_counts = Counter(decision["decision"] for decision in validated)
+    candidate_states = _candidate_aggregate_states(
+        validated,
+        [str(row["candidate_id"]) for row in source.rows],
+    )
+    candidate_state_counts = _candidate_state_counts(candidate_states)
+    raw_decision_counts = _raw_decision_counts(validated)
+    total_candidates = len(source.rows)
+    reviewed = total_candidates - candidate_state_counts["pending"]
+    if (
+        sum(candidate_state_counts.values()) != total_candidates
+        or reviewed
+        != (
+            candidate_state_counts["accepted"]
+            + candidate_state_counts["rejected"]
+            + candidate_state_counts["needs_correction"]
+            + candidate_state_counts["conflict"]
+        )
+    ):
+        raise ReviewWorkflowError("candidate aggregate progress invariant failed")
     return {
-        "total_candidates": len(source.rows),
+        "total_candidates": total_candidates,
         "decision_count": len(validated),
-        "reviewed": len(reviewed_ids),
-        "accepted": decision_counts["accept"],
-        "rejected": decision_counts["reject"],
-        "needs_correction": decision_counts["needs_correction"],
-        "pending": len(source.rows) - len(reviewed_ids),
-        "by_packet": _progress_dimension(validated, packet_by_candidate),
+        "raw_decision_counts": raw_decision_counts,
+        "reviewed": reviewed,
+        "accepted": candidate_state_counts["accepted"],
+        "rejected": candidate_state_counts["rejected"],
+        "needs_correction": candidate_state_counts["needs_correction"],
+        "conflict": candidate_state_counts["conflict"],
+        "pending": candidate_state_counts["pending"],
+        "candidate_state_counts": candidate_state_counts,
+        "by_packet": _progress_dimension(
+            validated, packet_by_candidate, candidate_states
+        ),
         "by_language": _progress_dimension(
             validated,
             {candidate_id: str(row["language_tag"]) for candidate_id, row in row_by_id.items()},
+            candidate_states,
         ),
         "by_scope": _progress_dimension(
             validated,
             {candidate_id: item.scope for candidate_id, item in prepared_by_id.items()},
+            candidate_states,
         ),
         "by_template_family": _progress_dimension(
             validated,
@@ -948,10 +1087,12 @@ def review_progress(
                 candidate_id: str(row["template_family"])
                 for candidate_id, row in row_by_id.items()
             },
+            candidate_states,
         ),
         "by_slot_mode": _progress_dimension(
             validated,
             {candidate_id: item.slot_mode for candidate_id, item in prepared_by_id.items()},
+            candidate_states,
         ),
         "by_reviewer_role": _progress_by_reviewer_role(validated),
     }
@@ -979,34 +1120,44 @@ def source_group_report(
     for group_id in sorted(rows_by_group):
         candidate_ids = sorted(rows_by_group[group_id])
         group_decisions = by_group[group_id]
-        decisions_by_candidate: dict[str, list[str]] = defaultdict(list)
-        for decision in group_decisions:
-            decisions_by_candidate[decision["candidate_id"]].append(decision["decision"])
-        reviewed_ids = sorted(decisions_by_candidate)
-        decision_values = [value for values in decisions_by_candidate.values() for value in values]
-        if not decision_values:
-            health = "unreviewed"
-        elif "needs_correction" in decision_values:
+        candidate_states = _candidate_aggregate_states(group_decisions, candidate_ids)
+        candidate_state_counts = _candidate_state_counts(candidate_states)
+        decision_values = [
+            decision["decision"] for decision in group_decisions
+        ]
+        if candidate_state_counts["conflict"]:
+            health = "review_conflict"
+        elif candidate_state_counts["needs_correction"]:
             health = "needs_correction"
-        elif "reject" in decision_values:
+        elif candidate_state_counts["rejected"]:
             health = "partially_rejected"
         elif all(
-            candidate_id in decisions_by_candidate
-            and set(decisions_by_candidate[candidate_id]) == {"accept"}
+            candidate_states[candidate_id] == "accepted"
             for candidate_id in candidate_ids
         ):
             health = "fully_accepted"
-        else:
+        elif candidate_state_counts["pending"] == len(candidate_ids):
             health = "unreviewed"
+        else:
+            health = "partially_reviewed"
+        reviewed_ids = sorted(
+            candidate_id
+            for candidate_id, state in candidate_states.items()
+            if state != "pending"
+        )
         report[group_id] = {
             "health": health,
             "candidate_count": len(candidate_ids),
             "reviewed_candidate_ids": reviewed_ids,
             "unreviewed_candidate_ids": [
-                candidate_id for candidate_id in candidate_ids if candidate_id not in reviewed_ids
+                candidate_id
+                for candidate_id in candidate_ids
+                if candidate_states[candidate_id] == "pending"
             ],
             "direct_decision_count": len(group_decisions),
-            "decision_counts": dict(sorted(Counter(decision_values).items())),
+            "raw_decision_counts": dict(sorted(Counter(decision_values).items())),
+            "candidate_states": candidate_states,
+            "candidate_state_counts": candidate_state_counts,
         }
     return report
 

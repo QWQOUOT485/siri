@@ -26,6 +26,24 @@ The packets are review allocations, not train/validation/held-out splits. The
 current allocation is 12 deterministic packets with 300 rows each, and every
 candidate appears exactly once.
 
+Multiple independent reviewers may review the same candidate. Every raw
+reviewer decision is preserved. Candidate-level progress is computed
+separately, so a candidate contributes exactly once to its aggregate state:
+
+| submitted values for one candidate | candidate aggregate state |
+| --- | --- |
+| none | `pending` |
+| one or more `accept`, and no other value | `accepted` |
+| one or more `reject`, and no other value | `rejected` |
+| one or more `needs_correction`, and no other value | `needs_correction` |
+| two or more values that are not identical | `conflict` |
+
+There is no majority vote, reviewer precedence, reject-wins rule, or automatic
+adjudication. Raw submission totals are exposed as `decision_count` and
+`raw_decision_counts`; candidate progress and dimension reports use the
+aggregate state and count each candidate once. A disagreement remains a
+`conflict` and is not automatically accepted or rejected.
+
 ## Frozen source identity
 
 The validator fails closed unless all four reviewed PR #48 identities match:
@@ -137,10 +155,21 @@ utterance or spans.
 ## Group reporting
 
 Decisions are row-level. A source group contains six variants, and one row's
-decision is never copied to the other five. A group is `fully_accepted` only
-when every one of its rows has a direct accept decision. Otherwise the report
-may show `partially_rejected`, `needs_correction`, or `unreviewed`; those are
-reports, not propagated decisions.
+decision is never copied to the other five. Group health is based on each
+row's candidate aggregate state. The reportable states are:
+
+- `unreviewed`: every row is `pending`
+- `partially_reviewed`: at least one row is reviewed and no higher-priority
+  health state applies
+- `fully_accepted`: all six rows are `accepted`
+- `partially_rejected`: at least one row is `rejected`, with no conflict or
+  needs-correction row
+- `needs_correction`: at least one row is `needs_correction`, with no conflict
+- `review_conflict`: at least one row is `conflict`
+
+Multiple agreeing reviewers for a row still produce one `accepted`,
+`rejected`, or `needs_correction` candidate state. These are reports, not
+propagated decisions. Conflict resolution and adjudication are not implemented.
 
 ## Offline validation
 
@@ -166,10 +195,13 @@ The initial workflow state is deliberately empty:
 
 ```text
 total candidates: 3600
+decision_count: 0
+raw decision counts: accept=0, reject=0, needs_correction=0
 reviewed: 0
 accepted: 0
 rejected: 0
 needs_correction: 0
+conflict: 0
 pending: 3600
 ```
 

@@ -1,5 +1,15 @@
 {
   "all_candidates_exactly_once": true,
+  "candidate_aggregate_states": [
+    "pending",
+    "accepted",
+    "rejected",
+    "needs_correction",
+    "conflict"
+  ],
+  "conflict_resolution": {
+    "automatic": false
+  },
   "decision_schema": {
     "accept_requires_all": [
       "label_correct",
@@ -8,6 +18,16 @@
       "scope_correct",
       "entity_surface_ok"
     ],
+    "candidate_aggregate_states": [
+      "pending",
+      "accepted",
+      "rejected",
+      "needs_correction",
+      "conflict"
+    ],
+    "conflict_resolution": {
+      "automatic": false
+    },
     "decision_values": [
       "accept",
       "reject",
@@ -68,13 +88,19 @@
   },
   "decision_storage": {
     "accepted": 0,
+    "conflict": 0,
+    "decision_count": 0,
     "directory": "decisions",
     "format": "JSONL",
     "needs_correction": 0,
     "pending": 3600,
+    "raw_decision_counts": {
+      "accept": 0,
+      "needs_correction": 0,
+      "reject": 0
+    },
     "rejected": 0,
-    "reviewed_candidate_count": 0,
-    "submitted_decision_count": 0
+    "reviewed": 0
   },
   "final_split_assigned": false,
   "held_out_sealed": false,
@@ -1163,10 +1189,10 @@
     "packet-11": 300,
     "packet-12": 300
   },
-  "review_manifest_sha256": "e13978aff58258f052be95947e55712960792c3e98ac9686fe3b0a6eba59078a",
-  "review_manifest_version": 1,
+  "review_manifest_sha256": "b59f493a25b34f5e1926321712229c94ea466dccc1bfaa53c4851107e63ed3c6",
+  "review_manifest_version": 2,
   "review_status": "pending_independent_review",
-  "review_workflow_version": "stage-b-independent-review-v1",
+  "review_workflow_version": "stage-b-independent-review-v2",
   "semantic_memory_enabled": false,
   "source_artifacts": {
     "candidate_corpus": "../candidate_corpus.jsonl",
@@ -1177,6 +1203,14 @@
   "source_group_reporting": {
     "auto_propagate_decisions": false,
     "fully_accepted_requires_each_row": true,
+    "health_states": [
+      "unreviewed",
+      "partially_reviewed",
+      "fully_accepted",
+      "partially_rejected",
+      "needs_correction",
+      "review_conflict"
+    ],
     "row_level_decisions": true
   },
   "source_identities": {
