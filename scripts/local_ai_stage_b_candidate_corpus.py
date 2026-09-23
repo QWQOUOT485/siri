@@ -38,15 +38,15 @@ from app.services.command_parser import CommandParser
 
 
 CANDIDATE_SCHEMA_VERSION = 1
-CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v5"
-GENERATOR_VERSION = "stage-b-candidate-generator-v5"
+CANDIDATE_CORPUS_VERSION = "stage-b-candidate-corpus-v6"
+GENERATOR_VERSION = "stage-b-candidate-generator-v6"
 GENERATION_SOURCE = "synthetic_local_entity_catalog_v2"
 REVIEW_STATUS = "pending_independent_review"
 VARIANTS_PER_SOURCE_GROUP = 6
 TARGET_CANDIDATE_ROWS = 3600
 MAX_ARTIFACT_BYTES = 50 * 1024 * 1024
-ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v1.json"
-ZH_HANS_SCRIPT_INVENTORY_SHA256 = "0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36"
+ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v2.json"
+ZH_HANS_SCRIPT_INVENTORY_SHA256 = "733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8"
 
 SCOPE_ORDER = (
     "supported_play",
@@ -778,7 +778,7 @@ def _zh_hans_script_inventory() -> frozenset[str]:
     expected = _sha256_json({key: value for key, value in payload.items() if key != "inventory_sha256"})
     if payload["inventory_sha256"] != expected or expected != ZH_HANS_SCRIPT_INVENTORY_SHA256:
         raise CandidateCorpusError("zh-Hans script inventory identity mismatch")
-    if payload["version"] != "stage-b-zh-hans-script-inventory-v1":
+    if payload["version"] != "stage-b-zh-hans-script-inventory-v2":
         raise CandidateCorpusError("zh-Hans script inventory version mismatch")
     allowed = payload["allowed_han_characters"]
     forbidden = payload["forbidden_han_characters"]
@@ -833,6 +833,60 @@ def _issue53_surface_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
     if row.template_family == "safety_hostile_text" and "執行 run cmd" in row.utterance:
         defects.append("duplicated_safety_verb")
     return tuple(defects)
+
+
+def _play_carrier(row: StageBCandidateRecord) -> str:
+    """Remove entity spans before checking generator-owned carrier wording."""
+
+    carrier = row.utterance
+    spans = (
+        row.provisional_expected.track,
+        row.provisional_expected.artist,
+        row.provisional_expected.album,
+    )
+    for span in sorted((span for span in spans if span is not None), key=lambda item: item.start, reverse=True):
+        carrier = carrier[:span.start] + "ENTITY" + carrier[span.end:]
+    return carrier
+
+
+def _v5_carrier_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
+    """Bounded regression gate for documented v5 generator-owned wording."""
+
+    if row.provisional_expected.intent != "spotify_play_track":
+        return ()
+    carrier = _play_carrier(row)
+    defects: list[str] = []
+    if row.template_family == "play_en_asr_spacing" and carrier.startswith("Play this request "):
+        defects.append("en_asr_meta_request")
+    if row.template_family == "play_hant_particle" and any(
+        text in carrier for text in ("演出者標籤", "專輯標籤")
+    ):
+        defects.append("hant_particle_meta_label")
+    if row.template_family == "play_hans_particle" and any(
+        text in carrier for text in ("演出者标签", "专辑标签")
+    ):
+        defects.append("hans_particle_meta_label")
+    if row.template_family in {"play_en_direct", "play_en_conversational", "play_en_polite"} and any(
+        text in carrier for text in ("requested track", "selected song", "requested song")
+    ):
+        defects.append("other_en_meta_request")
+    if row.template_family in {
+        "play_mixed_conversational", "play_mixed_word_order", "play_mixed_particle",
+        "play_mixed_asr_case", "play_mixed_asr_spacing",
+    } and (any(text in carrier for text in ("，artist ", "，album "))
+           or carrier.startswith("Play 一下 album ")):
+        defects.append("mixed_field_label")
+    return tuple(defects)
+
+
+def _v6_carrier_defects(row: StageBCandidateRecord) -> tuple[str, ...]:
+    """Reject the reviewed mixed ASR-spacing dangling album modifier."""
+
+    if row.template_family != "play_mixed_asr_spacing":
+        return ()
+    if " 那張 album 裡的" in _play_carrier(row):
+        return ("mixed_asr_spacing_dangling_album",)
+    return ()
 
 
 def _render(segments: Sequence[tuple[str, str | None]]) -> tuple[str, dict[str, dict[str, Any]]]:
@@ -908,18 +962,19 @@ def _play_segments(
 
     if language_tag == "en":
         if variant == 0:
-            segments = [("Play this requested track: ", None), (track, "track")]
+            segments = [("Play ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             family = "play_en_direct"
         elif variant == 1:
-            segments = [("Listen to this selected song: ", None), (track, "track")]
+            segments = [("Listen to ", None), (track, "track")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
+            segments += [(" for a bit", None)]
             family = "play_en_conversational"
         elif variant == 2:
             segments = [("Put on the song ", None), (track, "track")]
@@ -929,12 +984,12 @@ def _play_segments(
                 segments += [(" by ", None), (artist, "artist")]
             family = "play_en_word_order"
         elif variant == 3:
-            segments = [("Play the requested song ", None), (track, "track")]
+            segments = [("Play ", None), (track, "track")]
             if has_album:
                 segments += [(" from ", None), (album, "album")]
             if has_artist:
                 segments += [(" by ", None), (artist, "artist")]
-            segments += [(" for me", None)]
+            segments += [(" when you have a moment", None)]
             family = "play_en_polite"
         elif variant == 4:
             segments = [("put on ", None), (track, "track")]
@@ -945,11 +1000,11 @@ def _play_segments(
             segments += [(" right now please", None)]
             family = "play_en_punctuation_loss"
         else:
-            segments = [("Play this request ", None), (track, "track")]
+            segments = [("listen to ", None), (track, "track")]
             if has_artist:
-                segments += [(" artist ", None), (artist, "artist")]
+                segments += [(" by ", None), (artist, "artist")]
             if has_album:
-                segments += [(" album ", None), (album, "album")]
+                segments += [(" off the album ", None), (album, "album")]
             segments += [(" please", None)]
             family = "play_en_asr_spacing"
     elif language_tag == "zh-Hant":
@@ -976,12 +1031,12 @@ def _play_segments(
                 segments += [("，歌手是", None), (artist, "artist")]
             family = "play_hant_word_order"
         elif variant == 3:
-            segments = [("想聽歌名是", None), (track, "track")]
+            segments = [("想聽", None), (track, "track")]
             if has_artist:
-                segments += [("，演出者標籤是", None), (artist, "artist")]
+                segments += [("，", None), (artist, "artist"), ("唱的", None)]
             if has_album:
-                segments += [("，專輯標籤是", None), (album, "album")]
-            segments += [("，就這首就好", None)]
+                segments += [("，收錄在", None), (album, "album")]
+            segments += [("，就這首", None)]
             family = "play_hant_particle"
         elif variant == 4:
             segments = [("聽", None), (track, "track")]
@@ -1022,12 +1077,12 @@ def _play_segments(
                 segments += [("，歌手是", None), (artist, "artist")]
             family = "play_hans_word_order"
         elif variant == 3:
-            segments = [("想听歌名是", None), (track, "track")]
+            segments = [("想听", None), (track, "track")]
             if has_artist:
-                segments += [("，演出者标签是", None), (artist, "artist")]
+                segments += [("，", None), (artist, "artist"), ("唱的", None)]
             if has_album:
-                segments += [("，专辑标签是", None), (album, "album")]
-            segments += [("，就这首就好", None)]
+                segments += [("，收录在", None), (album, "album")]
+            segments += [("，就这首", None)]
             family = "play_hans_particle"
         elif variant == 4:
             segments = [("听", None), (track, "track")]
@@ -1053,39 +1108,42 @@ def _play_segments(
                 segments += [(" from ", None), (album, "album")]
             family = "play_mixed_code_switch"
         elif variant == 1:
-            segments = [("我要聽：", None), (track, "track")]
+            segments = [("我要聽 ", None), (track, "track")]
             if has_artist:
-                segments += [("，artist 是 ", None), (artist, "artist")]
+                segments += [("，", None), (artist, "artist"), (" 唱的", None)]
             if has_album:
-                segments += [("，album 是 ", None), (album, "album")]
+                segments += [("，收錄在 ", None), (album, "album")]
             family = "play_mixed_conversational"
         elif variant == 2:
-            segments = [("Play 一下這首歌：", None), (track, "track")]
+            segments = [("Play 一下 ", None)]
             if has_album:
-                segments += [("，album 是 ", None), (album, "album")]
+                segments += [(album, "album"), (" 裡的 ", None)]
+            segments += [(track, "track")]
             if has_artist:
-                segments += [("，artist 是 ", None), (artist, "artist")]
+                segments += [("，by ", None), (artist, "artist")]
             family = "play_mixed_word_order"
         elif variant == 3:
-            segments = [("聽這首歌，請幫我找：", None), (track, "track")]
+            segments = [("想聽 ", None), (track, "track"), (" 這首", None)]
             if has_artist:
                 segments += [("，by ", None), (artist, "artist")]
             if has_album:
-                segments += [("，album ", None), (album, "album")]
+                segments += [("，收錄在 ", None), (album, "album")]
+            segments += [("，謝謝", None)]
             family = "play_mixed_particle"
         elif variant == 4:
-            segments = [("請播放這首音樂給我 ", None), (track, "track")]
+            segments = [("請播放這首英文歌 ", None), (track, "track")]
             if has_artist:
-                segments += [("，artist ", None), (artist, "artist")]
+                segments += [("，by ", None), (artist, "artist")]
             if has_album:
-                segments += [("，album ", None), (album, "album")]
+                segments += [("，在 ", None), (album, "album"), (" 這張專輯裡", None)]
             family = "play_mixed_asr_case"
         else:
-            segments = [("Put on 這首音樂：", None), (track, "track")]
+            segments = [("想聽聽 ", None), (track, "track")]
             if has_artist:
-                segments += [("，artist ", None), (artist, "artist")]
+                segments += [("，", None), (artist, "artist"), (" 的歌", None)]
             if has_album:
-                segments += [("，album ", None), (album, "album")]
+                segments += [("，收錄在 ", None), (album, "album"), (" 這張專輯裡", None)]
+            segments += [("，謝謝", None)]
             family = "play_mixed_asr_spacing"
 
     if language_tag in {"zh-Hant", "zh-Hans"} and segments[-1][1] == "track":
@@ -1477,6 +1535,10 @@ def _make_candidate(plan: GroupPlan, *, candidate_number: int, variant: int) -> 
     _validate_language_surface(record.language_tag, record.utterance)
     if _issue53_surface_defects(record):
         raise CandidateCorpusError("generated candidate contains an Issue #53 surface defect")
+    if _v5_carrier_defects(record):
+        raise CandidateCorpusError("generated candidate contains a v5 meta carrier defect")
+    if _v6_carrier_defects(record):
+        raise CandidateCorpusError("generated candidate contains a v6 dangling album carrier")
     return record
 
 
@@ -1923,7 +1985,7 @@ def _generator_config_payload() -> dict[str, Any]:
             for variant, reason in sorted(SAFETY_REASON_BY_VARIANT.items())
         },
         "review_status": REVIEW_STATUS,
-        "zh_hans_script_inventory_version": "stage-b-zh-hans-script-inventory-v1",
+        "zh_hans_script_inventory_version": "stage-b-zh-hans-script-inventory-v2",
         "zh_hans_script_inventory_sha256": ZH_HANS_SCRIPT_INVENTORY_SHA256,
         "candidate_pool_split_status": "unsplit",
         "stage_a_generation_access": "forbidden; leakage check only after generation",
@@ -1963,6 +2025,33 @@ def _scope_for_row(row: StageBCandidateRecord) -> str:
     if row.provisional_ai_scope in {"deterministic_only", "safety_only"}:
         return row.provisional_ai_scope
     raise CandidateCorpusError("candidate row has an unknown AI scope")
+
+
+def audit_play_span_alignment(rows: Sequence[StageBCandidateRecord]) -> dict[str, int]:
+    """Check every present play span and its optional-slot status against text."""
+
+    span_errors = 0
+    optional_status_errors = 0
+    for row in rows:
+        if row.provisional_expected.intent != "spotify_play_track":
+            continue
+        expected = row.provisional_expected
+        if expected.track is None:
+            span_errors += 1
+        for slot in ("track", "artist", "album"):
+            span = getattr(expected, slot)
+            if span is not None and row.utterance[span.start:span.end] != span.text:
+                span_errors += 1
+        status = row.provisional_optional_slot_status
+        for slot in ("artist", "album"):
+            observed = None if status is None else status.get(slot)
+            wanted = "present" if getattr(expected, slot) is not None else "absent"
+            if observed != wanted:
+                optional_status_errors += 1
+    return {
+        "span_error_count": span_errors,
+        "optional_slot_status_error_count": optional_status_errors,
+    }
 
 
 def audit_production_gate(
@@ -2294,6 +2383,10 @@ def _metric_counts(
         _validate_language_surface(row.language_tag, row.utterance)
         if _issue53_surface_defects(row):
             raise CandidateCorpusError("candidate pool contains an Issue #53 surface defect")
+        if _v5_carrier_defects(row):
+            raise CandidateCorpusError("candidate pool contains a v5 meta carrier defect")
+        if _v6_carrier_defects(row):
+            raise CandidateCorpusError("candidate pool contains a v6 dangling album carrier")
     group_sizes = Counter(row.source_group_id for row in rows)
     if len(group_sizes) != sum(GROUP_COUNTS.values()):
         raise CandidateCorpusError("unexpected source-group cardinality")
@@ -2395,6 +2488,9 @@ def _metric_counts(
         if row.provisional_ai_scope == "supported"
         and row.provisional_expected.intent == "spotify_play_track"
     ]
+    play_span_audit = audit_play_span_alignment(supported_play)
+    if any(play_span_audit.values()):
+        raise CandidateCorpusError("supported-play span or optional-slot status mismatch")
     slot_counts = {
         "supported_play_rows": len(supported_play),
         "artist_present": sum(
@@ -2517,6 +2613,19 @@ def _metric_counts(
             "duplicated_safety_verb" in _issue53_surface_defects(row) for row in rows
         ),
     }
+    v5_carrier_residual_counts = {
+        defect: sum(defect in _v5_carrier_defects(row) for row in rows)
+        for defect in (
+            "en_asr_meta_request", "hant_particle_meta_label",
+            "hans_particle_meta_label", "other_en_meta_request", "mixed_field_label",
+        )
+    }
+    v6_carrier_residual_counts = {
+        "mixed_asr_spacing_dangling_album": sum(
+            "mixed_asr_spacing_dangling_album" in _v6_carrier_defects(row)
+            for row in rows
+        ),
+    }
     if deterministic_negative_reason_mismatch_count or safety_negative_reason_mismatch_count:
         raise CandidateCorpusError("row-level negative_reason mapping is inconsistent")
     if mixed_without_cjk_count or mixed_without_ascii_letter_count or english_with_cjk_count:
@@ -2536,6 +2645,10 @@ def _metric_counts(
             },
             "supported_language_counts": supported_language_counts,
             "slot_presence_counts": slot_counts,
+            "play_span_error_count": play_span_audit["span_error_count"],
+            "play_optional_slot_status_error_count": play_span_audit[
+                "optional_slot_status_error_count"
+            ],
             "play_slot_mode_matrix": play_slot_mode_matrix,
             "template_family_counts": dict(sorted(template_counts.items())),
             "generation_source_counts": dict(sorted(generation_source_counts.items())),
@@ -2558,6 +2671,8 @@ def _metric_counts(
             "english_with_cjk_count": english_with_cjk_count,
             "zh_hans_script_validation": "passed",
             "issue53_residual_counts": issue53_residual_counts,
+            "v5_carrier_residual_counts": v5_carrier_residual_counts,
+            "v6_carrier_residual_counts": v6_carrier_residual_counts,
             "production_gate_required_counts": gate_audit["required_counts_by_scope"],
             "production_gate_observed_eligibility_counts": gate_audit[
                 "observed_eligibility_counts_by_scope"
@@ -2618,6 +2733,10 @@ def _candidate_manifest(
         "language_slice_counts": metrics["language_slice_counts"],
         "supported_language_counts": metrics["supported_language_counts"],
         "slot_presence_counts": metrics["slot_presence_counts"],
+        "play_span_error_count": metrics["play_span_error_count"],
+        "play_optional_slot_status_error_count": metrics[
+            "play_optional_slot_status_error_count"
+        ],
         "play_slot_mode_matrix": metrics["play_slot_mode_matrix"],
         "source_group_count": metrics["source_group_count"],
         "source_group_size_counts": metrics["source_group_size_counts"],
@@ -2640,6 +2759,8 @@ def _candidate_manifest(
         "english_with_cjk_count": metrics["english_with_cjk_count"],
         "zh_hans_script_validation": metrics["zh_hans_script_validation"],
         "issue53_residual_counts": metrics["issue53_residual_counts"],
+        "v5_carrier_residual_counts": metrics["v5_carrier_residual_counts"],
+        "v6_carrier_residual_counts": metrics["v6_carrier_residual_counts"],
         "production_gate_required_counts": metrics["production_gate_required_counts"],
         "production_gate_observed_eligibility_counts": metrics[
             "production_gate_observed_eligibility_counts"
@@ -2796,7 +2917,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",
-        default="artifacts/local_ai/stage_b/v5",
+        default="artifacts/local_ai/stage_b/v6",
         help="local research output directory",
     )
     args = parser.parse_args(argv)

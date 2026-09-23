@@ -46,21 +46,22 @@ aggregate state and count each candidate once. A disagreement remains a
 
 ## Frozen source identity
 
-The validator fails closed unless all four frozen v5 identities match:
+The validator fails closed unless all four frozen v6 identities match:
 
 | artifact | SHA-256 |
 | --- | --- |
-| candidate corpus | `658628de9659c91688415f9aa3c29292d89037954a213f6f5a49e6e6fa1258bd` |
+| candidate corpus | `fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238` |
 | entity catalog | `7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb` |
-| generator config | `ddb44af17a7f2ce81ef413ce122f8d2d5664755f0be8495b5c319e850215412e` |
-| candidate manifest | `ff1e4a89524be878c9aaa491cb978c753728ef45baed1051512ec0954e838950` |
+| generator config | `132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e` |
+| candidate manifest | `83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6` |
 
-The source files are under `artifacts/local_ai/stage_b/v5/`. The v4 files
-remain at `artifacts/local_ai/stage_b/` as historical audit evidence. The
-v5 script inventory is separately pinned at
-`0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36`.
-A regenerated corpus cannot silently reuse this review manifest or a v4
-decision file. No v4 decision was imported into the v5 directory.
+The current source files are under `artifacts/local_ai/stage_b/v6/`. The v4
+files at `artifacts/local_ai/stage_b/` and v5 files at
+`artifacts/local_ai/stage_b/v5/` remain historical audit evidence. The v6
+script inventory is separately pinned at
+`733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8`.
+The external v5 Gemini decisions were not imported. A v4/v5 decision cannot
+silently reuse the v6 review manifest or candidate record hashes.
 
 ## What to review in each row
 

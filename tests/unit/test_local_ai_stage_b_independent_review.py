@@ -56,13 +56,13 @@ def _first_packet_row(tmp_path: Path) -> dict[str, object]:
     return json.loads(packet_path.read_text(encoding="utf-8").splitlines()[0])
 
 
-def test_review_source_binds_exact_frozen_v5_identities() -> None:
+def test_review_source_binds_exact_frozen_v6_identities() -> None:
     source = review.load_review_source()
 
     assert dict(source.identities) == dict(review.REVIEWED_SOURCE_IDENTITIES)
     assert len(source.rows) == 3600
     assert len(source.entities_by_key) == 600
-    assert source.manifest["generator_version"] == "stage-b-candidate-generator-v5"
+    assert source.manifest["generator_version"] == "stage-b-candidate-generator-v6"
     assert source.manifest["zh_hans_script_inventory_sha256"] == review.ZH_HANS_SCRIPT_INVENTORY_SHA256
 
 
@@ -224,6 +224,17 @@ def test_record_hash_mismatch_is_rejected() -> None:
 
     with pytest.raises(review.ReviewDecisionError, match="record_sha256"):
         review.validate_decisions([invalid])
+
+
+def test_v5_packet_decision_cannot_be_imported_into_v6() -> None:
+    old_packet = (
+        REPO_ROOT / "artifacts" / "local_ai" / "stage_b" / "v5"
+        / "review" / "packets" / "packet-01.jsonl"
+    )
+    old_row = json.loads(old_packet.read_text(encoding="utf-8").splitlines()[0])
+    old_decision = _accept_decision(old_row)
+    with pytest.raises(review.ReviewDecisionError, match="record_sha256"):
+        review.validate_decisions([old_decision])
 
 
 def test_reviewer_role_must_be_opaque_and_nonempty() -> None:
