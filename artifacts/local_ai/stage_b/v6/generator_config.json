@@ -1,0 +1,235 @@
+{
+  "candidate_corpus_version": "stage-b-candidate-corpus-v6",
+  "candidate_pool_split_status": "unsplit",
+  "candidate_schema_version": 1,
+  "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "deterministic_profile_sequence_by_language": {
+    "en": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ],
+    "mixed": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ],
+    "zh-Hans": [
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference"
+    ],
+    "zh-Hant": [
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "controls",
+      "unresolved_reference",
+      "unresolved_reference",
+      "unresolved_reference",
+      "ambiguous_version",
+      "ambiguous_version",
+      "unsupported_domain",
+      "unsupported_domain"
+    ]
+  },
+  "deterministic_reason_by_variant": {
+    "0": "playback_control",
+    "1": "playback_control",
+    "2": "playback_control",
+    "3": "playback_control",
+    "4": "playback_control",
+    "5": "unsupported_domain"
+  },
+  "deterministic_reasons": [
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "playback_control",
+    "unsupported_domain"
+  ],
+  "eligible_unknown_reasons": [
+    "artist_only",
+    "missing_track"
+  ],
+  "entity_morphology_quality_requirements": {
+    "artist_starts_the_rate_max_exclusive": 0.5,
+    "chinese_artist_band_suffix_rate_max": 0.4,
+    "chinese_artist_group_no_suffix_rate_min": 0.25,
+    "chinese_artist_solo_style_rate_min": 0.25,
+    "en_album_word_count_bucket_min": 3,
+    "en_artist_word_count_bucket_min": 3,
+    "en_track_word_count_bucket_min": 3,
+    "mixed_album_word_count_bucket_min": 3,
+    "mixed_artist_word_count_bucket_min": 3,
+    "mixed_track_word_count_bucket_min": 3,
+    "profile_slot_mode_min": 2,
+    "required_safe_surface_features": [
+      "digit",
+      "punctuation",
+      "apostrophe",
+      "hyphen",
+      "period"
+    ]
+  },
+  "final_stage_b_corpus": false,
+  "frozen_near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "gate_blocked_unknown_reasons": [
+    "unresolved_reference",
+    "ambiguous_version",
+    "unsupported_domain"
+  ],
+  "generation_source": "synthetic_local_entity_catalog_v2",
+  "generator_config_sha256": "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e",
+  "generator_version": "stage-b-candidate-generator-v6",
+  "group_counts": {
+    "deterministic_only": 50,
+    "safety_only": 40,
+    "supported_play": 300,
+    "supported_unknown": 210
+  },
+  "held_out_sealed": false,
+  "language_group_counts": {
+    "deterministic_only": {
+      "en": 10,
+      "mixed": 18,
+      "zh-Hans": 4,
+      "zh-Hant": 18
+    },
+    "safety_only": {
+      "en": 12,
+      "mixed": 12,
+      "zh-Hans": 4,
+      "zh-Hant": 12
+    },
+    "supported_play": {
+      "en": 66,
+      "mixed": 90,
+      "zh-Hans": 24,
+      "zh-Hant": 120
+    },
+    "supported_unknown": {
+      "en": 44,
+      "mixed": 70,
+      "zh-Hans": 16,
+      "zh-Hant": 80
+    }
+  },
+  "near_duplicate_policy": {
+    "algorithm": "char_ngram_jaccard_exact_v1",
+    "candidate_filter": "simhash64_hamming_v1",
+    "candidate_hamming_threshold": 12,
+    "config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+    "cross_split_only": true,
+    "hash_bits": 64,
+    "hash_seed": 1398030897,
+    "ngram_size": 3,
+    "normalization": "NFKC+casefold+remove-punctuation-and-whitespace",
+    "policy_version": "stage-b-near-duplicate-v1",
+    "similarity_threshold": 0.85
+  },
+  "near_duplicate_policy_version": "stage-b-near-duplicate-v1",
+  "play_slot_mode_matrix": {
+    "en": {
+      "album_only": 13,
+      "artist_only": 13,
+      "both": 27,
+      "neither": 13
+    },
+    "mixed": {
+      "album_only": 18,
+      "artist_only": 18,
+      "both": 36,
+      "neither": 18
+    },
+    "zh-Hans": {
+      "album_only": 5,
+      "artist_only": 5,
+      "both": 9,
+      "neither": 5
+    },
+    "zh-Hant": {
+      "album_only": 24,
+      "artist_only": 24,
+      "both": 48,
+      "neither": 24
+    }
+  },
+  "play_slot_modes": {
+    "album_only": 60,
+    "artist_only": 60,
+    "both": 120,
+    "neither": 60
+  },
+  "production_gate_blocked_scopes": [
+    "deterministic_only",
+    "safety_only"
+  ],
+  "production_gate_eligible_scopes": [
+    "supported_play",
+    "supported_unknown"
+  ],
+  "production_gate_error_code": "SPOTIFY_TRACK_NOT_FOUND",
+  "review_status": "pending_independent_review",
+  "reviewed_stage_b_record_schema_version": 1,
+  "safety_reason_by_variant": {
+    "0": "hostile_system",
+    "1": "path_or_url",
+    "2": "path_or_url",
+    "3": "hostile_system",
+    "4": "hostile_system",
+    "5": "hostile_system"
+  },
+  "safety_reasons": [
+    "hostile_system",
+    "path_or_url",
+    "path_or_url",
+    "hostile_system",
+    "hostile_system",
+    "hostile_system"
+  ],
+  "stage_a_generation_access": "forbidden; leakage check only after generation",
+  "target_candidate_rows": 3600,
+  "training_authorized": false,
+  "unknown_reasons": [
+    "artist_only",
+    "missing_track",
+    "unresolved_reference",
+    "ambiguous_version",
+    "unsupported_domain"
+  ],
+  "variants_per_source_group": 6,
+  "zh_hans_script_inventory_sha256": "733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8",
+  "zh_hans_script_inventory_version": "stage-b-zh-hans-script-inventory-v2"
+}

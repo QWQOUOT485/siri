@@ -6,7 +6,7 @@ candidate.  The only writes it performs are review packets, a review manifest,
 and reviewer-facing schema documentation under the separate ``review``
 directory.
 
-The source identity is fail-closed against the frozen v5 artifact hashes.
+The source identity is fail-closed against the frozen v6 artifact hashes.
 A regenerated candidate corpus cannot silently reuse an old decision ledger.
 """
 
@@ -37,28 +37,28 @@ REVIEW_STATUS = "pending_independent_review"
 PACKET_COUNT = 12
 ROWS_PER_PACKET = 300
 EXPECTED_CANDIDATE_COUNT = PACKET_COUNT * ROWS_PER_PACKET
-DEFAULT_STAGE_B_ARTIFACT_DIR = _REPO_ROOT / "artifacts" / "local_ai" / "stage_b" / "v5"
+DEFAULT_STAGE_B_ARTIFACT_DIR = _REPO_ROOT / "artifacts" / "local_ai" / "stage_b" / "v6"
 DEFAULT_REVIEW_DIR = DEFAULT_STAGE_B_ARTIFACT_DIR / "review"
-ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v1.json"
-ZH_HANS_SCRIPT_INVENTORY_SHA256 = "0aa72c72acb984135507b72ea179cd3812c163d644ee1c03942a858aef8c0b36"
+ZH_HANS_SCRIPT_INVENTORY_PATH = _REPO_ROOT / "scripts" / "data" / "stage_b_zh_hans_script_inventory_v2.json"
+ZH_HANS_SCRIPT_INVENTORY_SHA256 = "733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8"
 
-# These are the frozen v5 source identities.  They are intentionally
+# These are the frozen v6 source identities.  They are intentionally
 # literal and independent of the current candidate manifest.  The manifest is
 # also recomputed and compared so a stale or hand-edited manifest cannot bless
 # a different source corpus.
 REVIEWED_SOURCE_IDENTITIES = MappingProxyType(
     {
         "candidate_corpus_sha256": (
-            "658628de9659c91688415f9aa3c29292d89037954a213f6f5a49e6e6fa1258bd"
+            "a5671cbd8c3b28c3d14994786b800b70797aac19d0392931fa3f8c29e9628d0d"
         ),
         "entity_catalog_sha256": (
             "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb"
         ),
         "generator_config_sha256": (
-            "ddb44af17a7f2ce81ef413ce122f8d2d5664755f0be8495b5c319e850215412e"
+            "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e"
         ),
         "candidate_manifest_sha256": (
-            "ff1e4a89524be878c9aaa491cb978c753728ef45baed1051512ec0954e838950"
+            "13e50c4ccc336cc46c62d9a45654d2783d981dbcad0ea807869a9379d4fe3e18"
         ),
     }
 )
@@ -287,8 +287,8 @@ def _validate_source_row(payload: Mapping[str, Any]) -> dict[str, Any]:
         raise ReviewSourceIdentityError("candidate row failed source-schema validation") from exc
     if payload["review_status"] != REVIEW_STATUS:
         raise ReviewSourceIdentityError("candidate row is not pending independent review")
-    if payload["generator_version"] != "stage-b-candidate-generator-v5":
-        raise ReviewSourceIdentityError("candidate row generator version is not v5")
+    if payload["generator_version"] != "stage-b-candidate-generator-v6":
+        raise ReviewSourceIdentityError("candidate row generator version is not v6")
     if not isinstance(payload["generation_source"], str) or not payload["generation_source"]:
         raise ReviewSourceIdentityError("candidate row generation_source is invalid")
     return dict(payload)
@@ -307,7 +307,7 @@ def _source_group_number(source_group_id: str) -> str:
 def load_review_source(
     artifacts_dir: str | Path = DEFAULT_STAGE_B_ARTIFACT_DIR,
 ) -> ReviewSource:
-    """Load and fail-closed validate the frozen v5 source artifacts."""
+    """Load and fail-closed validate the frozen v6 source artifacts."""
 
     safe_dir = protocol.validate_local_path(artifacts_dir, field="artifacts_dir")
     manifest = _read_json(safe_dir / "candidate_manifest.json")
@@ -401,7 +401,7 @@ def load_review_source(
     }
     if actual_identities != dict(REVIEWED_SOURCE_IDENTITIES):
         raise ReviewSourceIdentityError(
-            "source artifacts do not match the frozen v5 identities"
+            "source artifacts do not match the frozen v6 identities"
         )
     for field, expected in dict(REVIEWED_SOURCE_IDENTITIES).items():
         manifest_field = "manifest_sha256" if field == "candidate_manifest_sha256" else field
@@ -737,7 +737,7 @@ required fields:
 `needs_correction`; pending is not a submitted decision. An accept requires
 all five positive reason codes. A reject or needs-correction decision requires
 at least one negative reason code. The offline validator also binds every
-decision to the frozen v5 source identities and rejects duplicate
+decision to the frozen v6 source identities and rejects duplicate
 decisions from the same reviewer for the same candidate.
 
 Multiple reviewers may review the same candidate. For each candidate, the
@@ -770,7 +770,7 @@ To validate a local JSONL submission without writing a ledger:
 ```
 
 The validator is offline-only and fails closed if the candidate artifact
-identity differs from the frozen v5 hashes in the review manifest.
+identity differs from the frozen v6 hashes in the review manifest.
 """
 
 

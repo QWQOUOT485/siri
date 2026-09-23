@@ -97,7 +97,7 @@ def test_generation_is_deterministic_and_ids_are_unique() -> None:
     }
     assert len({row.candidate_id for row in first_rows}) == 3600
     assert len({row.source_group_id for row in first_rows}) == 600
-    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v5"}
+    assert {row.generator_version for row in first_rows} == {"stage-b-candidate-generator-v6"}
     assert Counter(row.source_group_id for row in first_rows) == Counter(
         {f"source-group-{index:04d}": 6 for index in range(1, 601)}
     )
@@ -139,8 +139,8 @@ def test_gate_aligned_scope_reasons_and_slot_matrix_are_frozen() -> None:
     assert metrics["scope_contract_mismatch_count"] == 0
     assert metrics["eligibility_reason_counts_by_scope"] == {
         "supported_play": {
-            "parser_miss": 1278,
-            "parser_success_resolver_failure": 522,
+            "parser_miss": 1344,
+            "parser_success_resolver_failure": 456,
         },
         "supported_unknown": {
             "parser_miss": 914,
@@ -536,6 +536,102 @@ def test_quality_spot_check_fixture_has_all_review_relevant_surfaces() -> None:
     assert all("stage_a" not in row.template_family for row in spot_checks.values())
 
 
+def test_v6_repairs_all_documented_v5_play_carrier_families() -> None:
+    old_path = REPO_ROOT / "artifacts" / "local_ai" / "stage_b" / "v5" / "candidate_corpus.jsonl"
+    old_rows = {
+        row.candidate_id: row
+        for row in (
+            candidate.StageBCandidateRecord.from_mapping(json.loads(line))
+            for line in old_path.read_text(encoding="utf-8").splitlines()
+        )
+    }
+    new_rows, _catalog = candidate.generate_candidate_records()
+    repaired_family_counts = {
+        "play_en_asr_spacing": 66,
+        "play_hant_particle": 120,
+        "play_hans_particle": 24,
+        "play_en_direct": 66,
+        "play_en_conversational": 66,
+        "play_en_polite": 66,
+        "play_mixed_conversational": 90,
+        "play_mixed_word_order": 90,
+        "play_mixed_particle": 90,
+        "play_mixed_asr_case": 90,
+        "play_mixed_asr_spacing": 90,
+    }
+    changed = Counter()
+    for row in new_rows:
+        previous = old_rows[row.candidate_id]
+        if row.template_family in repaired_family_counts:
+            changed[row.template_family] += row.utterance != previous.utterance
+            assert not candidate._v5_carrier_defects(row)
+            assert row.provisional_expected.intent == "spotify_play_track"
+            assert row.provisional_optional_slot_status == previous.provisional_optional_slot_status
+        else:
+            assert row.utterance == previous.utterance
+    assert changed == repaired_family_counts
+    assert sum(candidate._v5_carrier_defects(row) != () for row in new_rows) == 0
+
+
+def test_v6_asr_carrier_is_spoken_and_not_a_meta_request() -> None:
+    rows, _catalog = candidate.generate_candidate_records()
+    asr_rows = [row for row in rows if row.template_family == "play_en_asr_spacing"]
+    assert len(asr_rows) == 66
+    assert all(row.utterance.startswith("listen to ") for row in asr_rows)
+    assert all("this request" not in candidate._play_carrier(row) for row in asr_rows)
+    assert all("ENTITY" in candidate._play_carrier(row) for row in asr_rows)
+
+
+@pytest.mark.parametrize(
+    ("family", "prefix", "artist_phrase", "album_phrase", "forbidden"),
+    [
+        ("play_hant_particle", "想聽", "唱的", "收錄在", ("標籤", "欄位", "metadata", "field")),
+        ("play_hans_particle", "想听", "唱的", "收录在", ("标签", "字段", "metadata", "field")),
+    ],
+)
+def test_v6_chinese_particle_carriers_support_all_optional_modes(
+    family: str, prefix: str, artist_phrase: str, album_phrase: str,
+    forbidden: tuple[str, ...],
+) -> None:
+    rows, _catalog = candidate.generate_candidate_records()
+    family_rows = [row for row in rows if row.template_family == family]
+    observed_modes = set()
+    for row in family_rows:
+        carrier = candidate._play_carrier(row)
+        assert carrier.startswith(prefix)
+        assert carrier.endswith("就這首" if family == "play_hant_particle" else "就这首")
+        assert not any(token in carrier for token in forbidden)
+        slots = row.provisional_optional_slot_status
+        assert slots is not None
+        observed_modes.add((slots["artist"], slots["album"]))
+        assert (artist_phrase in carrier) == (slots["artist"] == "present")
+        assert (album_phrase in carrier) == (slots["album"] == "present")
+    assert observed_modes == {
+        ("present", "present"), ("present", "absent"),
+        ("absent", "present"), ("absent", "absent"),
+    }
+
+
+def test_all_play_spans_and_optional_slot_statuses_align_after_rephrasing() -> None:
+    rows, _catalog = candidate.generate_candidate_records()
+    play_rows = [row for row in rows if row.provisional_expected.intent == "spotify_play_track"]
+    assert len(play_rows) == 1800
+    assert candidate.audit_play_span_alignment(play_rows) == {
+        "span_error_count": 0,
+        "optional_slot_status_error_count": 0,
+    }
+    first = play_rows[0]
+    track = first.provisional_expected.track
+    assert track is not None
+    corrupt_text = first.utterance[:track.start] + "X" + first.utterance[track.start + 1:]
+    assert candidate.audit_play_span_alignment([replace(first, utterance=corrupt_text)])["span_error_count"] == 1
+    incorrect_status = dict(first.provisional_optional_slot_status or {})
+    incorrect_status["artist"] = "absent" if incorrect_status["artist"] == "present" else "present"
+    assert candidate.audit_play_span_alignment([
+        replace(first, provisional_optional_slot_status=incorrect_status)
+    ])["optional_slot_status_error_count"] == 1
+
+
 def test_candidate_schema_roundtrips_spans_and_keeps_review_pending() -> None:
     rows, _catalog = candidate.generate_candidate_records()
 
@@ -638,7 +734,7 @@ def test_artifact_manifest_review_queue_and_hashes_are_deterministic(tmp_path: P
     }
     assert first_manifest["source_group_count"] == 600
     assert first_manifest["template_family_count"] == 32
-    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v5"
+    assert first_manifest["generator_version"] == "stage-b-candidate-generator-v6"
     assert first_manifest["exact_duplicate_count"] == 0
     assert first_manifest["same_group_near_duplicate_count"] == 0
     assert first_manifest["cross_group_near_duplicate_count"] == 0

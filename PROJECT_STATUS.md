@@ -4,37 +4,38 @@
 
 ## Current Phase
 
-### 2026-09-23 Stage B v5 candidate pool frozen for independent review
+### 2026-09-23 Stage B v6 carrier correction pending independent review
 
-Issue #53's five confirmed v4 generator defects are addressed by
-`stage-b-candidate-generator-v5` on branch `codex/stage-b-v5-issue-53` from
-exact main `68a71ed420467f1eebdf686f9268905af37e8146`. The new candidate
-pool is proposed in PR #55, which remains open and unmerged. The new candidate
-and review artifacts live under `artifacts/local_ai/stage_b/v5/`; the v4
-artifacts remain at `artifacts/local_ai/stage_b/` as historical audit evidence.
-No v4 review decision was imported. The review workflow is bound to the v5
-candidate/source identities and starts with zero decisions and 3,600 pending.
+PR #55 merged the mechanically frozen v5 pool at main
+`75a94cb1f081e0fa0a25f5571b85dafc05d6eb18`. An external Gemini 3.8 High
+review returned 3,600 accept decisions, correctly bound to v5 identities, but
+those decisions were **not imported**. Independent gatekeeper review found
+systematic carrier-naturalness misses in at least 210 rows: English ASR spacing
+(66), Traditional particle (120), and Simplified particle (24). V5 is historical
+audit evidence only, along with v4. The v6 candidate/review artifacts are
+under `artifacts/local_ai/stage_b/v6/`; no earlier artifact was overwritten.
 
-The v5 pool has 3,600 rows, 600 source groups, and 32 template families;
-scope counts remain 1,800 supported play, 1,260 supported unknown, 300
-deterministic-only, and 240 safety-only. Language counts are 1,380 zh-Hant,
-288 zh-Hans, 1,140 mixed, and 792 en. Stage A leakage, exact duplicates,
-same-group near duplicates, cross-group near duplicates, cross-group exact
-duplicates, production-gate scope mismatches, and all five Issue #53 residual
-counts are zero. Stage A and near-duplicate config hashes remain frozen.
-The independent zh-Hans script inventory is versioned and hashed separately
-from the generation conversion map; an unreviewed Han character fails closed.
-The five focused defect checks plus inventory-tamper coverage pass (6 tests),
-the full unit suite passes (553 tests, 2 dependency deprecation warnings),
-and `compileall -q app scripts tests` plus `git diff --check` pass.
+The `stage-b-candidate-generator-v6` branch
+`codex/stage-b-v6-naturalness-correction` fixes those three carriers and eight
+additional documented carrier-level defects found in a review of all 32
+families. In total, 858 candidate utterances were rephrased. V6 has 3,600
+rows, 600 source groups, 32 families, and the unchanged scope, language,
+optional-slot, Stage A, near-duplicate, and production-gate contracts. The
+independent zh-Hans script inventory remains fail-closed and is separately
+versioned for the newly used Simplified character `唱`. Mechanical validation
+and regression evidence are in
+[`docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md).
+The focused Stage B candidate/review tests passed (55), the full unit suite
+passed (559, 2 dependency deprecation warnings), and `compileall -q app scripts tests`
+plus `git diff --check` passed. These checks do not replace semantic review.
 
-The 12 packets each contain 300 candidates, exactly once, and are review
-allocations only. Independent semantic review is pending. There is no final
-3,000-row selection, train/validation/held-out split, held-out seal, model
-compute, training, production fallback approval, or Semantic Memory enablement.
+The 12 v6 packets each contain 300 candidates exactly once. The v6 review
+manifest begins with zero decisions and 3,600 pending. Independent semantic
+review has **not** accepted v6. There is no final 3,000-row selection,
+train/validation/held-out split, held-out seal, model compute, training,
+production fallback approval, or Semantic Memory enablement.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
-remain mandatory. Full offline evidence and file hashes are in
-[`docs/LOCAL_AI_STAGE_B_V5_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V5_CANDIDATE_EVIDENCE.md).
+remain mandatory.
 
 ### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 
@@ -90,7 +91,8 @@ generator families are English slash-delimited punctuation-loss surfaces;
 Chinese deterministic-volume rows that became compound playback intent;
 Chinese `unknown_missing_track` bare direct-play surfaces; and artificial
 mixed-language surfaces combining `執行 run cmd`. These defects caused v4 to
-be blocked; v5 was regenerated separately and awaits independent review.
+be blocked; v5 was regenerated separately and later superseded by v6 after
+the carrier-naturalness audit.
 V4 review decisions are audit evidence only and must not be blindly reused
 after regeneration because record text or hashes changed.
 The offline production-alignment audit reports supported play/unknown as
@@ -147,20 +149,21 @@ are accepted, otherwise partial review or unreviewed. No decision is
 fabricated, propagated, adjudicated, or automatically resolved.
 
 [`docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
-now targets the frozen v5 source identities while preserving the same review
-workflow. The historical v4 manifest remains in its original directory. This is **not**
-the final Stage B corpus: v4 cannot progress to final selection, and review of
-the separate v5 pool remains pending. No final 3,000-row selection
+now targets the frozen v6 source identities while preserving the same review
+workflow. The historical v4 and v5 manifests remain in their original
+directories. This is **not** the final Stage B corpus: v4 and v5 cannot
+progress to final selection, and review of v6 is pending. No final 3,000-row selection
 exists, no split is assigned, held-out data is not sealed, and no correction,
 training, fine-tuning, inference, model compute, RX 9070 XT qualification,
 deployment, production-parser authority, RAG, vector storage, embeddings,
 Semantic Memory, Local AI fallback, or live Windows/Spotify/Siri/network
 operation is authorized.
 
-The focused independent-review suite passes (**24 passed**), the full unit
-suite passes (**496 passed, 2 existing dependency deprecation warnings**), and
-`compileall -q app scripts tests` plus `git diff --check` pass. No hosted CI
-claim is made. `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
+At the v4 workflow merge, the focused independent-review suite passed
+(**24 tests**), the full unit suite passed (**496 tests**, 2 dependency
+deprecation warnings), and `compileall -q app scripts tests` plus
+`git diff --check` passed. These are historical results, not v6 validation.
+`LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
 `LOCAL_AI_FALLBACK_APPROVED=false` remain unchanged.
 
 ### 2026-09-21 Stage B pre-corpus gate / Memory RAG roadmap-only / compute not authorized
