@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import ctypes
+import ntpath
 import sys
 import time
 from ctypes import wintypes
+from pathlib import Path
 
 from app.domain.app_models import ProcessSpec
 
@@ -22,7 +24,9 @@ class WindowsProcessController:
     WAIT_FAILED = 0xFFFFFFFF
 
     def close(self, process: ProcessSpec, *, force: bool = False) -> OperationResult:
-        if not process.reliable or not process.executable_names:
+        if not process.reliable or not (
+            process.executable_paths or (process.name_only_system and process.executable_names)
+        ):
             return OperationResult(False, "找得到這個應用程式，但目前無法安全判斷應關閉哪個程序。", "UNSAFE_PROCESS_MAPPING")
         if sys.platform != "win32":
             return OperationResult(False, "Process control is available only on Windows", "WINDOWS_ONLY")
@@ -31,7 +35,7 @@ class WindowsProcessController:
             return OperationResult(False, "目前找不到這個應用程式的可關閉視窗。", "APP_NOT_RUNNING")
         unique_pids = list(dict.fromkeys(pid for pid, _ in targets))
         if force:
-            closed = sum(1 for pid in unique_pids if self._terminate(pid))
+            closed = sum(1 for pid in unique_pids if self._terminate(pid, process))
             return OperationResult(bool(closed), "已嘗試強制結束程序。" if closed else "無法強制結束程序。", None if closed else "FORCE_CLOSE_FAILED", {"count": closed})
 
         kernel32 = ctypes.windll.kernel32
@@ -41,7 +45,7 @@ class WindowsProcessController:
             # numeric PID after WM_CLOSE cannot distinguish an exited process
             # from an access/inspection failure and is vulnerable to PID reuse.
             for pid in unique_pids:
-                handle = kernel32.OpenProcess(self.SYNCHRONIZE, False, pid)
+                handle = kernel32.OpenProcess(self.SYNCHRONIZE | self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
                 if not handle:
                     return OperationResult(
                         False,
@@ -50,6 +54,15 @@ class WindowsProcessController:
                         {"remaining": len(unique_pids)},
                     )
                 handles[pid] = handle
+                if not self._same_session(pid) or not self._matches_identity(
+                    self._process_path_from_handle(handle), process
+                ):
+                    return OperationResult(
+                        False,
+                        "無法可靠檢查程式身分，未送出正常關閉要求。",
+                        "GRACEFUL_CLOSE_INSPECTION_FAILED",
+                        {"remaining": len(unique_pids)},
+                    )
 
             remaining = set(unique_pids)
             for pid in tuple(remaining):
@@ -98,10 +111,10 @@ class WindowsProcessController:
     def _find_windowed_processes(self, process: ProcessSpec) -> list[tuple[int, int]]:
         if sys.platform != "win32":
             return []
-        names = {name.casefold() for name in process.executable_names}
         session_id = self._current_session_id()
+        if session_id < 0:
+            return []
         user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
         result: list[tuple[int, int]] = []
         callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
@@ -115,7 +128,7 @@ class WindowsProcessController:
             if candidate_session != session_id:
                 return True
             path = self._process_path(int(pid.value))
-            if path and path.name.casefold() in names:
+            if self._matches_identity(path, process):
                 result.append((int(pid.value), int(hwnd)))
             return True
 
@@ -133,21 +146,40 @@ class WindowsProcessController:
             return int(session.value)
         return -1
 
+    def _same_session(self, pid: int) -> bool:
+        current = self._current_session_id()
+        return current >= 0 and self._process_session_id(pid) == current
+
     def _process_path(self, pid: int):
         kernel32 = ctypes.windll.kernel32
         handle = kernel32.OpenProcess(self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
         if not handle:
             return None
         try:
-            buffer = ctypes.create_unicode_buffer(32768)
-            size = wintypes.DWORD(len(buffer))
-            if kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
-                from pathlib import Path
-
-                return Path(buffer.value)
+            return self._process_path_from_handle(handle)
         finally:
             kernel32.CloseHandle(handle)
+
+    @staticmethod
+    def _process_path_from_handle(handle: int) -> Path | None:
+        buffer = ctypes.create_unicode_buffer(32768)
+        size = wintypes.DWORD(len(buffer))
+        if ctypes.windll.kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+            return Path(buffer.value)
         return None
+
+    @staticmethod
+    def _matches_identity(path: Path | None, process: ProcessSpec) -> bool:
+        if path is None:
+            return False
+        actual = ntpath.normcase(ntpath.normpath(str(path)))
+        if process.executable_paths:
+            return actual in {ntpath.normcase(ntpath.normpath(expected)) for expected in process.executable_paths}
+        return bool(
+            process.name_only_system
+            and ntpath.basename(str(path)).casefold()
+            in {name.casefold() for name in process.executable_names}
+        )
 
     @staticmethod
     def _wait_status(kernel32, handle: int) -> int:
@@ -157,11 +189,19 @@ class WindowsProcessController:
         # double or an untyped ctypes binding that exposes WAIT_FAILED as -1.
         return int(kernel32.WaitForSingleObject(handle, 0)) & 0xFFFFFFFF
 
-    def _terminate(self, pid: int) -> bool:
-        handle = ctypes.windll.kernel32.OpenProcess(self.PROCESS_TERMINATE | self.SYNCHRONIZE, False, pid)
+    def _terminate(self, pid: int, process: ProcessSpec) -> bool:
+        handle = ctypes.windll.kernel32.OpenProcess(
+            self.PROCESS_TERMINATE | self.SYNCHRONIZE | self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+        )
         if not handle:
             return False
         try:
+            # Inspect and terminate through the same handle; a reused numeric
+            # PID cannot redirect termination to an unverified image.
+            if not self._same_session(pid) or not self._matches_identity(
+                self._process_path_from_handle(handle), process
+            ):
+                return False
             return bool(ctypes.windll.kernel32.TerminateProcess(handle, 1))
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)

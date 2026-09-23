@@ -117,11 +117,15 @@ def test_windows_launcher_allows_approved_msc(monkeypatch):
     patch_interactive_windows(monkeypatch)
     started = []
     monkeypatch.setattr(launcher_module.os, "startfile", started.append, raising=False)
+    target = r"C:\Windows\System32\devmgmt.msc"
+    monkeypatch.setattr(launcher_module, "trusted_msc_path", lambda name: target if name == "devmgmt.msc" else None)
+    monkeypatch.setattr(launcher_module.Path, "is_file", lambda self: str(self) == target)
+    monkeypatch.setattr(launcher_module.Path, "resolve", lambda self, strict=False: self)
 
-    result = WindowsLauncher().launch(launch_spec(LaunchMethod.SHELL_EXECUTE, "devmgmt.msc"))
+    result = WindowsLauncher().launch(launch_spec(LaunchMethod.SHELL_EXECUTE, target))
 
     assert result.success is True
-    assert started == ["devmgmt.msc"]
+    assert started == [target]
 
 
 def test_windows_launcher_enforces_executable_extension_gate(monkeypatch, tmp_path):

@@ -4,6 +4,31 @@
 
 ## Current Phase
 
+### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
+
+The branch `codex/issue-52-first-four-fixes` starts from exact `main`
+`bdd3468457ee2a2caa434d4c41091cafd8f45594` and changes only the first
+four high-risk findings tracked in issue #52. Discovered/manual process-close
+mapping now carries canonical executable paths; fixed system entries mark
+name-only hints explicitly, and the existing service still refuses to close
+system apps. Graceful close rechecks identity on its retained wait handle;
+force close rechecks identity on the termination handle. Spotify clarification
+uses closed positive selection forms. Fixed `.msc` tools resolve through the
+Windows system-directory API and the launcher rechecks the trusted path.
+Blocking `/action` and `/command` orchestration runs as sync FastAPI endpoints.
+
+The four code fixes passed independent source review at implementation commit
+`8b2ab5cef21e14d6bd87ca68c597bb3a05e8649e`; the reviewed code is unchanged.
+Subsequent PR commits update `PROJECT_STATUS.md` only. PR #54 remains open and
+unmerged. Source/mock independent review passed, but no live Windows
+process-close or MMC launch acceptance, real Spotify playback, or Siri
+acceptance has been performed; the installed Agent was not changed. Issue #52
+and its other findings remain open, with its checkboxes untouched. Next: merge
+PR #54, then perform separately authorized real Windows/Spotify/Siri
+acceptance where relevant.
+`LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
+remain unchanged.
+
 ### 2026-09-23 Stage B independent-review workflow merged / independent review pending
 
 PR #48's reviewed candidate-corpus head was exactly
@@ -13,19 +38,31 @@ at exact head `c59ae2b0aba1f0ddec42d02e28f01e40d02512f1` and is now merged into
 `main` with merge commit `84c778b702d8ca469882aa5e06a6f3602ceffdcd`. The
 independent-review workflow is now in `main`; its 12 deterministic review
 packets of 300 rows each remain frozen. Review decisions remain zero at
-workflow creation, so all 3,600 candidates remain pending independent review.
-Conflict-aware candidate aggregation exists, but automatic conflict
-adjudication does not exist. The final 3,000 rows are not selected, no final
-split exists, held-out data is not sealed, and training is not authorized.
+workflow creation; that initial manifest count does not mean all 3,600 rows
+have been semantically reviewed. Conflict-aware candidate aggregation exists,
+but automatic conflict adjudication does not exist. The final 3,000 rows are
+not selected, no final split exists, held-out data is not sealed, and training
+is not authorized.
 The implementation commit is `8d135e37d6a196bd2d1f630e51e8095d8c797613`.
 
-The frozen Stage B source remains an offline, deterministic, **unsplit** pool
+Stage B v4 remains frozen as audit evidence, but is no longer eligible to
+progress to final selection. It is an offline, deterministic, **unsplit** pool
 of 3,600 provisional rows across 600 source groups and 32 template families.
 Scope counts are 1,800 supported play, 1,260 supported semantic-unknown, 300
 deterministic-only, and 240 safety-only. The source is synthetic, local,
-provider-ID free, and Spotify/network independent. The v4 HANS surface table
-covers every Traditional character used by the Hant catalog, and strict local
-conversion tests prevent the previously detected contamination from returning.
+provider-ID free, and Spotify/network independent. Packet 01 independent
+semantic review and a follow-up corpus scan found corpus and generator defects,
+tracked in issue #53. The scan found 6 zh-Hans rows containing Traditional
+`著`. The earlier HANS contamination check was incomplete because detection
+coverage depended on the known conversion mapping. Additional affected
+generator families are English slash-delimited punctuation-loss surfaces;
+Chinese deterministic-volume rows that became compound playback intent;
+Chinese `unknown_missing_track` bare direct-play surfaces; and artificial
+mixed-language surfaces combining `執行 run cmd`. A v5 or equivalent
+regenerated candidate corpus is required before independent review resumes.
+V4 review decisions are audit evidence only and must not be blindly reused
+after regeneration because record text or hashes may change. V5 has not been
+implemented.
 The offline production-alignment audit reports supported play/unknown as
 1,800/1,260 eligible, deterministic-only/safety-only as 300/240 blocked, and
 zero scope-contract mismatches. Leakage, exact duplicates, same-group near
@@ -81,12 +118,13 @@ fabricated, propagated, adjudicated, or automatically resolved.
 
 [`docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
 records the reviewer boundary and offline validation commands. This is **not**
-the final Stage B corpus: independent review is pending, no final 3,000-row
-selection exists, no split is assigned, held-out data is not sealed, and no
-correction, training, fine-tuning, inference, model compute, RX 9070 XT
-qualification, deployment, production-parser authority, RAG, vector storage,
-embeddings, Semantic Memory, Local AI fallback, or live
-Windows/Spotify/Siri/network operation is authorized.
+the final Stage B corpus: v4 cannot progress to final selection, and review of
+a regenerated v5 or equivalent remains pending. No final 3,000-row selection
+exists, no split is assigned, held-out data is not sealed, and no correction,
+training, fine-tuning, inference, model compute, RX 9070 XT qualification,
+deployment, production-parser authority, RAG, vector storage, embeddings,
+Semantic Memory, Local AI fallback, or live Windows/Spotify/Siri/network
+operation is authorized.
 
 The focused independent-review suite passes (**24 passed**), the full unit
 suite passes (**496 passed, 2 existing dependency deprecation warnings**), and

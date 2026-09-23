@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import ntpath
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -10,13 +12,14 @@ from pathlib import Path
 from app.domain.app_models import LaunchMethod, LaunchSource, LaunchSpec
 
 from .base import OperationResult
+from .system_paths import ALLOWED_MSC, trusted_msc_path
 
 
 class WindowsLauncher:
     """Accept only a catalog-created, verified LaunchSpec."""
 
     _allowed_shell_prefixes = ("ms-", "shell:AppsFolder\\")
-    _allowed_msc = {"devmgmt.msc", "services.msc", "eventvwr.msc", "diskmgmt.msc", "taskschd.msc"}
+    _allowed_msc = ALLOWED_MSC
 
     def launch(self, spec: LaunchSpec) -> OperationResult:
         if not isinstance(spec, LaunchSpec) or not spec.verified:
@@ -39,13 +42,36 @@ class WindowsLauncher:
                 os.startfile(spec.target)  # type: ignore[attr-defined]
                 return OperationResult(True, "Application started")
             if spec.method is LaunchMethod.SHELL_EXECUTE:
-                if Path(spec.target).name.casefold() not in self._allowed_msc:
+                target = spec.target
+                normalized = target.replace("/", "\\")
+                basename = ntpath.basename(normalized)
+                trusted = trusted_msc_path(basename)
+                if (
+                    not re.fullmatch(r"[A-Za-z]:\\.+", normalized)
+                    or normalized.startswith(("\\\\", "\\?\\", "\\.\\"))
+                    or any(part in {".", ".."} for part in normalized.split("\\"))
+                    or basename.casefold() not in self._allowed_msc
+                    or trusted is None
+                    or ntpath.normcase(ntpath.normpath(normalized)) != ntpath.normcase(ntpath.normpath(trusted))
+                    or not self._resolved_msc_matches(target, trusted)
+                ):
                     return OperationResult(False, "Shell document is not an approved system tool", "INVALID_SYSTEM_TARGET")
-                os.startfile(spec.target)  # type: ignore[attr-defined]
+                os.startfile(target)  # type: ignore[attr-defined]
                 return OperationResult(True, "System tool started")
         except (OSError, PermissionError):
             return OperationResult(False, "Windows could not start the application", "LAUNCH_FAILED")
         return OperationResult(False, "Unsupported launch method", "INVALID_LAUNCH_METHOD")
+
+    @staticmethod
+    def _resolved_msc_matches(target: str, trusted: str) -> bool:
+        try:
+            path = Path(target)
+            if not path.is_file():
+                return False
+            resolved = path.resolve(strict=True)
+        except OSError:
+            return False
+        return ntpath.normcase(ntpath.normpath(str(resolved))) == ntpath.normcase(ntpath.normpath(trusted))
 
     def _launch_executable(self, spec: LaunchSpec) -> OperationResult:
         target = Path(spec.target)

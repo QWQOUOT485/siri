@@ -102,12 +102,12 @@ def _valid_executable(path_value: str | None) -> Path | None:
     return None
 
 
-def _process_spec(path: Path | None, extra: tuple[str, ...] = ()) -> ProcessSpec | None:
-    names = list(extra)
+def _process_spec(path: Path | None) -> ProcessSpec | None:
+    # Discovery-backed close authority is a canonical image path, never a
+    # basename.  A different installation can use the same executable name.
     if path:
-        names.append(path.name.casefold())
-    unique = tuple(dict.fromkeys(name.casefold() for name in names if name))
-    return ProcessSpec(executable_names=unique, reliable=bool(unique)) if unique else None
+        return ProcessSpec(executable_paths=(str(path.resolve()),), reliable=True)
+    return None
 
 
 def _path_entry(
