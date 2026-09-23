@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-23 Issue #52 first four high-risk fixes — source review pending
+### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 
 The branch `codex/issue-52-first-four-fixes` starts from exact `main`
 `bdd3468457ee2a2caa434d4c41091cafd8f45594` and changes only the first
@@ -17,11 +17,15 @@ uses closed positive selection forms. Fixed `.msc` tools resolve through the
 Windows system-directory API and the launcher rechecks the trusted path.
 Blocking `/action` and `/command` orchestration runs as sync FastAPI endpoints.
 
-These are source and mock-test changes pending independent PR review. No live
-Windows process-close or MMC launch acceptance, real Spotify playback, or Siri
-acceptance was performed; the installed Agent was not changed. Issue #52 and
-its other findings remain open, with its checkboxes untouched. Next: review
-the PR and perform separately authorized real Windows/Spotify acceptance.
+The four code fixes passed independent source review at implementation commit
+`8b2ab5cef21e14d6bd87ca68c597bb3a05e8649e`; the reviewed code is unchanged.
+Subsequent PR commits update `PROJECT_STATUS.md` only. PR #54 remains open and
+unmerged. Source/mock independent review passed, but no live Windows
+process-close or MMC launch acceptance, real Spotify playback, or Siri
+acceptance has been performed; the installed Agent was not changed. Issue #52
+and its other findings remain open, with its checkboxes untouched. Next: merge
+PR #54, then perform separately authorized real Windows/Spotify/Siri
+acceptance where relevant.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
 remain unchanged.
 
