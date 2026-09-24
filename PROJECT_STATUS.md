@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-23 Stage B v6 independent decisions packaged for PR review
+### 2026-09-24 Stage B v6 review package merged / Issue #53 status cleanup pending
 
 PR #55 merged the mechanically frozen v5 pool at main
 `75a94cb1f081e0fa0a25f5571b85dafc05d6eb18`. An external Gemini 3.8 High
@@ -30,20 +30,34 @@ and regression evidence are in
 [`docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md).
 Gemini 3.8 High independently reviewed all 3,600 v6 rows. Before packaging,
 the gatekeeper independently matched the 12 decision files against frozen
-candidate IDs and record hashes. This branch packages those raw files and a
-separate deterministic review aggregate; PR #57 is open for independent review.
-Repository-native validation reports 12 packets of 300 decisions, 3,600
-unique candidate IDs, and 3,600 accepted / 0 rejected / 0 needs correction /
-0 conflict / 0 pending. The original `review_manifest.json` remains the frozen
-initial allocation with zero decisions and 3,600 pending. Raw submissions are
+candidate IDs and record hashes. PR #57 packaged those raw files and a separate
+deterministic review aggregate; it is now merged into `main`. The exact reviewed
+head was `b288c16ffbdd05e375bb9ed6b5a9c82275fc5141`; the merge commit is
+`219f50e4f2ffb817b70746a79951b5260daff958`. The v6 independent semantic
+decision package is now in `main`.
+
+Repository-native validation reports 12 raw decision files with 300 decisions
+each, covering 3,600 unique candidates exactly once. The aggregate is 3,600
+accepted / 0 rejected / 0 needs_correction / 0 conflict / 0 pending. The
+original `review_manifest.json` remains the frozen initial allocation with
+zero decisions and 3,600 pending; it was not rewritten. Raw submissions are
 under `artifacts/local_ai/stage_b/v6/review/decisions/`;
 `decision_manifest.json` binds their bytes and source identities, while
-`review_progress.json` records the post-review aggregate. This review result
-does not select a final 3,000, assign a train/validation/held-out split, seal
-held-out data, or authorize training or model compute. Production fallback and
-Semantic Memory remain disabled. Packaging/review/corpus focused tests passed
-(78), the full unit suite passed (582, two existing dependency deprecation
-warnings), and `compileall -q app scripts tests` plus `git diff --check` passed.
+`review_progress.json` records the post-review aggregate.
+
+All five Issue #53 v4 defect classes have zero residuals in v6: zh-Hans
+Traditional `著`, English slash-delimited slot punctuation, Chinese compound
+deterministic-volume/playback intent, Chinese bare `unknown_missing_track`,
+and the mixed duplicated shell verb. The technical remediation requirements
+are satisfied. Issue #53 remains open solely until the gatekeeper completes
+independent review and merge of this status-cleanup PR.
+
+This review result does not select a final 3,000, assign a
+train/validation/held-out split, seal held-out data, or authorize training or
+model compute. Production fallback and Semantic Memory remain disabled.
+Packaging/review/corpus focused tests passed (78), the full unit suite passed
+(582, two existing dependency deprecation warnings), and
+`compileall -q app scripts tests` plus `git diff --check` passed.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
 remain mandatory.
 
@@ -162,9 +176,10 @@ fabricated, propagated, adjudicated, or automatically resolved.
 now targets the frozen v6 source identities while preserving the same review
 workflow. The historical v4 and v5 manifests remain in their original
 directories. This is **not** the final Stage B corpus: v4 and v5 cannot
-progress to final selection. V6 reviewer decisions have been packaged for
-independent PR review, with no final 3,000-row selection
-exists, no split is assigned, held-out data is not sealed, and no correction,
+progress to final selection. V6 reviewer decisions are now in `main` after
+PR #57 merged; independent semantic review is complete with 3,600 accepted
+decisions. No final 3,000-row selection exists, no split is assigned, held-out
+data is not sealed, and no correction,
 training, fine-tuning, inference, model compute, RX 9070 XT qualification,
 deployment, production-parser authority, RAG, vector storage, embeddings,
 Semantic Memory, Local AI fallback, or live Windows/Spotify/Siri/network
