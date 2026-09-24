@@ -2,3 +2,4 @@
 artifacts/local_ai/stage_b/v6/review/decisions/packet-*.decisions.jsonl -text
 artifacts/local_ai/stage_b/v6/review/decision_manifest.json -text
 artifacts/local_ai/stage_b/v6/review/review_progress.json -text
+artifacts/local_ai/stage_b/final_v1/* -text

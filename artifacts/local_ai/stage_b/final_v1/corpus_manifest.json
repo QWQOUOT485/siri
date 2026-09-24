@@ -1,0 +1,159 @@
+{
+  "ai_scope_counts": {
+    "deterministic_only": 240,
+    "safety_only": 180,
+    "supported": 2580
+  },
+  "album_absent_count": 564,
+  "album_present_count": 936,
+  "artist_absent_count": 564,
+  "artist_present_count": 936,
+  "canonicalization": "NFKC+casefold+punctuation-to-space+whitespace-collapse",
+  "corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
+  "deterministic_only_count": 240,
+  "held_out_language_gates": {
+    "mixed": {
+      "supported_play": 42,
+      "supported_total": 102,
+      "supported_unknown": 60
+    },
+    "zh-Hant": {
+      "supported_play": 258,
+      "supported_total": 438,
+      "supported_unknown": 180
+    }
+  },
+  "intent_counts": {
+    "spotify_play_track": 1500,
+    "unknown": 1500
+  },
+  "language_slice_counts": {
+    "chinese": 1668,
+    "english": 192,
+    "mixed": 1140
+  },
+  "language_tag_counts": {
+    "en": 192,
+    "mixed": 1140,
+    "zh-Hans": 288,
+    "zh-Hant": 1380
+  },
+  "manifest_sha256": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
+  "near_duplicate_policy": {
+    "algorithm": "char_ngram_jaccard_exact_v1",
+    "candidate_filter": "simhash64_hamming_v1",
+    "candidate_hamming_threshold": 12,
+    "config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+    "cross_split_only": true,
+    "hash_bits": 64,
+    "hash_seed": 1398030897,
+    "ngram_size": 3,
+    "normalization": "NFKC+casefold+remove-punctuation-and-whitespace",
+    "policy_version": "stage-b-near-duplicate-v1",
+    "similarity_threshold": 0.85
+  },
+  "optional_slot_partition": {
+    "album_absent_rows": 564,
+    "album_present_rows": 936,
+    "artist_absent_rows": 564,
+    "artist_present_rows": 936,
+    "supported_play_rows": 1500
+  },
+  "per_split_class_counts": {
+    "test": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_unknown": 240
+    },
+    "train": {
+      "deterministic_only": 180,
+      "safety_only": 120,
+      "supported_play": 900,
+      "supported_unknown": 600
+    },
+    "validation": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_unknown": 240
+    }
+  },
+  "per_split_language_slice_counts": {
+    "test": {
+      "chinese": 498,
+      "english": 0,
+      "mixed": 102
+    },
+    "train": {
+      "chinese": 1170,
+      "english": 0,
+      "mixed": 630
+    },
+    "validation": {
+      "chinese": 0,
+      "english": 192,
+      "mixed": 408
+    }
+  },
+  "per_split_language_tag_counts": {
+    "test": {
+      "en": 0,
+      "mixed": 102,
+      "zh-Hans": 0,
+      "zh-Hant": 498
+    },
+    "train": {
+      "en": 0,
+      "mixed": 630,
+      "zh-Hans": 288,
+      "zh-Hant": 882
+    },
+    "validation": {
+      "en": 192,
+      "mixed": 408,
+      "zh-Hans": 0,
+      "zh-Hant": 0
+    }
+  },
+  "per_split_optional_slot_counts": {
+    "test": {
+      "album_absent_rows": 150,
+      "album_present_rows": 150,
+      "artist_absent_rows": 102,
+      "artist_present_rows": 198,
+      "supported_play_rows": 300
+    },
+    "train": {
+      "album_absent_rows": 318,
+      "album_present_rows": 582,
+      "artist_absent_rows": 288,
+      "artist_present_rows": 612,
+      "supported_play_rows": 900
+    },
+    "validation": {
+      "album_absent_rows": 96,
+      "album_present_rows": 204,
+      "artist_absent_rows": 174,
+      "artist_present_rows": 126,
+      "supported_play_rows": 300
+    }
+  },
+  "per_split_row_counts": {
+    "test": 600,
+    "train": 1800,
+    "validation": 600
+  },
+  "safety_only_count": 180,
+  "schema_version": 1,
+  "source_group_count": 500,
+  "split_sha256": {
+    "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
+    "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
+    "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
+  },
+  "supported_play_count": 1500,
+  "supported_semantic_unknown_count": 1080,
+  "total_row_count": 3000,
+  "traditional_simplified_canonicalization": "not_implemented"
+}

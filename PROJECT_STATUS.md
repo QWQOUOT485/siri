@@ -4,62 +4,43 @@
 
 ## Current Phase
 
-### 2026-09-24 Stage B v6 review package merged / Issue #53 status cleanup pending
+### 2026-09-24 Stage B final v1 pre-seal split pending independent PR review
 
-PR #55 merged the mechanically frozen v5 pool at main
-`75a94cb1f081e0fa0a25f5571b85dafc05d6eb18`. An external Gemini 3.8 High
-review returned 3,600 accept decisions, correctly bound to v5 identities, but
-those decisions were **not imported**. Independent gatekeeper review found
-systematic carrier-naturalness misses in at least 210 rows: English ASR spacing
-(66), Traditional particle (120), and Simplified particle (24). V5 is historical
-audit evidence only, along with v4. The v6 candidate/review artifacts are
-under `artifacts/local_ai/stage_b/v6/`; no earlier artifact was overwritten.
+Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
+the independently accepted decision package remains separate audit evidence
+under `artifacts/local_ai/stage_b/v6/`. Its 12 raw submissions cover all 3,600
+candidates once: 3,600 accepted, zero rejected, needs_correction, conflict, or
+pending. PR #56 merged reviewed head
+`d3b71f9f02871f64191c924621f35f9bc4b2f9a4`; PR #57 merged the exact
+decision package. V4 and v5 remain historical audit evidence.
 
-The `stage-b-candidate-generator-v6` branch fixed three carrier-naturalness
-defects and eight additional carrier-level defects across the 32 families.
-Gatekeeper inspection of its first reviewed head found a dangling album
-modifier in 54 `play_mixed_asr_spacing` rows. The follow-up corrected those
-54 rows. PR #56 merged exact reviewed head
-`d3b71f9f02871f64191c924621f35f9bc4b2f9a4` at main
-`8790491de6da591330b5e8d29749f43754d2260a`. V6 has 3,600 rows, 600
-source groups, 32 families, and the unchanged scope, language,
-optional-slot, Stage A, near-duplicate, and production-gate contracts. The
-independent zh-Hans script inventory remains fail-closed and is separately
-versioned for the newly used Simplified character `唱`. Mechanical validation
-and regression evidence are in
-[`docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md`](docs/LOCAL_AI_STAGE_B_V6_CANDIDATE_EVIDENCE.md).
-Gemini 3.8 High independently reviewed all 3,600 v6 rows. Before packaging,
-the gatekeeper independently matched the 12 decision files against frozen
-candidate IDs and record hashes. PR #57 packaged those raw files and a separate
-deterministic review aggregate; it is now merged into `main`. The exact reviewed
-head was `b288c16ffbdd05e375bb9ed6b5a9c82275fc5141`; the merge commit is
-`219f50e4f2ffb817b70746a79951b5260daff958`. The v6 independent semantic
-decision package is now in `main`.
+Starting at exact main `7619baa4145b7525fad32a1bc62ec35afedd59aa`, the
+new `artifacts/local_ai/stage_b/final_v1/` pool deterministically selects 500
+whole groups / 3,000 rows and excludes 100 whole groups / 600 rows. Train is
+300 groups / 1,800 rows, validation is 100 / 600, and held-out Stage B test is
+100 / 600. The authoritative `validate_protocol_corpus()` passed the exact
+class quotas, held-out language/slot gates, Stage A leakage check, and frozen
+near-duplicate policy. Canonical final corpus SHA-256:
+`a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13`.
+Selection manifest SHA-256:
+`973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a`;
+split assignment SHA-256:
+`84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37`;
+authoritative corpus manifest SHA-256:
+`297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c`;
+provenance manifest SHA-256:
+`d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d`.
 
-Repository-native validation reports 12 raw decision files with 300 decisions
-each, covering 3,600 unique candidates exactly once. The aggregate is 3,600
-accepted / 0 rejected / 0 needs_correction / 0 conflict / 0 pending. The
-original `review_manifest.json` remains the frozen initial allocation with
-zero decisions and 3,600 pending; it was not rewritten. Raw submissions are
-under `artifacts/local_ai/stage_b/v6/review/decisions/`;
-`decision_manifest.json` binds their bytes and source identities, while
-`review_progress.json` records the post-review aggregate.
-
-All five Issue #53 v4 defect classes have zero residuals in v6: zh-Hans
-Traditional `著`, English slash-delimited slot punctuation, Chinese compound
-deterministic-volume/playback intent, Chinese bare `unknown_missing_track`,
-and the mixed duplicated shell verb. The technical remediation requirements
-are satisfied. Issue #53 remains open solely until the gatekeeper completes
-independent review and merge of this status-cleanup PR.
-
-This review result does not select a final 3,000, assign a
-train/validation/held-out split, seal held-out data, or authorize training or
-model compute. Production fallback and Semantic Memory remain disabled.
-Packaging/review/corpus focused tests passed (78), the full unit suite passed
-(582, two existing dependency deprecation warnings), and
-`compileall -q app scripts tests` plus `git diff --check` passed.
+`final_split_assigned=true` and `held_out_sealed=false`. The held-out split
+has not been copied into a seal/evaluation location. Training, fine-tuning,
+calibration, model compute, or Stage B finalist promotion remain unauthorized.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
-remain mandatory.
+remain mandatory. This PR does not change runtime/Spotify work; Issue #59 is
+separate and OPEN, as is Issue #52. The next gate is independent review of the
+final-v1 pre-seal selection and split before any held-out sealing decision.
+Focused Stage B selection/protocol/v6 review tests passed (128), the full unit
+suite passed (597; two existing dependency deprecation warnings), and
+`compileall -q app scripts tests` plus `git diff --check` passed.
 
 ### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 

@@ -1,0 +1,271 @@
+{
+  "artifact_file_sha256": {
+    "README.md": "5cddb2c1a52215f44f45373ddee470377ea84f3d1e92db0d40e7882ebe2cd539",
+    "corpus_manifest.json": "89ddcbfe6f55a0c20ef50678f2441b766801b9ada0ffd2534b0e82a1338a9d68",
+    "held_out.jsonl": "de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946",
+    "provenance_manifest.json": "44a4f5eba9ef203625983298a646ceaec6831c759dec9d0770b63d7a3d5fc7f6",
+    "split_assignment.json": "7540a9657dcde05c344594ae1024e6edc546c3c00d316df6ebfe248192aa87d8",
+    "train.jsonl": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+    "validation.jsonl": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a"
+  },
+  "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
+  "canonical_split_sha256": {
+    "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
+    "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
+    "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
+  },
+  "decision_manifest_sha256": "a6bce0eaba3b2e68f7ee11b0f6cd3318664e277df5430be0ef187d94b23fa39d",
+  "excluded_group_count": 100,
+  "excluded_row_count": 600,
+  "final_split_assigned": true,
+  "held_out_language_gates": {
+    "mixed": {
+      "supported_play": 42,
+      "supported_total": 102,
+      "supported_unknown": 60
+    },
+    "zh-Hant": {
+      "supported_play": 258,
+      "supported_total": 438,
+      "supported_unknown": 180
+    }
+  },
+  "held_out_optional_slots": {
+    "album_absent_rows": 150,
+    "album_present_rows": 150,
+    "artist_absent_rows": 102,
+    "artist_present_rows": 198,
+    "supported_play_rows": 300
+  },
+  "held_out_sealed": false,
+  "local_ai_fallback_approved": false,
+  "model_compute_authorized": false,
+  "near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "overall_class_counts": {
+    "deterministic_only": 240,
+    "safety_only": 180,
+    "supported_play": 1500,
+    "supported_unknown": 1080
+  },
+  "per_split_class_counts": {
+    "test": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_unknown": 240
+    },
+    "train": {
+      "deterministic_only": 180,
+      "safety_only": 120,
+      "supported_play": 900,
+      "supported_unknown": 600
+    },
+    "validation": {
+      "deterministic_only": 30,
+      "safety_only": 30,
+      "supported_play": 300,
+      "supported_unknown": 240
+    }
+  },
+  "per_split_group_class_counts": {
+    "excluded": {
+      "deterministic_only": 10,
+      "safety_only": 10,
+      "supported_play": 50,
+      "supported_unknown": 30
+    },
+    "test": {
+      "deterministic_only": 5,
+      "safety_only": 5,
+      "supported_play": 50,
+      "supported_unknown": 40
+    },
+    "train": {
+      "deterministic_only": 30,
+      "safety_only": 20,
+      "supported_play": 150,
+      "supported_unknown": 100
+    },
+    "validation": {
+      "deterministic_only": 5,
+      "safety_only": 5,
+      "supported_play": 50,
+      "supported_unknown": 40
+    }
+  },
+  "per_split_group_counts": {
+    "excluded": 100,
+    "test": 100,
+    "train": 300,
+    "validation": 100
+  },
+  "per_split_language_counts": {
+    "test": {
+      "en": 0,
+      "mixed": 102,
+      "zh-Hans": 0,
+      "zh-Hant": 498
+    },
+    "train": {
+      "en": 0,
+      "mixed": 630,
+      "zh-Hans": 288,
+      "zh-Hant": 882
+    },
+    "validation": {
+      "en": 192,
+      "mixed": 408,
+      "zh-Hans": 0,
+      "zh-Hant": 0
+    }
+  },
+  "per_split_negative_reason_counts": {
+    "test": {
+      "artist_only": 120,
+      "hostile_system": 20,
+      "missing_track": 120,
+      "path_or_url": 10,
+      "playback_control": 25,
+      "unsupported_domain": 5
+    },
+    "train": {
+      "ambiguous_version": 12,
+      "artist_only": 300,
+      "hostile_system": 80,
+      "missing_track": 300,
+      "path_or_url": 40,
+      "playback_control": 100,
+      "unresolved_reference": 36,
+      "unsupported_domain": 32
+    },
+    "validation": {
+      "ambiguous_version": 18,
+      "artist_only": 120,
+      "hostile_system": 20,
+      "missing_track": 120,
+      "path_or_url": 10,
+      "unsupported_domain": 12
+    }
+  },
+  "per_split_optional_slot_counts": {
+    "test": {
+      "album_absent_rows": 150,
+      "album_present_rows": 150,
+      "artist_absent_rows": 102,
+      "artist_present_rows": 198,
+      "supported_play_rows": 300
+    },
+    "train": {
+      "album_absent_rows": 318,
+      "album_present_rows": 582,
+      "artist_absent_rows": 288,
+      "artist_present_rows": 612,
+      "supported_play_rows": 900
+    },
+    "validation": {
+      "album_absent_rows": 96,
+      "album_present_rows": 204,
+      "artist_absent_rows": 174,
+      "artist_present_rows": 126,
+      "supported_play_rows": 300
+    }
+  },
+  "per_split_row_counts": {
+    "test": 600,
+    "train": 1800,
+    "validation": 600
+  },
+  "per_split_template_family_counts": {
+    "test": {
+      "deterministic_app_control": 5,
+      "deterministic_playback_control": 25,
+      "play_hant_conversational": 43,
+      "play_hant_direct": 43,
+      "play_hant_homophone": 43,
+      "play_hant_particle": 43,
+      "play_hant_spacing": 43,
+      "play_hant_word_order": 43,
+      "play_mixed_asr_case": 7,
+      "play_mixed_asr_spacing": 7,
+      "play_mixed_code_switch": 7,
+      "play_mixed_conversational": 7,
+      "play_mixed_particle": 7,
+      "play_mixed_word_order": 7,
+      "safety_hostile_text": 30,
+      "unknown_artist_only": 120,
+      "unknown_missing_track": 120
+    },
+    "train": {
+      "deterministic_app_control": 20,
+      "deterministic_playback_control": 100,
+      "play_hans_conversational": 24,
+      "play_hans_direct": 24,
+      "play_hans_homophone": 24,
+      "play_hans_particle": 24,
+      "play_hans_spacing": 24,
+      "play_hans_word_order": 24,
+      "play_hant_conversational": 77,
+      "play_hant_direct": 77,
+      "play_hant_homophone": 77,
+      "play_hant_particle": 77,
+      "play_hant_spacing": 77,
+      "play_hant_word_order": 77,
+      "play_mixed_asr_case": 49,
+      "play_mixed_asr_spacing": 49,
+      "play_mixed_code_switch": 49,
+      "play_mixed_conversational": 49,
+      "play_mixed_particle": 49,
+      "play_mixed_word_order": 49,
+      "safety_hostile_text": 120,
+      "unknown_ambiguous_version": 12,
+      "unknown_artist_only": 300,
+      "unknown_missing_track": 300,
+      "unknown_unresolved_reference": 36,
+      "unknown_unsupported_domain": 12
+    },
+    "validation": {
+      "play_en_asr_spacing": 16,
+      "play_en_conversational": 16,
+      "play_en_direct": 16,
+      "play_en_polite": 16,
+      "play_en_punctuation_loss": 16,
+      "play_en_word_order": 16,
+      "play_mixed_asr_case": 34,
+      "play_mixed_asr_spacing": 34,
+      "play_mixed_code_switch": 34,
+      "play_mixed_conversational": 34,
+      "play_mixed_particle": 34,
+      "play_mixed_word_order": 34,
+      "safety_hostile_text": 30,
+      "unknown_ambiguous_version": 18,
+      "unknown_artist_only": 120,
+      "unknown_missing_track": 120,
+      "unknown_unsupported_domain": 12
+    }
+  },
+  "review_counts": {
+    "accepted": 3600,
+    "conflict": 0,
+    "needs_correction": 0,
+    "pending": 0,
+    "rejected": 0
+  },
+  "review_progress_sha256": "4defbb52301054d0a82c99939e930094ed2be3fe89512cb7959a3349287ec5ce",
+  "selected_group_count": 500,
+  "selected_row_count": 3000,
+  "selection_algorithm": "lex-first-heldout-then-train-validation-v1",
+  "selection_manifest_sha256": "973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a",
+  "selection_schema_version": "stage-b-final-selection-v1",
+  "semantic_memory_enabled": false,
+  "source_group_count": 600,
+  "source_identities": {
+    "candidate_corpus_sha256": "fec537e73e45b4af68ad15bb9e75e09c0f3c2780fcf179a4dd8a3f0dc37a6238",
+    "candidate_manifest_sha256": "83e27d68f13821839278957b8bc5291ef18091ed135319670da5fd139612bea6",
+    "entity_catalog_sha256": "7b0a09825cb40e046a7c27cc4f51f08aa22d42e5a5587c23710f831c3c0f15cb",
+    "generator_config_sha256": "132398500823674d3fec24361139145247f92b13a17cd7476e40110d4ac7df2e"
+  },
+  "source_row_count": 3600,
+  "stage_a_sha256": "60ebad4bcafeae7821986ac454ff2e730da7661537b11879aba6f725675bee55",
+  "starting_main_sha": "7619baa4145b7525fad32a1bc62ec35afedd59aa",
+  "training_authorized": false
+}
