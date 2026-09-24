@@ -442,6 +442,51 @@ dataset/retrieval research，而不是讓使用者從 UI 任意提升 candidate 
 retrieval，這個介面可作為統一的「retrieval observability」層，而不是為每一種
 memory provider 分別做不可比較的 debug UI。
 
+#### Compact widget / Scriptable-style companion
+
+除了完整 local web dashboard，也可研究一個較小的 **read-only companion widget**，
+用卡片方式即時顯示最近一次 JEV retrieval 的摘要，例如：
+
+~~~text
+Query
+候選 12
+   ↓
+Filter 5
+   ↓
+Top 3
+   ↓
+Selected 1
+
+✓ 最終選中
+來源 / score / reason
+~~~
+
+手機端可採類似 Scriptable widget 的呈現方式：小卡片、定時刷新、狀態一眼可讀；
+完整候選、score breakdown 與 decision trace 則留在 localhost / LAN dashboard。
+
+UI 風格參考，不代表 production dependency，也不直接複製第三方 implementation：
+
+- https://raw.githubusercontent.com/poychang/scriptable-widgets/main/widgets/codex-reset-checker/codex-reset-checker.js
+- https://blog.poychang.net/codex-reset-checker-scriptable-widgets/
+
+建議資料流：
+
+~~~text
+JEV / retrieval pipeline
+        ↓
+sanitized read-only trace event
+        ↓
+bounded local trace store
+        ↓
+localhost dashboard API
+        ├── full visual trace
+        └── optional compact phone/widget view
+~~~
+
+Widget / trace API 必須保持 read-only：不能用 client input 改寫 candidate、score、
+selection、memory trust state 或 `ValidatedAction`；手機端優先顯示 sanitized summary，
+而不是把 sensitive/raw memory 全量同步出去。
+
 本項目前只屬 FUTURE RESEARCH / ROADMAP，不代表已實作 JEV retrieval、
 Personal RAG runtime、dashboard 或任何新的 execution authority。
 
