@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-24 Stage B final v1 pre-seal split in PR #61, pending independent review
+### 2026-09-24 Stage B held-out seal v1, pending independent review
 
 Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
 the independently accepted decision package remains separate audit evidence
@@ -14,8 +14,10 @@ pending. PR #56 merged reviewed head
 `d3b71f9f02871f64191c924621f35f9bc4b2f9a4`; PR #57 merged the exact
 decision package. V4 and v5 remain historical audit evidence.
 
-Starting at exact main `7619baa4145b7525fad32a1bc62ec35afedd59aa`, the
-new `artifacts/local_ai/stage_b/final_v1/` pool deterministically selects 500
+PR #61 merged its exact reviewed head `4b3683858f0d083a7a7e7307d34c595364870368`
+into main as `347147324e8c83715dd7341d12c9dee023dffb16`. Starting at
+`7619baa4145b7525fad32a1bc62ec35afedd59aa`, the frozen
+`artifacts/local_ai/stage_b/final_v1/` pool deterministically selects 500
 whole groups / 3,000 rows and excludes 100 whole groups / 600 rows. Train is
 300 groups / 1,800 rows, validation is 100 / 600, and held-out Stage B test is
 100 / 600. The authoritative `validate_protocol_corpus()` passed the exact
@@ -31,16 +33,19 @@ authoritative corpus manifest SHA-256:
 provenance manifest SHA-256:
 `d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d`.
 
-`final_split_assigned=true` and `held_out_sealed=false`. The held-out split
-has not been copied into a seal/evaluation location. Training, fine-tuning,
-calibration, model compute, or Stage B finalist promotion remain unauthorized.
+The new `artifacts/local_ai/stage_b/sealed_v1/` contains a byte-identical
+evaluation-only copy of the 600-row / 100-group held-out split. Its byte
+SHA-256 is `de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946`;
+the seal manifest self-hash is
+`5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef`.
+The seal manifest records `final_split_assigned=true` and `held_out_sealed=true`.
+The frozen `final_v1` pre-seal manifests intentionally retain their historical
+`held_out_sealed=false` state. Training, fine-tuning, calibration, model
+compute, or Stage B finalist promotion remain unauthorized.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
-remain mandatory. This PR does not change runtime/Spotify work; Issue #59 is
-separate and OPEN, as is Issue #52. The next gate is independent review of the
-final-v1 pre-seal selection and split before any held-out sealing decision.
-Focused Stage B selection/protocol/v6 review tests passed (128), the full unit
-suite passed (597; two existing dependency deprecation warnings), and
-`compileall -q app scripts tests` plus `git diff --check` passed.
+remain mandatory. This seal PR does not change runtime/Spotify work; Issues
+#52, #59, and #60 remain separate and OPEN. The next gate is independent
+review of the seal before any compute or training authorization discussion.
 
 ### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 
