@@ -363,6 +363,133 @@ Semantic Memory、grounding、policy 與 ValidatedAction authority 保持不變�
 RAG runtime，也不改變 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` 或
 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
+### JEV retrieval / selection trace UI — future observability
+
+未來 JEV / Personal Agent 進行 memory、document、entity 或其他 bounded data
+retrieval 時，應提供一個可選的本機可視化介面，讓開發者可以直觀看到「資料如何
+被找出來、如何被淘汰、如何排序，以及最後哪一筆 evidence 被選中」。
+
+第一版可視化至少應能呈現：
+
+- 原始 query、normalized query 與 bounded extracted fields；
+- 各 retrieval source，例如 high-trust Semantic Memory、future Personal RAG、
+  local document index 或其他明確 allowlisted data source；
+- candidate recall pool 與各階段候選數量；
+- filter / dedup / conflict / rerank 等選擇階段；
+- 每筆 candidate 的 bounded score breakdown、provenance 與 selected /
+  rejected 狀態；
+- 被淘汰 candidate 的 machine-readable reason code；
+- 最終 selected evidence 的醒目標示；
+- 每個 retrieval / filter / rerank stage 的 latency；
+- 完整但 bounded 的 decision trace，方便重現 retrieval bug。
+
+概念流程：
+
+~~~text
+User query
+    ↓
+Normalize / extract
+    ↓
+Retrieve candidates
+    ↓
+Filter / deduplicate / conflict checks
+    ↓
+Rerank
+    ↓
+Bounded evidence selection
+    ↓
+Local AI interpretation
+~~~
+
+UI 應清楚區分：
+
+~~~text
+retrieved candidate
+≠ trusted fact
+≠ selected evidence
+≠ ValidatedAction
+≠ execution authority
+~~~
+
+這個 trace panel 的主要用途是 observability、debugging、evaluation 與 future
+dataset/retrieval research，而不是讓使用者從 UI 任意提升 candidate trust 或直接
+授權 execution。
+
+安全與隱私邊界：
+
+- 預設只顯示 bounded / sanitized trace，不 dump 整個 process environment、
+  secrets、OAuth token、API key、private filesystem path 或 provider credential；
+- provider ID / URI 若未來需要顯示，只能視為 server-owned metadata，不能因 UI
+  顯示而取得 execution authority；
+- sensitive memory / personal history 應支援 redaction，並允許完全停用 trace；
+- trace data 不得自動成為 fine-tuning data；
+- frozen benchmark / held-out labels 不得因 visualizer 而暴露到 training、
+  calibration、prompt construction 或 selection logic；
+- visualizer 不得改寫 candidate、score、ranking、memory trust state 或
+  `ValidatedAction`；
+- UI 關閉、故障或未安裝時，retrieval pipeline 必須維持相同行為。
+
+未來若要實作，可先從 read-only developer panel 開始：
+
+1. query / slot view；
+2. candidate table；
+3. filter / rerank stage timeline；
+4. selected evidence detail；
+5. rejection reason / score breakdown；
+6. sanitized exportable trace for offline debugging。
+
+之後若 JEV 擴展到更大的 long-term-memory / Personal RAG / local document
+retrieval，這個介面可作為統一的「retrieval observability」層，而不是為每一種
+memory provider 分別做不可比較的 debug UI。
+
+#### Compact widget / Scriptable-style companion
+
+除了完整 local web dashboard，也可研究一個較小的 **read-only companion widget**，
+用卡片方式即時顯示最近一次 JEV retrieval 的摘要，例如：
+
+~~~text
+Query
+候選 12
+   ↓
+Filter 5
+   ↓
+Top 3
+   ↓
+Selected 1
+
+✓ 最終選中
+來源 / score / reason
+~~~
+
+手機端可採類似 Scriptable widget 的呈現方式：小卡片、定時刷新、狀態一眼可讀；
+完整候選、score breakdown 與 decision trace 則留在 localhost / LAN dashboard。
+
+UI 風格參考，不代表 production dependency，也不直接複製第三方 implementation：
+
+- https://raw.githubusercontent.com/poychang/scriptable-widgets/main/widgets/codex-reset-checker/codex-reset-checker.js
+- https://blog.poychang.net/codex-reset-checker-scriptable-widgets/
+
+建議資料流：
+
+~~~text
+JEV / retrieval pipeline
+        ↓
+sanitized read-only trace event
+        ↓
+bounded local trace store
+        ↓
+localhost dashboard API
+        ├── full visual trace
+        └── optional compact phone/widget view
+~~~
+
+Widget / trace API 必須保持 read-only：不能用 client input 改寫 candidate、score、
+selection、memory trust state 或 `ValidatedAction`；手機端優先顯示 sanitized summary，
+而不是把 sensitive/raw memory 全量同步出去。
+
+本項目前只屬 FUTURE RESEARCH / ROADMAP，不代表已實作 JEV retrieval、
+Personal RAG runtime、dashboard 或任何新的 execution authority。
+
 ---
 
 # Horizon 3 — Safer Local AI
