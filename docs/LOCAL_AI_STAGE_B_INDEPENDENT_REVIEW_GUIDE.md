@@ -8,17 +8,20 @@ review decision.
 
 ## Current review boundary
 
-The workflow covers only:
+The v6 workflow now records independently produced decisions separately from
+the frozen allocation:
 
 ```text
 frozen candidate corpus
   -> deterministic review packets
-  -> empty decision schema
-  -> offline decision validation
+  -> initial review_manifest.json (0 decisions, 3600 pending)
+  -> raw external decisions/*.jsonl (12 packets)
+  -> decision_manifest.json (package provenance and integrity)
+  -> review_progress.json (deterministic aggregate)
 ```
 
-It does not accept, reject, relabel, correct, select, split, seal, train, or
-run inference on candidates. The final 3,000-row selection, group-aware
+The reviewer submitted row-level accept decisions. Packaging does not relabel,
+correct, select, split, seal, train, or run inference on candidates. The final 3,000-row selection, group-aware
 train/validation/held-out split, held-out sealing, and any correction workflow
 are later work.
 
@@ -62,6 +65,12 @@ script inventory is separately pinned at
 `733a18812f93dd23ff3a5811ad8626d6b0aa663ba64f244f885ff3d3b037d7d8`.
 The external v5 Gemini decisions were not imported. A v4/v5 decision cannot
 silently reuse the v6 review manifest or candidate record hashes.
+
+PR #56 merged reviewed head `d3b71f9f02871f64191c924621f35f9bc4b2f9a4`
+at main `8790491de6da591330b5e8d29749f43754d2260a`. The independent
+Gemini 3.8 High review produced 12 v6 decision files. The gatekeeper checked
+all 3,600 candidate ID and record-hash pairs against the reviewed packets;
+the repository packaging command independently revalidates them.
 
 ## What to review in each row
 
@@ -190,13 +199,30 @@ Validate an external decision JSONL without writing a ledger:
 .venv\\Scripts\\python.exe scripts\\local_ai_stage_b_independent_review.py --validate-decisions <decisions.jsonl>
 ```
 
+Package a complete 12-file external decision directory:
+
+```text
+.venv\\Scripts\\python.exe scripts\\local_ai_stage_b_independent_review.py --package-decisions <external-decision-directory>
+```
+
+This command requires exact frozen source identities, all 12 packet files,
+300 valid decisions per packet, the frozen packet assignments, and exact-once
+coverage of all 3,600 candidates. It preserves each submitted JSONL file's
+bytes, records its source and packaged SHA-256 in `decision_manifest.json`,
+and computes `review_progress.json` with the existing aggregate logic. An
+identical rerun is allowed; conflicting existing raw or derived files are
+rejected. Narrow `.gitattributes` rules retain those exact 14 artifact files'
+bytes across Windows checkouts. The supporting reviewer Markdown report
+contributes only its hash and cannot create or override a decision. No private
+external path is stored.
+
 The validator rejects unknown candidate IDs, record-hash mismatches, duplicate
 decisions from one reviewer for one candidate, invalid decision or reason
 codes, empty/non-opaque reviewer roles, extra fields, missing positive accept
 evidence, negative decisions without a negative reason, and source identity
 mismatches.
 
-The initial workflow state is deliberately empty:
+`review_manifest.json` remains the deliberately empty initial state:
 
 ```text
 total candidates: 3600
@@ -209,6 +235,13 @@ needs_correction: 0
 conflict: 0
 pending: 3600
 ```
+
+The packaged v6 decisions instead aggregate to 3,600 reviewed and accepted,
+with 0 rejected, 0 needs correction, 0 conflict, and 0 pending. This semantic
+review result is not final selection or training authorization. The review
+remains row-level, packets are allocation only, and a later second reviewer's
+disagreement would remain `conflict` without majority vote, reject-wins, or
+automatic adjudication.
 
 The current workflow keeps `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and
 `LOCAL_AI_FALLBACK_APPROVED=false`. It has no network, subprocess, model,
