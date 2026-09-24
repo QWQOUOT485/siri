@@ -20,10 +20,11 @@ frozen candidate corpus
   -> review_progress.json (deterministic aggregate)
 ```
 
-The reviewer submitted row-level accept decisions. Packaging does not relabel,
-correct, select, split, seal, train, or run inference on candidates. The final 3,000-row selection, group-aware
-train/validation/held-out split, held-out sealing, and any correction workflow
-are later work.
+The reviewer submitted row-level accept decisions. Packaging itself does not
+relabel, correct, select, split, seal, train, or run inference on candidates.
+The separate `final_v1` build selects 3,000 rows and assigns whole source
+groups to train/validation/held-out. Held-out sealing and any correction
+workflow are later work.
 
 The packets are review allocations, not train/validation/held-out splits. The
 current allocation is 12 deterministic packets with 300 rows each, and every

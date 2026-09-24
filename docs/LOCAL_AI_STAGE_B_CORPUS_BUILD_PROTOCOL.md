@@ -1,13 +1,14 @@
 # Local AI Stage B Corpus Build Protocol
 
-**Status: pre-corpus gate only.** This protocol freezes the first offline
-corpus-build rules and the near-duplicate policy. It does not authorize corpus
-generation, training, fine-tuning, inference, model download, or production
-Local AI fallback.
+**Status: frozen protocol, final-v1 split assigned before sealing.** This
+protocol freezes the offline corpus-build rules and near-duplicate policy.
+`artifacts/local_ai/stage_b/final_v1/` now contains a separately reviewable
+3,000-row whole-group split. Held-out sealing, training, fine-tuning,
+inference, model download, and production Local AI fallback remain unauthorized.
 
 ## 1. Frozen identities
 
-The first future build uses these identities:
+The final-v1 build uses these identities:
 
 ```text
 corpus_protocol_version: stage-b-corpus-build-v1
@@ -29,8 +30,9 @@ final untouched regression. It must not enter generation prompts, training,
 validation, calibration, threshold fitting, paraphrase generation, or manual
 correction.
 
-No real train, validation, or held-out Stage B split exists yet. The target is
-still the separately reviewed 3,000-row protocol in
+A deterministic 3,000-row train/validation/held-out assignment now exists in
+`artifacts/local_ai/stage_b/final_v1/`. Its held-out partition is assigned but
+not sealed. The target counts and gates remain those in
 [`LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md`](LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md).
 
 ## 2. Construction authority

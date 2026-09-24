@@ -1,0 +1,19 @@
+{
+  "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
+  "corpus_protocol_version": "stage-b-corpus-build-v1",
+  "final_split_sha256": {
+    "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
+    "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
+    "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
+  },
+  "generation_source": "synthetic_local_entity_catalog_v2",
+  "generator_version": "stage-b-candidate-generator-v6",
+  "near_duplicate_config_sha256": "64045462fe025b66dd5346df1e1d80cc886ab5e1fb1e8495fa57fe9aa9eb6ae7",
+  "provenance_schema_version": 1,
+  "provenance_sha256": "d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d",
+  "review_status": "independently_reviewed",
+  "review_timestamp_policy": "omitted-no-personal-timestamp",
+  "reviewer_role_id": "gemini-3-8-high-v6-independent",
+  "split_assignment_stage": "group-aware-pre-seal",
+  "validation_tool_version": "stage-b-final-selection-v1"
+}
