@@ -648,6 +648,117 @@ LAN / localhost dashboard 可查看：
 
 高風險設定仍應需要本機操作或 explicit confirmation。
 
+### 29.1 JEV retrieval / selection visual trace
+
+未來 JEV / Personal Agent 在做 memory、document、entity 或其他 bounded retrieval 時，應提供一個**唯讀可視化 trace**，讓使用者可以直接看到：
+
+~~~text
+原始查詢
+→ normalized query / extracted slots
+→ recall candidate pool
+→ filters / rejection reasons
+→ rerank / score breakdown
+→ final selected evidence
+~~~
+
+目標不是讓 UI 取得更多 authority，而是讓「它看了哪些資料、為什麼淘汰、最後選了什麼」變得可觀察、可除錯。
+
+第一版可優先顯示：
+
+- 原始 query 與 normalized query；
+- extracted track / artist / album 或未來其他 structured slots；
+- recall 到的 candidate 數量；
+- top candidates 的來源、provenance、類型與 bounded score；
+- 每個 candidate 的保留／淘汰 reason code；
+- filter / rerank 前後的 candidate count；
+- 最終 selected evidence 的明顯 highlight；
+- 各 retrieval stage 的 latency；
+- clarification / abstain / no-selection 狀態；
+- 不同資料來源，例如 high-trust Semantic Memory、future Personal RAG、documents、entity catalog。
+
+可視化應能清楚區分：
+
+~~~text
+retrieved
+filtered
+reranked
+selected as evidence
+authorized for execution
+~~~
+
+其中 **selected evidence 不等於 executable authority**。即使某筆資料在 JEV / retrieval ranking 中被選中，仍必須遵守：
+
+~~~text
+retrieved evidence
+→ Local AI / interpretation
+→ deterministic grounding
+→ policy
+→ ValidatedAction
+→ trusted adapter
+~~~
+
+UI 不得因為方便 debug 而繞過既有 security boundary。
+
+#### Compact widget / watch-style presentation
+
+除了完整 local web dashboard，也可研究一個較小的 **read-only companion widget**，用卡片方式即時顯示最近一次 JEV retrieval：
+
+~~~text
+Query
+候選 12
+   ↓
+Filter 5
+   ↓
+Top 3
+   ↓
+Selected 1
+
+✓ 最終選中
+來源 / score / reason
+~~~
+
+手機端可以採類似 Scriptable widget 的呈現方式：小卡片、定時刷新、狀態一眼可讀；完整候選與 decision trace 則留在 localhost / LAN dashboard。
+
+UI 風格參考，不代表 production dependency，也不直接複製第三方 implementation：
+
+- https://raw.githubusercontent.com/poychang/scriptable-widgets/main/widgets/codex-reset-checker/codex-reset-checker.js
+- https://blog.poychang.net/codex-reset-checker-scriptable-widgets/
+
+建議資料流：
+
+~~~text
+JEV / retrieval pipeline
+        ↓
+sanitized read-only trace event
+        ↓
+bounded local trace store
+        ↓
+localhost dashboard API
+        ├── full visual trace
+        └── optional compact phone/widget view
+~~~
+
+Trace 必須遵守：
+
+- 預設不輸出 API key、OAuth token、provider secret、private path 或 raw credentials；
+- provider IDs / URIs 若存在，只能按既有 trusted/server-owned 規則處理，不因 UI 顯示而取得 authority；
+- trace API 為 read-only，不能用 client input 改寫 candidate、score、selection 或 trust state；
+- bounded retention，避免 debug trace 無限制累積個人資料；
+- sensitive/raw memory 預設只在本機完整查看，手機端優先提供 sanitized summary；
+- score 必須標示其語意來源，不能把 heuristic / similarity / model confidence 混成一個看似絕對可信的數字；
+- 若 pipeline fail closed、abstain 或需要 clarification，UI 應顯示真實狀態，不虛構 final selection。
+
+未來這個 visual trace 可以同時服務：
+
+- JEV / decision-model debug；
+- Semantic Memory / Personal RAG retrieval；
+- local document retrieval；
+- Chinese rap real-world entity catalog；
+- clarification candidate ranking；
+- production shadow evaluation。
+
+本項目目前只屬 **ROADMAP / observability UX**。它不授權 JEV production execution、Personal RAG、模型訓練、Semantic Memory enablement 或 Local AI fallback。
+
 ## 30. Capability platform
 
 長期可以把功能抽象為 capability：
