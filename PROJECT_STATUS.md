@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-24 Stage B held-out seal v1, pending independent review
+### 2026-09-24 Stage B held-out sealed; RX 9070 XT basic tensor smoke passed
 
 Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
 the independently accepted decision package remains separate audit evidence
@@ -43,9 +43,19 @@ The frozen `final_v1` pre-seal manifests intentionally retain their historical
 `held_out_sealed=false` state. Training, fine-tuning, calibration, model
 compute, or Stage B finalist promotion remain unauthorized.
 `LOCAL_SEMANTIC_MEMORY_ENABLED=false` and `LOCAL_AI_FALLBACK_APPROVED=false`
-remain mandatory. This seal PR does not change runtime/Spotify work; Issues
-#52, #59, and #60 remain separate and OPEN. The next gate is independent
-review of the seal before any compute or training authorization discussion.
+remain mandatory. PR #62 merged the seal as main
+`df4631e17b26f60170410d1cb63d15c86a22aea2`.
+
+The real Windows ROCm/PyTorch probe in
+`docs/LOCAL_AI_STAGE_B_RX9070XT_HARDWARE_PREFLIGHT_2026-09-24.md` selected
+the RX 9070 XT (`gfx1201`, `cuda:1`) over the integrated GPU (`gfx1036`,
+`cuda:0`). A 4×4 FP32 tensor multiplication, synchronization, and readback
+passed on the target with `cpu_fallback=false`. This is basic tensor execution
+evidence only; laya/decider loads, model/adapter/training-path correctness,
+latency, and candidate qualification remain unproven. Training and model
+compute remain unauthorized, and Semantic Memory and Local AI fallback remain
+disabled. Issues #52, #59, and #60 remain separate and OPEN. The next gate is
+independent review of this hardware probe before any model-path smoke.
 
 ### 2026-09-23 Issue #52 first four high-risk fixes — independent source review passed; live acceptance pending
 
