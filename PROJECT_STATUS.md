@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-24 Stage B final v1 pre-seal split pending independent PR review
+### 2026-09-24 Stage B final v1 pre-seal split in PR #61, pending independent review
 
 Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
 the independently accepted decision package remains separate audit evidence
