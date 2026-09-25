@@ -4,30 +4,30 @@
 
 ## Current Phase
 
-### 2026-09-25 Stage B Laya model-load blocked by cp950 encoding
+### 2026-09-26 Stage B Laya UTF-8 load and RX 9070 XT residency passed
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
 
-The first Laya model-load attempt was **blocked before device residency** by a
-Windows cp950 decoding error. Root cause identified:
+The earlier `OTHER_DEPENDENCY_CP950` failure came from a PyTorch Jinja template
+read under the Windows cp950 default. A dedicated `-X utf8` child process
+cleared that boundary. Metadata-only checkpoint inspection reconciled the
+historical count: **321,908,995 parameters + 3 persistent `temperature`
+buffer elements = 321,908,998 checkpoint/state elements**. The one additional
+authorized live load passed strict checkpoint loading and residency readback:
+Laya, all parameters, and all buffers were on the unique RX 9070 XT /
+`gfx1201` at `cuda:1`; trainable parameter count 321,908,995; parameter and
+buffer dtypes `torch.float32`; `cpu_fallback=false`. Load was 16.048 s;
+baseline VRAM allocated/reserved 0/0, after and peak
+1,307,833,856/1,333,788,672 bytes. Model aggregate and venv inventory
+hashes were identical before/after. See
+`docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_MODEL_LOAD_PREFLIGHT_2026-09-25.md`
+for the exact source/model hashes, memory readback, and evidence limits.
 
-`
-LAYA_CP950_ROOT_CAUSE_IDENTIFIED
-classification = OTHER_DEPENDENCY_CP950
-`
-
-PyTorch `torch/_inductor/utils.py::load_template()` reads
-`torch/_inductor/kernel/templates/cutedsl_mm_grouped.py.jinja` without an
-explicit UTF-8 encoding on Windows, causing the system cp950 codec to fail at
-UTF-8 byte 0xe2 at offset 616. The cp950 fix itself is a separate task.
-
-**Current blockers (in gate order):**
-
-1. Narrow UTF-8 subprocess/environment compatibility fix validation
-2. Resume Laya model-load / device-readback gate
-3. Model residency / parameter device / forward/backward — unproven
-4. Decider — separately unqualified
+**Remaining gates:** independent review of PR #72, then separately authorized
+forward/inference/backward, adapter and training-path checks. None ran in this
+task. Decider remains separately unqualified; model compute and training remain
+unauthorized.
 
 **Authority flags** (all remain `false`):
 
@@ -35,6 +35,8 @@ UTF-8 byte 0xe2 at offset 616. The cp950 fix itself is a separate task.
 - `model_compute_authorized=false`
 - `semantic_memory_enabled=false`
 - `local_ai_fallback_approved=false`
+- `LOCAL_SEMANTIC_MEMORY_ENABLED=false`
+- `LOCAL_AI_FALLBACK_APPROVED=false`
 
 See [GitHub Issue #68](https://github.com/QWQOUOT485/siri/issues/68) for
 detailed Stage B Laya blocker history.
