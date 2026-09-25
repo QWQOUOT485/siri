@@ -1,6 +1,33 @@
 # Stage B Laya UTF-8 model-load preflight — 2026-09-25
 
-## Result
+## Current result — 2026-09-26
+
+**`LAYA_RX9070XT_MODEL_LOAD_READBACK_PASSED`.** The one additional authorized
+`-B -X utf8` load used the exact pinned local source, model, and qualified
+venv. The child reported UTF-8 mode 1 and selected the unique RX 9070 XT /
+`gfx1201` at `cuda:1`. Laya, all parameters, and all buffers reported
+`cuda:1`; `cpu_fallback=false`. Strict checkpoint load succeeded.
+
+| Readback | Observation |
+| --- | --- |
+| Parameter elements / trainable elements | 321,908,995 / 321,908,995 |
+| Persistent buffer | `temperature`, 3 elements, `torch.float32` |
+| Checkpoint/state elements | 321,908,998; state keys matched parameters plus persistent buffer |
+| Parameter / buffer dtypes | `torch.float32` / `torch.float32` |
+| Load duration | 16.048 seconds |
+| Baseline allocated / reserved | 0 / 0 bytes |
+| After-load allocated / reserved | 1,307,833,856 / 1,333,788,672 bytes |
+| Peak allocated / reserved | 1,307,833,856 / 1,333,788,672 bytes |
+| Model aggregate SHA before / after | `eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf` / same |
+| Venv inventory SHA before / after | `3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337` / same |
+| Source | `42626c348753fbb17572a813127df2278a1ec527`, clean |
+| Frozen seal | `5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef`, 600 rows / 100 groups |
+
+No forward, inference, backward, optimizer, training, LoRA, calibration, or
+held-out evaluation ran. This qualifies construction/load and device residency
+readback only. All authority flags remain false.
+
+## Historical first attempt
 
 **`LAYA_MODEL_LOAD_NEW_BLOCKER`: `parameter_count_mismatch`.** The sole live
 attempt passed the prior cp950 boundary and returned from the pinned Laya
@@ -8,6 +35,27 @@ loader on the RX 9070 XT. The project-owned readback stopped when the actual
 parameter count differed from the historical expectation of 321,908,998.
 The child stopped before emitting the actual count, so this report does not
 claim a value or accept the mismatch. No second load was attempted.
+
+## 2026-09-26 correction, before second live attempt
+
+The old `321,908,998` expectation conflated `named_parameters()` with all
+checkpoint state elements. A metadata-only `safetensors.safe_open` inspection
+of the exact pinned `model.safetensors` recorded every tensor key, shape,
+dtype, and element count in
+[the header inventory](LAYA_CHECKPOINT_HEADER_INVENTORY_2026-09-26.json)
+(SHA-256 `fc30dfebfbe91f045c46c2e5fe27996c0ef116caf7ca98e0cd374cd4b42accfe`).
+It found 170 tensor keys and 321,908,998 elements. The only `temperature`
+key is shape `[3]`, dtype `F32`, 3 elements. Excluding it leaves
+321,908,995 elements. No tensor payload was materialized. The other keys
+belong to the `encoder`, `head`, `type_emb`, `scorer`, and `act_head` modules
+in pinned `laya/common.py`; the earlier strict state-dict load succeeded.
+The pinned `DecisionModel` uses `self.register_buffer("temperature", torch.ones(3))`
+at line 102, so temperature is persistent state rather than a parameter.
+
+The corrected gate separately checks 321,908,995 parameter elements, 3
+persistent temperature buffer elements, and 321,908,998 state elements. The
+first attempt's actual parameter count remains unknown because it was not
+serialized. No final residency PASS is inferred from the first attempt.
 
 The live gate ran from branch `codex/stage-b-laya-utf8-model-load-preflight`
 at starting main/checkout HEAD `6175bdebd3512b843638b9008f1ee9a4bc91bff2`.
@@ -66,11 +114,11 @@ not recorded as a completed residency qualification.
   optimizer, training, LoRA, calibration, or held-out evaluation occurred.
 - Frozen source, review, split, and sealed artifacts were not modified.
 
-The next gate requires independent review of the parameter-count discrepancy
-and an explicitly authorized way to capture its exact value. This task does
-not relax the expected count or retry the model load. Forward/backward,
-adapter smoke, training pipeline, validation and held-out quality, latency,
-Decider qualification, and production fallback remain unproven.
+Those validation figures describe the first attempt and are retained as
+historical evidence. The 2026-09-26 correction above supersedes its blocker.
+Forward/backward, adapter smoke, training pipeline, validation and held-out
+quality, latency, Decider qualification, and production fallback remain
+unproven and unauthorized.
 
 ```text
 training_authorized=false

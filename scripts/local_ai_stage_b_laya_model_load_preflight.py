@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import locale
+import math
 import os
 import subprocess
 import sys
@@ -27,6 +28,9 @@ MODEL_REVISION = "052592a15d198d9ad47da779604259b10b47b7aa"
 WEIGHT_SHA = "9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204"
 ARTIFACT_SHA = "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf"
 SEAL_SHA = "5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef"
+EXPECTED_PARAMETER_ELEMENTS = 321_908_995
+EXPECTED_TEMPERATURE_BUFFER_ELEMENTS = 3
+EXPECTED_CHECKPOINT_STATE_ELEMENTS = 321_908_998
 RESULT_PREFIX = "STAGE_B_LAYA_RESULT="
 EXPECTED_PACKAGES = {
     "pip": "26.2.1",
@@ -124,6 +128,31 @@ def model_identity(rows: list[dict[str, Any]], aggregate: str) -> None:
     require(not isinstance(config.get("extra_special_tokens"), list), "tokenizer_fix_would_write")
 
 
+def checkpoint_header() -> list[dict[str, Any]]:
+    """Inspect tensor slices only; never materialize checkpoint payloads."""
+    from safetensors import safe_open
+
+    with safe_open(str(MODEL / "model.safetensors"), framework="pt", device="cpu") as handle:
+        return [{"key": key, "shape": handle.get_slice(key).get_shape(),
+                 "dtype": handle.get_slice(key).get_dtype(),
+                 "elements": math.prod(handle.get_slice(key).get_shape())}
+                for key in sorted(handle.keys())]
+
+
+def validate_checkpoint_header(rows: list[dict[str, Any]]) -> dict[str, int]:
+    temperature = [row for row in rows if row["key"] == "temperature"]
+    require(len(temperature) == 1 and temperature[0]["shape"] == [3]
+            and temperature[0]["dtype"] == "F32"
+            and temperature[0]["elements"] == EXPECTED_TEMPERATURE_BUFFER_ELEMENTS,
+            "temperature_checkpoint_mismatch")
+    total = sum(row["elements"] for row in rows)
+    require(total == EXPECTED_CHECKPOINT_STATE_ELEMENTS
+            and total - temperature[0]["elements"] == EXPECTED_PARAMETER_ELEMENTS,
+            "checkpoint_element_count_mismatch")
+    return {"checkpoint_tensor_keys": len(rows), "checkpoint_state_element_count": total,
+            "checkpoint_parameter_elements": total - temperature[0]["elements"]}
+
+
 def require_unchanged(before: Any, after: Any, reason: str) -> None:
     require(before == after, reason)
 
@@ -135,29 +164,52 @@ def select_device(devices: tuple[Any, ...]) -> str:
     return f"cuda:{selected.index}"
 
 
-def residency(agent: Any, device: str) -> dict[str, Any]:
-    require(device.startswith("cuda:") and device[5:].isdigit(), "selected_device_not_indexed")
+def collect_residency(agent: Any, device: str) -> dict[str, Any]:
     reported = str(agent.device)
     parameters = list(agent.model.named_parameters())
     buffers = list(agent.model.named_buffers())
     parameter_devices = sorted({str(value.device) for _, value in parameters})
     buffer_devices = sorted({str(value.device) for _, value in buffers})
-    require(reported == device, "laya_device_mismatch_or_cpu_fallback")
-    require(bool(parameters) and parameter_devices == [device], "parameter_residency_mismatch")
-    require(all(str(value.device) == device for _, value in buffers), "buffer_residency_mismatch")
+    state = agent.model.state_dict()
+    persistent_buffers = [(name, value) for name, value in buffers if name in state]
     count = sum(value.numel() for _, value in parameters)
-    require(count == 321_908_998, "parameter_count_mismatch")
     return {
         "laya_reported_device": reported,
         "parameter_devices": parameter_devices,
         "buffer_devices": buffer_devices,
         "parameter_count": count,
+        "persistent_buffer_count": sum(value.numel() for _, value in persistent_buffers),
+        "persistent_temperature_buffer_count": sum(value.numel() for name, value in persistent_buffers if name == "temperature"),
+        "checkpoint_state_element_count": sum(value.numel() for value in state.values()),
+        "state_keys_match_parameters_and_buffers": set(state) == ({name for name, _ in parameters} | {name for name, _ in persistent_buffers}),
+        "persistent_buffer_names": sorted(name for name, _ in persistent_buffers),
         "trainable_parameter_count": sum(value.numel() for _, value in parameters if value.requires_grad),
         "parameter_dtypes": sorted({str(value.dtype) for _, value in parameters}),
         "buffer_dtypes": sorted({str(value.dtype) for _, value in buffers}),
         "checkpoint_compatibility": "strict_load_state_dict_succeeded",
-        "cpu_fallback": False,
+        "cpu_fallback": any(value.startswith("cpu") for value in [reported, *parameter_devices, *buffer_devices]),
     }
+
+
+def validate_residency(observed: dict[str, Any], device: str) -> None:
+    require(device.startswith("cuda:") and device[5:].isdigit(), "selected_device_not_indexed")
+    require(observed["laya_reported_device"] == device, "laya_device_mismatch_or_cpu_fallback")
+    require(observed["parameter_devices"] == [device], "parameter_residency_mismatch")
+    require(all(value == device for value in observed["buffer_devices"]), "buffer_residency_mismatch")
+    require(observed["parameter_count"] == EXPECTED_PARAMETER_ELEMENTS, "parameter_count_mismatch")
+    require(observed["persistent_buffer_names"] == ["temperature"]
+            and observed["persistent_temperature_buffer_count"] == EXPECTED_TEMPERATURE_BUFFER_ELEMENTS
+            and observed["persistent_buffer_count"] == EXPECTED_TEMPERATURE_BUFFER_ELEMENTS,
+            "persistent_buffer_mismatch")
+    require(observed["state_keys_match_parameters_and_buffers"]
+            and observed["checkpoint_state_element_count"] == EXPECTED_CHECKPOINT_STATE_ELEMENTS,
+            "checkpoint_state_mismatch")
+
+
+def residency(agent: Any, device: str) -> dict[str, Any]:
+    observed = collect_residency(agent, device)
+    validate_residency(observed, device)
+    return observed
 
 
 def child() -> dict[str, Any]:
@@ -192,6 +244,7 @@ def child() -> dict[str, Any]:
         before_rows, before_sha = artifact_inventory()
         result["canonical_artifact_pre_sha256"] = before_sha
         model_identity(before_rows, before_sha)
+        result.update(validate_checkpoint_header(checkpoint_header()))
         devices = enumerate_accelerators(torch)
         device = select_device(devices)
         selected = next(item for item in devices if item.index == int(device[5:]))
@@ -217,11 +270,14 @@ def child() -> dict[str, Any]:
         result["after_load_reserved_bytes"] = torch.cuda.memory_reserved(target)
         result["peak_allocated_bytes"] = torch.cuda.max_memory_allocated(target)
         result["peak_reserved_bytes"] = torch.cuda.max_memory_reserved(target)
-        result.update(residency(agent, device))
+        result.update(collect_residency(agent, device))
+        validate_residency(result, device)
         result["status"] = "LAYA_RX9070XT_MODEL_LOAD_READBACK_PASSED"
     except UnicodeDecodeError as exc:
         result.update(status="LAYA_UTF8_PROCESS_FIX_FAILED" if exc.encoding == "cp950" else "LAYA_MODEL_LOAD_NEW_BLOCKER",
                       blocker=type(exc).__name__, blocker_detail=str(exc)[:200])
+    except GateError as exc:
+        result.update(blocker=str(exc), blocker_detail=str(exc)[:200])
     except Exception as exc:
         result.update(blocker=type(exc).__name__, blocker_detail=str(exc)[:200])
     finally:
@@ -268,11 +324,11 @@ def parent(runner: Any = subprocess.run) -> dict[str, Any]:
     except (UnicodeError, ValueError, GateError):
         return {"status": "LAYA_MODEL_LOAD_NEW_BLOCKER", "blocker": "child_result_unreadable",
                 "child_returncode": completed.returncode, "authority_flags": dict(AUTHORITY_FLAGS)}
-    if completed.returncode != 0:
-        result["status"] = "LAYA_MODEL_LOAD_NEW_BLOCKER"
-        result["blocker"] = "child_nonzero_exit"
-    if result.get("status") != "LAYA_RX9070XT_MODEL_LOAD_READBACK_PASSED":
-        result["child_returncode"] = completed.returncode
+    valid_success = completed.returncode == 0 and result.get("status") == "LAYA_RX9070XT_MODEL_LOAD_READBACK_PASSED"
+    valid_failure = completed.returncode != 0 and result.get("status") in ("LAYA_MODEL_LOAD_NEW_BLOCKER", "LAYA_UTF8_PROCESS_FIX_FAILED") and isinstance(result.get("blocker"), str) and bool(result["blocker"])
+    if not (valid_success or valid_failure):
+        result.update(status="LAYA_MODEL_LOAD_NEW_BLOCKER", blocker="child_nonzero_exit")
+    result["child_returncode"] = completed.returncode
     result["frozen_stage_b_seal_sha256"] = SEAL_SHA
     return result
 

@@ -4,26 +4,30 @@
 
 ## Current Phase
 
-### 2026-09-25 Stage B Laya UTF-8 load cleared cp950; parameter count blocked
+### 2026-09-26 Stage B Laya UTF-8 load and RX 9070 XT residency passed
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
 
 The earlier `OTHER_DEPENDENCY_CP950` failure came from a PyTorch Jinja template
 read under the Windows cp950 default. A dedicated `-X utf8` child process
-cleared that boundary and returned from the pinned Laya loader on the RX 9070 XT.
-The one authorized live attempt then stopped at **`parameter_count_mismatch`**
-against the historical 321,908,998 expectation. Its actual count was not
-emitted before the fail-closed check raised, so full device-residency
-qualification remains blocked. See
+cleared that boundary. Metadata-only checkpoint inspection reconciled the
+historical count: **321,908,995 parameters + 3 persistent `temperature`
+buffer elements = 321,908,998 checkpoint/state elements**. The one additional
+authorized live load passed strict checkpoint loading and residency readback:
+Laya, all parameters, and all buffers were on the unique RX 9070 XT /
+`gfx1201` at `cuda:1`; trainable parameter count 321,908,995; parameter and
+buffer dtypes `torch.float32`; `cpu_fallback=false`. Load was 16.048 s;
+baseline VRAM allocated/reserved 0/0, after and peak
+1,307,833,856/1,333,788,672 bytes. Model aggregate and venv inventory
+hashes were identical before/after. See
 `docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_MODEL_LOAD_PREFLIGHT_2026-09-25.md`
 for the exact source/model hashes, memory readback, and evidence limits.
 
-**Current blockers (in gate order):**
-
-1. Independent review of the Laya parameter-count discrepancy; no automatic retry
-2. Completed device/parameter/buffer readback and forward/backward — unproven
-3. Decider — separately unqualified
+**Remaining gates:** independent review of PR #72, then separately authorized
+forward/inference/backward, adapter and training-path checks. None ran in this
+task. Decider remains separately unqualified; model compute and training remain
+unauthorized.
 
 **Authority flags** (all remain `false`):
 

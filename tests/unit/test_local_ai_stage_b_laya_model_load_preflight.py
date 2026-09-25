@@ -37,7 +37,7 @@ def test_target_selection_rejects_igpu_nvidia_and_ambiguity() -> None:
 
 
 class Tensor:
-    def __init__(self, device: str, *, count: int = 321_908_998) -> None:
+    def __init__(self, device: str, *, count: int = 321_908_995) -> None:
         self.device = device
         self.dtype = "float32"
         self.requires_grad = True
@@ -47,11 +47,16 @@ class Tensor:
         return self.count
 
 
-def agent(parameter_devices: tuple[str, ...], buffer_devices: tuple[str, ...], reported: str = "cuda:2"):
+def agent(parameter_devices: tuple[str, ...], buffer_devices: tuple[str, ...], reported: str = "cuda:2",
+          parameter_count: int = 321_908_995, buffer_count: int = 3):
+    parameters = [(str(i), Tensor(device, count=parameter_count if i == 0 else 0))
+                  for i, device in enumerate(parameter_devices)]
+    buffers = [("temperature" if i == 0 else str(i), Tensor(device, count=buffer_count if i == 0 else 0))
+               for i, device in enumerate(buffer_devices)]
     model = SimpleNamespace(
-        named_parameters=lambda: [(str(i), Tensor(device, count=321_908_998 if i == 0 else 0))
-                                  for i, device in enumerate(parameter_devices)],
-        named_buffers=lambda: [(str(i), Tensor(device, count=1)) for i, device in enumerate(buffer_devices)],
+        named_parameters=lambda: parameters,
+        named_buffers=lambda: buffers,
+        state_dict=lambda: dict(parameters + buffers),
     )
     return SimpleNamespace(device=reported, model=model,
                            system_one=lambda *_: pytest.fail("forward was called"))
@@ -60,12 +65,14 @@ def agent(parameter_devices: tuple[str, ...], buffer_devices: tuple[str, ...], r
 def test_residency_requires_exact_index_and_never_runs_forward() -> None:
     result = gate.residency(agent(("cuda:2",), ("cuda:2",)), "cuda:2")
     assert result["cpu_fallback"] is False
-    assert result["parameter_count"] == 321_908_998
-    assert result["trainable_parameter_count"] == 321_908_998
+    assert result["parameter_count"] == 321_908_995
+    assert result["persistent_temperature_buffer_count"] == 3
+    assert result["checkpoint_state_element_count"] == 321_908_998
+    assert result["trainable_parameter_count"] == 321_908_995
     for bad_agent, expected in (
-        (agent(("cuda:2",), (), "cpu"), "laya_device_mismatch"),
-        (agent(("cuda:0",), ()), "parameter_residency_mismatch"),
-        (agent(("cuda:2", "cpu"), ()), "parameter_residency_mismatch"),
+        (agent(("cuda:2",), ("cuda:2",), "cpu"), "laya_device_mismatch"),
+        (agent(("cuda:0",), ("cuda:2",)), "parameter_residency_mismatch"),
+        (agent(("cuda:2", "cpu"), ("cuda:2",)), "parameter_residency_mismatch"),
         (agent(("cuda:2",), ("cpu",)), "buffer_residency_mismatch"),
         (agent(("cuda:2",), ("cuda:0",)), "buffer_residency_mismatch"),
     ):
@@ -73,6 +80,30 @@ def test_residency_requires_exact_index_and_never_runs_forward() -> None:
             gate.residency(bad_agent, "cuda:2")
     with pytest.raises(gate.GateError, match="selected_device_not_indexed"):
         gate.residency(agent(("cuda:2",), ()), "cuda")
+
+
+def test_count_mismatch_preserves_observed_readback() -> None:
+    observed = gate.collect_residency(agent(("cuda:2",), ("cuda:2",), parameter_count=321_908_998), "cuda:2")
+    assert observed["parameter_count"] == 321_908_998
+    assert observed["parameter_devices"] == ["cuda:2"]
+    with pytest.raises(gate.GateError, match="parameter_count_mismatch"):
+        gate.validate_residency(observed, "cuda:2")
+    observed = gate.collect_residency(agent(("cpu",), ("cuda:2",)), "cuda:2")
+    assert observed["parameter_devices"] == ["cpu"] and observed["cpu_fallback"] is True
+    with pytest.raises(gate.GateError, match="parameter_residency_mismatch"):
+        gate.validate_residency(observed, "cuda:2")
+    observed = gate.collect_residency(agent(("cuda:2",), ("cuda:2",), buffer_count=2), "cuda:2")
+    with pytest.raises(gate.GateError, match="persistent_buffer_mismatch"):
+        gate.validate_residency(observed, "cuda:2")
+
+
+def test_header_count_semantics() -> None:
+    rows = [{"key": "temperature", "shape": [3], "dtype": "F32", "elements": 3},
+            {"key": "encoder.weight", "shape": [321_908_995], "dtype": "F16", "elements": 321_908_995}]
+    assert gate.validate_checkpoint_header(rows)["checkpoint_state_element_count"] == 321_908_998
+    rows[0]["elements"] = 2
+    with pytest.raises(gate.GateError, match="temperature_checkpoint_mismatch"):
+        gate.validate_checkpoint_header(rows)
 
 
 def test_artifact_and_identity_changes_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,4 +155,18 @@ def test_parent_captures_raw_bytes_and_returns_bounded_blocker(monkeypatch: pyte
     result = gate.parent(fake_runner)
     assert result["status"] == "LAYA_MODEL_LOAD_NEW_BLOCKER"
     assert result["child_returncode"] == 1
+    assert result["blocker"] == "RuntimeError"
     assert all(value is False for value in result["authority_flags"].values())
+
+
+def test_parent_missing_result_is_generic(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gate, "PYTHON", Path(sys.executable))
+    import local_ai_stage_b_held_out_seal as seal
+    monkeypatch.setattr(seal, "verify_seal", lambda: {
+        "seal_manifest_sha256": gate.SEAL_SHA, "sealed_row_count": 600,
+        "sealed_group_count": 100, "final_split_assigned": True,
+        "held_out_sealed": True, **gate.AUTHORITY_FLAGS,
+    })
+    for output in (b"", (gate.RESULT_PREFIX + "{").encode()):
+        result = gate.parent(lambda command, **kwargs: subprocess.CompletedProcess(command, 1, output, b""))
+        assert result["blocker"] == "child_result_unreadable"
