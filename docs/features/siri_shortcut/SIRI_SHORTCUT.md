@@ -1,5 +1,7 @@
 # Apple Shortcuts (捷徑) 設定指南
 
+需要「換一批」與多輪選歌時，請使用 [Windows 管家 V2 建置稿](SIRI_SHORTCUT_V2.md)。下文記錄既有單次選歌流程，其實機驗收不涵蓋換批後繼續聽寫。
+
 本指南將教您如何設定 iPhone 上的「捷徑」(Shortcuts) App，讓您可以透過 Siri 語音控制您的 Windows 電腦。整個設定過程非常簡單，不需要編寫任何複雜的程式碼！
 
 ## 1. 捷徑運作原理
@@ -137,6 +139,14 @@ Spotify 搜尋
 → POST /command + clarification_token
 → 播放成功後結束 Shortcut
 ```
+
+### 「換一批」的後續回應
+
+上面的穩定版流程只驗收過第二輪選歌後結束。若第二輪說「換一批」，Agent 會把新候選放在**第二次 POST 的回應**中。這個回應的 `success` 仍是 `false`、`error_code` 是 `SPOTIFY_CLARIFICATION_REQUIRED`，但 `message` 有可朗讀的候選，並附上**新的** `clarification_token`。因此第二次 POST 後不能只在 `success=true` 時朗讀，也不能直接結束。
+
+在第二次「取得 URL 內容」之後，先取該次回應的 `message` 並執行「朗讀文字」。若該次回應還有 `clarification_required=true` 與 `clarification_token`，用**新 token** 再聽寫一次並 POST；最多依 Agent 回應繼續兩輪，收到沒有下一批、聽不清楚、過期或其他錯誤時也要朗讀 `message`。不要重用舊 token、在捷徑內自行選歌曲或組 Spotify ID／URI。
+
+2026-09-24 的 iPhone 實機回報是說「換一批」後捷徑無聲結束；Windows Agent 同日紀錄顯示第二輪曾回傳 `SPOTIFY_CLARIFICATION_REQUIRED`，另一次回傳 `SPOTIFY_CLARIFICATION_UNCLEAR`。尚未取得捷徑動作畫面或第二輪實際聽寫文字，因此無聲結束的精確捷徑分支仍待確認。
 
 第二次語音例如：
 

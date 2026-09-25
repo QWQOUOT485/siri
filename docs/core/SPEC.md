@@ -14,7 +14,7 @@
 
 ## 2. 核心功能與指令 (Core Features & Commands)
 
-本產品保留基於規則的指令解析器 (Rule-based Command Parser) 作為第一層，並允許在 Windows 本機加入小型 Local LLM 作為 **fallback 語意解析器**。Local LLM 僅可將自然語言收斂成封閉 schema，不得直接控制 Windows、Spotify、shell、URL、executable path 或其他執行目標。V1 不使用雲端付費 LLM API；高風險操作（shutdown / force-close / firewall / system administration）永久維持 deterministic-only。詳細設計見 `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md`。
+本產品保留基於規則的指令解析器 (Rule-based Command Parser) 作為第一層，並允許在 Windows 本機加入小型 Local LLM 作為 **fallback 語意解析器**。Local LLM 僅可將自然語言收斂成封閉 schema，不得直接控制 Windows、Spotify、shell、URL、executable path 或其他執行目標。V1 不使用雲端付費 LLM API；高風險操作（shutdown / force-close / firewall / system administration）永久維持 deterministic-only。詳細設計見 `docs/local_ai/architecture/LOCAL_AI_ARCHITECTURE_PROPOSAL.md`。
 
 ### 2.1 應用程式操作 (Application Control)
 - **開啟程式 (open_app)**：安全啟動應用程式。
@@ -48,7 +48,7 @@
 - 使用者輸入的歌名/歌手/專輯提示只可作為 Spotify 搜尋文字，不可變成 shell、CMD、PowerShell、exe path、command-line arguments 或 arbitrary URL。
 - 如果搜尋結果明顯歧義或信心不足，不得隨機播放；回傳可朗讀訊息，要求使用者補充歌手或更完整歌名。
 - Spotify 播放目標優先使用本機設定的 Windows Spotify Connect 裝置；若目前沒有可用裝置，回傳清楚錯誤，或安全地透過 Trusted AppEntry 開啟 Spotify Desktop 後再重試。
-- Spotify OAuth / token / scopes / device selection 詳見 [Spotify Integration](SPOTIFY.md)。
+- Spotify OAuth / token / scopes / device selection 詳見 [Spotify Integration](../features/spotify/SPOTIFY.md)。
 - **音量控制**：Windows 主音量仍由既有 volume adapter 控制，單次調整限制步數 (steps 1-10)。支援 `volume_up`, `volume_down`, `mute`, `unmute`, `toggle_mute`。
   - 常用語句：音量大一點、音量增加、聲音大一點、調大音量、音量小一點、音量降低、聲音小一點、調小音量、靜音、取消靜音、解除靜音 / volume up, volume down, mute, unmute。
 - **Windows 精確百分比音量**：新增 deterministic closed action `set_volume`，只接受 `volume_percent=0..100` 整數。支援「音量 30%」、「音量調到 30%」、「把音量降到 25%」、「set volume to 45 percent」。精確設定走 pycaw master-volume scalar；若精確 setter 不可用，不得用媒體鍵近似成假成功。
@@ -56,7 +56,7 @@
 - **Spotify shuffle**：`spotify_shuffle_on/off`，支援「隨機播放」、「關閉隨機播放」。
 - **Spotify repeat**：`spotify_repeat_track/context/off`，支援「單曲循環」、「循環播放清單／專輯」、「關閉循環」。
 - **正常連續播放**：`spotify_continue` 定義為「repeat off + resume」，保留目前 shuffle 狀態；支援「就一直播下去」、「正常播就好」。它不保證 Spotify context/queue 之外的無限播放。
-- 上述新增控制全部 deterministic-only，不擴張 Local AI allowlist。詳細規格見 [Deterministic Volume and Spotify Playback Controls](PLAYBACK_CONTROLS.md)。
+- 上述新增控制全部 deterministic-only，不擴張 Local AI allowlist。詳細規格見 [Deterministic Volume and Spotify Playback Controls](../features/spotify/PLAYBACK_CONTROLS.md)。
 
 ### 2.4 系統控制 (System Control)
 - **鎖定電腦 (LockWorkStation)**：立即執行鎖定。

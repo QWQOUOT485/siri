@@ -751,7 +751,7 @@ Do not recommend a model if benchmark execution is incomplete.
 
 When given this runbook, Codex should:
 
-1. Read AGENTS.md, PROJECT_STATUS.md, docs/SECURITY.md, docs/SPEC.md, docs/ARCHITECTURE.md, docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md, and this runbook.
+1. Read AGENTS.md, PROJECT_STATUS.md, docs/core/SECURITY.md, docs/core/SPEC.md, docs/core/ARCHITECTURE.md, docs/local_ai/architecture/LOCAL_AI_ARCHITECTURE_PROPOSAL.md, and this runbook.
 2. Inspect whether PoC script/fixture already exist.
 3. If missing, implement only the standalone PoC tooling.
 4. Do not wire AI into production runtime.

@@ -3,16 +3,16 @@
 Behavior rules for coding agents working on this project.
 
 ## Before Coding
-1. Read docs/SECURITY.md — highest priority
+1. Read docs/core/SECURITY.md — highest priority
 2. Read PROJECT_STATUS.md — current phase, completed work, and real-world acceptance status; this is a handoff summary, not a security/spec override
-3. Read docs/SPEC.md for product requirements
-4. Read docs/ARCHITECTURE.md for system design
-5. If modifying Windows Adapters → read docs/WINDOWS.md
-6. If modifying Parser → read docs/SPEC.md
-7. If modifying API → read docs/API.md + docs/SECURITY.md
-8. If modifying networking → read docs/NETWORKING.md
-9. If modifying Spotify/music playback → read docs/SPOTIFY.md + docs/SECURITY.md
-10. After completing work → run relevant tests per docs/TESTING.md
+3. Read docs/core/SPEC.md for product requirements
+4. Read docs/core/ARCHITECTURE.md for system design
+5. If modifying Windows Adapters → read docs/core/WINDOWS.md
+6. If modifying Parser → read docs/core/SPEC.md
+7. If modifying API → read docs/core/API.md + docs/core/SECURITY.md
+8. If modifying networking → read docs/core/NETWORKING.md
+9. If modifying Spotify/music playback → read docs/features/spotify/SPOTIFY.md + docs/core/SECURITY.md
+10. After completing work → run relevant tests per docs/core/TESTING.md
 
 ## Project Status Handoff
 
@@ -69,7 +69,7 @@ TASKS cannot override security or product specifications.
 - Can reference: Microsoft docs, Python docs, FastAPI docs, Windows API docs, Apple Shortcuts docs
 
 ## Source of Truth
-- Active maintained specifications are authoritative in this order: `docs/SECURITY.md` → `docs/SPEC.md` → `docs/ARCHITECTURE.md` → task/platform documents.
+- Active maintained specifications are authoritative in this order: `docs/core/SECURITY.md` → `docs/core/SPEC.md` → `docs/core/ARCHITECTURE.md` → task/platform documents.
 - `PROJECT_STATUS.md` records current implementation/acceptance state and decisions, but cannot weaken active security requirements.
-- `docs/SOURCE_SPEC.md` is a read-only historical snapshot. Keep it for provenance, but do not use it to override newer accepted product/spec/security decisions.
+- `docs/core/SOURCE_SPEC.md` is a read-only historical snapshot. Keep it for provenance, but do not use it to override newer accepted product/spec/security decisions.
 - When historical SOURCE_SPEC text conflicts with the active maintained specifications, follow the active maintained specifications.

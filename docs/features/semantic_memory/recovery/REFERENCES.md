@@ -55,6 +55,6 @@ Phase 1 intentionally uses SQLite + RAM exact alias index + RapidFuzz candidate 
 
 For project/author/license tracking and future dependency-adoption notes, see:
 
-- [Open-source references and attribution notes](../OPEN_SOURCE_REFERENCES.md)
+- [Open-source references and attribution notes](../../../core/OPEN_SOURCE_REFERENCES.md)
 
 That file distinguishes current dependencies from research-only references and should be re-checked against the exact upstream version before code is copied, vendored, packaged, or distributed.

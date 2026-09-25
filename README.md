@@ -393,3 +393,22 @@ logs\agent.log
 ```
 
 Firewall、Task Scheduler、runtime、logs 可恢復或重新建立；不要在不確認的情況下刪除 `D:\ai`，因為該資料夾可能還有其他專案。
+
+
+## 13. Documentation
+
+All documentation is organized under `docs/` by subsystem:
+
+| Section | Path | Contents |
+|---------|------|----------|
+| **Current Status** | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | Implementation/acceptance state |
+| **Core** | [`docs/core/`](docs/core/) | Architecture, API, Security, Spec, Testing |
+| **Spotify** | [`docs/features/spotify/`](docs/features/spotify/) | Integration docs and acceptance evidence |
+| **Siri Shortcut** | [`docs/features/siri_shortcut/`](docs/features/siri_shortcut/) | iPhone Shortcut setup and V2 design |
+| **Semantic Memory** | [`docs/features/semantic_memory/`](docs/features/semantic_memory/) | Alias memory and recovery pipeline |
+| **Local AI** | [`docs/local_ai/`](docs/local_ai/) | Benchmark, Stage A/B, architecture proposals |
+| **Releases** | [`docs/releases/`](docs/releases/) | v1.0 scope freeze and release gate evidence |
+| **Roadmap** | [`docs/roadmap/`](docs/roadmap/) | Future roadmap and open questions |
+| **Full Index** | [`docs/README.md`](docs/README.md) | Complete documentation index |
+
+Agent rules and document priority: [`AGENTS.md`](AGENTS.md). Current tasks: [`TASKS.md`](TASKS.md).

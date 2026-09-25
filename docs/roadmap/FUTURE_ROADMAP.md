@@ -2,7 +2,7 @@
 
 > Status: **Vision / Aspirational**
 >
-> 這份文件描述 Windows Siri Agent 未來可能發展的方向。它不是目前實作狀態、不是 release commitment，也不能覆蓋 docs/SECURITY.md、docs/SPEC.md 或 docs/ARCHITECTURE.md。
+> 這份文件描述 Windows Siri Agent 未來可能發展的方向。它不是目前實作狀態、不是 release commitment，也不能覆蓋 docs/core/SECURITY.md、docs/core/SPEC.md 或 docs/core/ARCHITECTURE.md。
 >
 > 真正目前做到哪裡，請看 PROJECT_STATUS.md。真正要先做什麼，請看 TASKS.md。
 

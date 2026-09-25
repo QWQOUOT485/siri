@@ -14,7 +14,7 @@ explicit playback passed. The live bounded continuation case returned
 `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without producing a next page or
 rotating the opaque token. This proves only that the selected live fixture did
 not produce another trusted page; it does not prove a source bug. See the
-[runtime acceptance evidence](../SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md)
+[runtime acceptance evidence](../../spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md)
 for the complete boundary. Siri voice acceptance was not performed, Semantic
 Memory remains disabled, and Local AI fallback remains unapproved.
 
@@ -546,7 +546,7 @@ The live bounded continuation gate remains **BLOCKED / NOT ACCEPTED**:
 page or opaque-token rotation. The current evidence proves only that the
 selected live fixture did not produce another trusted page; it does not prove
 a source bug or establish provider/result-set insufficiency as the root cause.
-See the [runtime acceptance evidence](../SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
+See the [runtime acceptance evidence](../../spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
 
 Siri voice acceptance was not performed. Semantic Memory remains disabled and
 Local AI fallback remains unapproved. Candidate recovery remains candidate

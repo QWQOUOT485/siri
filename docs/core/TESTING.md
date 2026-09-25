@@ -151,4 +151,4 @@ Required unit/security coverage for the approved deterministic-controls batch:
 - Local AI cannot emit these newly added deterministic controls in its initial schema/allowlist
 - numeric fields cannot carry expressions, shell text, URLs, paths, or command chaining
 
-Safe Windows/Spotify runtime acceptance is required before marking the features implemented. See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).
+Safe Windows/Spotify runtime acceptance is required before marking the features implemented. See [PLAYBACK_CONTROLS.md](../features/spotify/PLAYBACK_CONTROLS.md).

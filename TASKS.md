@@ -17,7 +17,7 @@ and installed `/health` plus OpenAPI version `1.0.0`.
 Core Siri → Windows → Spotify playback and clarification are functional. The
 v1.0 scope freeze was accepted when PR #29 merged into `main`; its retained
 scope, `spotify_continue` known limitation, proposed blockers, and v1.1
-deferrals remain recorded in `docs/V1_SCOPE_FREEZE_2026-09-20.md`. Candidate
+deferrals remain recorded in `docs/releases/v1/V1_SCOPE_FREEZE_2026-09-20.md`. Candidate
 Recovery Phase 1B source implementation was merged to `main` by PR #35
 (`dde5e07130517dcaa67d9136ad222f748930545f`). The tested current `main` is
 `fcb955a43b0590636f776ffc31e7ca71897114f2`.
@@ -29,7 +29,7 @@ gate remains **BLOCKED / NOT ACCEPTED**: live `都不是` returned
 rotation. This does not prove a source bug. Siri voice acceptance was not
 performed; Semantic Memory remains disabled; Local AI fallback remains
 unapproved. The detailed evidence boundary is recorded in
-`docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
+`docs/features/spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
 
 ## v1.0.0 Release Identity Cut
 
@@ -68,17 +68,17 @@ unapproved. The detailed evidence boundary is recorded in
 
 1. Read `AGENTS.md`.
 2. Read `PROJECT_STATUS.md`.
-3. Read `docs/SECURITY.md`.
-4. Read `docs/SPEC.md` and `docs/ARCHITECTURE.md`.
+3. Read `docs/core/SECURITY.md`.
+4. Read `docs/core/SPEC.md` and `docs/core/ARCHITECTURE.md`.
 5. Read task-specific docs:
-   - Spotify → `docs/SPOTIFY.md`
-   - playback controls → `docs/PLAYBACK_CONTROLS.md`
-   - Local AI → `docs/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` plus current SECURITY / ARCHITECTURE rules
-   - semantic recovery → `docs/semantic_recovery/`
-   - Windows adapters → `docs/WINDOWS.md`
-   - API → `docs/API.md`
-   - Siri → `docs/SIRI_SHORTCUT.md`
-6. Before finishing, run relevant tests per `docs/TESTING.md`.
+   - Spotify → `docs/features/spotify/SPOTIFY.md`
+   - playback controls → `docs/features/spotify/PLAYBACK_CONTROLS.md`
+   - Local AI → `docs/local_ai/architecture/LOCAL_AI_ARCHITECTURE_PROPOSAL.md` plus current SECURITY / ARCHITECTURE rules
+   - semantic recovery → `docs/features/semantic_memory/recovery/`
+   - Windows adapters → `docs/core/WINDOWS.md`
+   - API → `docs/core/API.md`
+   - Siri → `docs/features/siri_shortcut/SIRI_SHORTCUT.md`
+6. Before finishing, run relevant tests per `docs/core/TESTING.md`.
 7. If real project state changed, update `PROJECT_STATUS.md`.
 
 ## Post-freeze Queue
@@ -137,7 +137,7 @@ control. Production Local AI authority remains unchanged, and
   ninth candidate, finalist, training authorization, or production dependency.
   See [MiniMind training-method reference](docs/LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md).
 - Full candidate set, hardware protocol, metrics, fairness rules, and
-  promotion boundary: [dedicated benchmark plan](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
+  promotion boundary: [dedicated benchmark plan](docs/local_ai/benchmark/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
 
 ### P2.6 — Memory RAG / Personal RAG (future research)
 
@@ -171,7 +171,7 @@ control. Production Local AI authority remains unchanged, and
 - No production dependency, daemon, embedding model, migration, or runtime
   enablement is authorized until the separate feasibility/security/acceptance
   gate passes.
-- Design notes: [Memory RAG / Personal RAG](docs/FUTURE_ROADMAP.md#memory-rag--personal-rag--future-research).
+- Design notes: [Memory RAG / Personal RAG](docs/roadmap/FUTURE_ROADMAP.md#memory-rag--personal-rag--future-research).
 
 ### P3 — Project infrastructure
 
@@ -181,12 +181,12 @@ control. Production Local AI authority remains unchanged, and
 
 ## Current Acceptance Gaps
 
-- `spotify_continue` is source-tested and implemented, but its only permitted active-device real run failed closed with `SPOTIFY_FORBIDDEN` / sanitized `provider_reason=UNKNOWN`; it remains a v1.0 known limitation and **NOT ACCEPTED**. See `docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`.
+- `spotify_continue` is source-tested and implemented, but its only permitted active-device real run failed closed with `SPOTIFY_FORBIDDEN` / sanitized `provider_reason=UNKNOWN`; it remains a v1.0 known limitation and **NOT ACCEPTED**. See `docs/features/spotify/evidence/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`.
 - Candidate Recovery Phase 1B initial trusted clarification and explicit
   playback passed after installed alignment, but the bounded live continuation
   returned `SPOTIFY_CLARIFICATION_RECOVERY_EXHAUSTED` without a next page or
   token rotation. It remains **BLOCKED / NOT ACCEPTED**; this does not prove a
-  source bug. See `docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
+  source bug. See `docs/features/spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`.
 - Exact Windows volume has installed runtime acceptance but not Siri voice / physical-speaker acceptance.
 - Top-Artist-only and Recently-Played-only real-account ordering cases remain partial/unproven and are not v1.0 blockers.
 - Semantic-memory runtime acceptance is incomplete; keep it disabled.
@@ -195,7 +195,7 @@ control. Production Local AI authority remains unchanged, and
 
 ## Definition of Done for v1
 
-- all mandatory `docs/SECURITY.md` invariants remain enforced
+- all mandatory `docs/core/SECURITY.md` invariants remain enforced
 - core Windows app control and Spotify named-track playback work
 - Siri clarification E2E remains passing
 - OAuth tokens and secrets remain local
