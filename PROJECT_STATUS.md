@@ -24,10 +24,11 @@ hashes were identical before/after. See
 `docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_MODEL_LOAD_PREFLIGHT_2026-09-25.md`
 for the exact source/model hashes, memory readback, and evidence limits.
 
-**Remaining gates:** independent review of PR #72, then separately authorized
-forward/inference/backward, adapter and training-path checks. None ran in this
-task. Decider remains separately unqualified; model compute and training remain
-unauthorized.
+PR #72 independent review and merge are complete.
+
+**Remaining gates:** Forward/inference/backward, adapter smoke, and
+training-path checks require separate authorization and have not run. Decider
+remains separately unqualified; model compute and training remain unauthorized.
 
 **Authority flags** (all remain `false`):
 
