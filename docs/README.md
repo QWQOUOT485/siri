@@ -8,7 +8,7 @@ This directory organizes the Windows Siri Agent documentation by subsystem and e
 |---------|----------|
 | [Core](core/) | Architecture, API, Security, Spec, Testing, Windows, Networking |
 | [Spotify](features/spotify/) | Spotify integration, playback controls, acceptance evidence |
-| [Siri Shortcut](features/siri_shortcut/) | iPhone Shortcut setup, clarification flow, V2 design |
+| [Siri Shortcut](features/siri_shortcut/) | iPhone Shortcut setup, clarification flow |
 | [Semantic Memory](features/semantic_memory/) | Alias memory, semantic recovery pipeline |
 | [Local AI](local_ai/) | Architecture, benchmark, Stage A evidence, Stage B plan/evidence |
 | [Releases](releases/) | v1.0 scope freeze, release-cut gate, installed identity |

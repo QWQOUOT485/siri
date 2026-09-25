@@ -404,7 +404,7 @@ All documentation is organized under `docs/` by subsystem:
 | **Current Status** | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | Implementation/acceptance state |
 | **Core** | [`docs/core/`](docs/core/) | Architecture, API, Security, Spec, Testing |
 | **Spotify** | [`docs/features/spotify/`](docs/features/spotify/) | Integration docs and acceptance evidence |
-| **Siri Shortcut** | [`docs/features/siri_shortcut/`](docs/features/siri_shortcut/) | iPhone Shortcut setup and V2 design |
+| **Siri Shortcut** | [`docs/features/siri_shortcut/`](docs/features/siri_shortcut/) | iPhone Shortcut setup |
 | **Semantic Memory** | [`docs/features/semantic_memory/`](docs/features/semantic_memory/) | Alias memory and recovery pipeline |
 | **Local AI** | [`docs/local_ai/`](docs/local_ai/) | Benchmark, Stage A/B, architecture proposals |
 | **Releases** | [`docs/releases/`](docs/releases/) | v1.0 scope freeze and release gate evidence |
