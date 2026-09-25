@@ -58,13 +58,22 @@ replace a candidate; if one cannot run, record the exact blocker and continue.
 | 7 | [Verdict-open-jev](https://github.com/Heman10x-NGU/Verdict-open-jev) | ModernBERT ~151M | very small non-autoregressive encoder decision engine | latency / size floor and encoder-vs-decoder comparison |
 | 8 | [open-jev-deberta-v3-large](https://huggingface.co/com-kotobalabs/open-jev-deberta-v3-large) | DeBERTa-v3-large | encoder + typed option scoring + calibrated probabilities | independent encoder architecture and calibration reference |
 
-Optional methodology reference, not a ninth required model:
+Optional methodology references, not additional required candidates:
 
 - [LitJev](https://github.com/zhengxuyu/litjev) may be used to test
   logits-only inference on an existing Qwen checkpoint. If used, prefer the
   current Qwen baseline backbone so the experiment isolates **decision
   inference vs autoregressive JSON generation** rather than changing both model
   and inference method at once.
+- [MiniMind](https://github.com/jingyaogong/minimind), pinned for this research
+  note at `f659b55761b754d306bd140573493a6543cafd7f`, may be used only as a
+  training-method reference for compact PyTorch SFT, LoRA, checkpoint/resume,
+  distillation, and later Agentic-RL experiments. MiniMind is **not** a ninth
+  Stage A candidate, a Stage B finalist, training authorization, production
+  dependency, or executable-authority path. Candidate-native objectives remain
+  authoritative, and sealed held-out labels must never enter teacher,
+  distillation, filtering, or tuning loops. See
+  [MiniMind training-method reference](LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md).
 
 ### Stage A — Run released models / inference methods as-is
 

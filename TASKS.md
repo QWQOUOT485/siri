@@ -132,6 +132,10 @@ control. Production Local AI authority remains unchanged, and
 - Stage B may adapt at most 2–3 evidence-backed finalists.
 - Compare semantic quality, false acceptance/safety, calibration, latency,
   memory use, and Chinese/mixed-language behavior.
+- Keep MiniMind as a pinned **training-method reference only** for future SFT,
+  distillation, checkpoint/resume, and later Agentic-RL research. It is not a
+  ninth candidate, finalist, training authorization, or production dependency.
+  See [MiniMind training-method reference](docs/LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md).
 - Full candidate set, hardware protocol, metrics, fairness rules, and
   promotion boundary: [dedicated benchmark plan](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
 
