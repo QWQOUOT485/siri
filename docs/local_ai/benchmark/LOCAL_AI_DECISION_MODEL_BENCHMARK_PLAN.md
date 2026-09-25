@@ -73,7 +73,7 @@ Optional methodology references, not additional required candidates:
   dependency, or executable-authority path. Candidate-native objectives remain
   authoritative, and sealed held-out labels must never enter teacher,
   distillation, filtering, or tuning loops. See
-  [MiniMind training-method reference](LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md).
+  [MiniMind training-method reference](../training/LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md).
 
 ### Stage A — Run released models / inference methods as-is
 

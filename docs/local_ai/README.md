@@ -8,6 +8,7 @@ Current status: `LOCAL_AI_FALLBACK_APPROVED=false`. Production fallback is **NO-
 |---------|----------|
 | [architecture/](architecture/) | Architecture proposal, PoC runbook |
 | [benchmark/](benchmark/) | Benchmark plan and historical benchmark results |
+| [training/](training/) | Training-method references such as MiniMind; research only |
 | [stage_a/](stage_a/) | Stage A evaluation evidence |
 | [stage_b/](stage_b/) | Stage B adaptation plan, corpus protocol, current evidence |
 | [historical/](historical/) | Historical reviews, fail-closed matrix, shadow acceptance |
