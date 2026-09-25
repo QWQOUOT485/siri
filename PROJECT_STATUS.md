@@ -26,9 +26,23 @@ for the exact source/model hashes, memory readback, and evidence limits.
 
 PR #72 independent review and merge are complete.
 
-**Remaining gates:** Forward/inference/backward, adapter smoke, and
-training-path checks require separate authorization and have not run. Decider
-remains separately unqualified; model compute and training remain unauthorized.
+**Next planned gate:** a separately authorized Laya head-only shape smoke using
+a fixed non-secret 64-row synthetic fixture for structural checks and one fixed
+8-row RX 9070 XT batch for a single forward/backward connectivity pass. The
+encoder remains frozen; no optimizer, optimizer step, checkpoint save, quality
+benchmark, Stage A fixture access, or Stage B train/validation/held-out access
+is part of that gate. It has not run yet.
+
+If that shape smoke passes, the following training-pipeline smoke may reuse
+MiniMind as a **training-engineering reference** for mixed precision,
+optimizer/scheduler wiring, gradient clipping, deterministic seeding,
+checkpoint save/resume, and experiment logging. MiniMind does not replace Laya
+or turn Laya into a causal-LM SFT model: Laya keeps its candidate-native
+encoder/decision-head/span/validity objectives. Distillation/LoRA/RL remain
+later separately reviewed experiments, not current authorization.
+
+Decider remains separately unqualified; general model compute and training
+remain unauthorized.
 
 **Authority flags** (all remain `false`):
 
