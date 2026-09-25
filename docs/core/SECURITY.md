@@ -190,7 +190,7 @@ Observation logging is disabled by default. Database corruption/unavailability d
 
 The current design must not feed Spotify catalog metadata into AI/embedding models. Future vector memory, if accepted, embeds user-authored/Siri-transcribed utterances only.
 
-See [semantic recovery security](semantic_recovery/SECURITY.md).
+See [semantic recovery security](../features/semantic_memory/recovery/SECURITY.md).
 
 
 ## Exact Volume and Playback-State Safety
@@ -215,4 +215,4 @@ Spotify shuffle/repeat modes are closed values. The client cannot choose arbitra
 
 These controls do not enter the initial Local AI allowlist. Numeric strings must not be evaluated as expressions or command text.
 
-See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).
+See [PLAYBACK_CONTROLS.md](../features/spotify/PLAYBACK_CONTROLS.md).

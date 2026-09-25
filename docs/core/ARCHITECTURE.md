@@ -130,7 +130,7 @@ The service converts Spotify API results into trusted internal objects (for exam
 
 For playback, resolve the configured or active Spotify Connect device. If the desired Windows device is not active, the service may use Spotify's device-transfer capability. If no suitable device exists, optionally open Spotify Desktop through the existing Trusted AppEntry flow and return/retry safely.
 
-Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes; token handling belongs in infrastructure, not domain. See [SPOTIFY.md](SPOTIFY.md).
+Authorization uses OAuth Authorization Code with PKCE and least-privilege scopes; token handling belongs in infrastructure, not domain. See [SPOTIFY.md](../features/spotify/SPOTIFY.md).
 
 
 ## Local Semantic Recovery / Alias Memory
@@ -153,7 +153,7 @@ Phase 1 authority rule: only an **exact confirmed non-conflicted alias** may aut
 
 Alias promotion is controlled by a single `MemoryLearner`; automatic confirmation requires a server-owned clarification selection followed by successful playback. Conflicted aliases leave the automatic fast path.
 
-See [Local Semantic Recovery](semantic_recovery/README.md) for the implementation specification.
+See [Local Semantic Recovery](../features/semantic_memory/recovery/README.md) for the implementation specification.
 
 ## Local AI Semantic Fallback (V1 allowed, not currently enabled)
 
@@ -218,7 +218,7 @@ V1 Local AI constraints:
 - `fallback` remains behind the local `LOCAL_AI_FALLBACK_APPROVED` promotion gate and is not production-approved by the current benchmark result
 - enabling execution requires a new measured benchmark after the revised prompt/grounding design; the Phase 0.5 result is not sufficient
 
-See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](LOCAL_AI_ARCHITECTURE_PROPOSAL.md) for
+See [LOCAL_AI_ARCHITECTURE_PROPOSAL.md](../local_ai/architecture/LOCAL_AI_ARCHITECTURE_PROPOSAL.md) for
 the reviewed design and deferred options.
 
 ## Next Optimization Priorities
@@ -440,7 +440,7 @@ windows-siri-agent/
 └── requirements.txt
 ```
 
-This tree is descriptive, not a permission boundary. Security authority remains in the domain/service contracts and in `docs/SECURITY.md`.
+This tree is descriptive, not a permission boundary. Security authority remains in the domain/service contracts and in `docs/core/SECURITY.md`.
 
 ## Key Design Decisions (v2)
 
@@ -489,4 +489,4 @@ Windows exact master volume uses the endpoint scalar setter; failure to access a
 
 `spotify_continue` means repeat off followed by resume while preserving current shuffle state.
 
-No action accepts arbitrary Spotify endpoint URLs, arbitrary HTTP bodies, shell text, executable paths, or client-provided Spotify IDs/URIs. See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md).
+No action accepts arbitrary Spotify endpoint URLs, arbitrary HTTP bodies, shell text, executable paths, or client-provided Spotify IDs/URIs. See [PLAYBACK_CONTROLS.md](../features/spotify/PLAYBACK_CONTROLS.md).

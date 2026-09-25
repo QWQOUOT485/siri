@@ -211,9 +211,9 @@ predeclared gate.
 
 ## Source reports
 
-- [Benchmark plan](LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
+- [Benchmark plan](../../benchmark/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md)
 - [Stage A pilot](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_PILOT_2026-09-21.md)
 - [Stage A Batch 2A](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2A_2026-09-21.md)
 - [Stage A Batch 2B](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_BATCH_2B_2026-09-21.md)
-- [Candidate manifest](../scripts/local_ai_benchmark_manifest.py)
-- [Benchmark harness and result schema](../scripts/local_ai_benchmark_harness.py)
+- [Candidate manifest](../../../../scripts/local_ai_benchmark_manifest.py)
+- [Benchmark harness and result schema](../../../../scripts/local_ai_benchmark_harness.py)

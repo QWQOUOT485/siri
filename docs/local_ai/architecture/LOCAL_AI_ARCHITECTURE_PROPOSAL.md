@@ -6,13 +6,13 @@
 >
 > It is intended for architecture/security review first. Do **not** treat the existence of this file as proof that AI integration has been approved, implemented, tested, or accepted.
 >
-> Current project truth remains in `PROJECT_STATUS.md`. Mandatory security invariants remain in `docs/SECURITY.md`.
+> Current project truth remains in `PROJECT_STATUS.md`. Mandatory security invariants remain in `docs/core/SECURITY.md`.
 >
 > **Historical-scope notice (2026-09-19):** Sections 1–36 contain the
 > pre-PoC proposal and may mention broader intents, AI clarification, or
 > candidate selection. Those earlier concepts are superseded for the first
-> integration by Sections 37–40 and the current `docs/SECURITY.md`,
-> `docs/ARCHITECTURE.md`, and `docs/API.md` contract. Do not use an earlier
+> integration by Sections 37–40 and the current `docs/core/SECURITY.md`,
+> `docs/core/ARCHITECTURE.md`, and `docs/core/API.md` contract. Do not use an earlier
 > section to expand runtime authority.
 
 ## 1. Goal
@@ -1099,7 +1099,7 @@ Keep permanently deterministic-only:
 
 If a vague utterance could mean shutdown or force-close, AI must not turn it into that action.
 
-Changing this rule requires an explicit future security review and corresponding update to `docs/SECURITY.md`.
+Changing this rule requires an explicit future security review and corresponding update to `docs/core/SECURITY.md`.
 
 ## 22. Application commands — out of V1 AI scope
 
@@ -1196,7 +1196,7 @@ Possible response extension:
 
 Do not expose internal Spotify URI or OAuth data in options.
 
-The exact response schema should be reviewed against existing `docs/API.md` before implementation.
+The exact response schema should be reviewed against existing `docs/core/API.md` before implementation.
 
 ### LM Studio reference points
 
@@ -2033,8 +2033,8 @@ If these conditions are not met, keep AI in `shadow` or `off`; do not weaken gro
 ## 38. Second-round architecture and security review (2026-09-19)
 
 This section records the second-round review requested below. The authoritative
-runtime rules are now reflected in `docs/ARCHITECTURE.md`, `docs/SECURITY.md`,
-`docs/API.md`, and `docs/NETWORKING.md`. This proposal remains a design
+runtime rules are now reflected in `docs/core/ARCHITECTURE.md`, `docs/core/SECURITY.md`,
+`docs/core/API.md`, and `docs/core/NETWORKING.md`. This proposal remains a design
 document; it is not proof that Local AI has been implemented or accepted.
 
 ### 38.1 Accepted decisions
@@ -2245,7 +2245,7 @@ In particular, identify:
 - clarification-token weaknesses
 - better separation of domain/service/adapter responsibilities
 - places where deterministic code should be preferred over AI
-- anything that would violate `docs/SECURITY.md`
+- anything that would violate `docs/core/SECURITY.md`
 
 ## 41. Current-scope supersession record (2026-09-19)
 

@@ -29,7 +29,7 @@ are permanently test-only. They must not be used for Stage B training,
 validation, prompt/schema tuning, threshold/calibration fitting, augmentation,
 or manual answer correction. The Stage A report explicitly records that no
 Stage B work was started and that the frozen corpus must remain separate
-([Stage A summary](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L23-L36)).
+([Stage A summary](../stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L23-L36)).
 
 The reviewed released rows explain why adaptation is research-only:
 
@@ -40,7 +40,7 @@ The reviewed released rows explain why adaptation is research-only:
 
 These values are historical Stage A evidence, not a new inference run. See the
 comparison rows and research-candidate rationale in the
-[Stage A synthesis](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L56-L127).
+[Stage A synthesis](../stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L56-L127).
 
 ## 2. Protocol freeze before any compute
 
@@ -66,8 +66,8 @@ held-out test for diagnosis or tuning.
 The existing benchmark-only harness is the compatibility boundary, not a
 production route: it allows only `spotify_play_track` / `unknown`, rejects
 execution-authority fields, and marks missing typed-model slots as unavailable
-([harness](../scripts/local_ai_benchmark_harness.py#L25-L46),
-[typed decision schema](../scripts/local_ai_benchmark_harness.py#L191-L253)).
+([harness](../../../scripts/local_ai_benchmark_harness.py#L25-L46),
+[typed decision schema](../../../scripts/local_ai_benchmark_harness.py#L191-L253)).
 The Stage B extension may add sanitized span evidence and slot metrics, but it
 must preserve the old corpus hash and the old closed intent set.
 
@@ -362,8 +362,8 @@ must not silently load a different architecture
 ([upstream loader compatibility check](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L46-L87)).
 The benchmark-only adapter currently forces `device="cpu"` and exposes only
 the typed intent, with slot evidence explicitly unavailable
-([laya adapter](../scripts/local_ai_stage_a_adapters.py#L423-L464),
-[typed conversion](../scripts/local_ai_stage_a_adapters.py#L286-L314)).
+([laya adapter](../../../scripts/local_ai_stage_a_adapters.py#L423-L464),
+[typed conversion](../../../scripts/local_ai_stage_a_adapters.py#L286-L314)).
 
 ### 5.2 Proposed narrowest adaptation
 
@@ -642,7 +642,7 @@ parser, never an execution engine; only `spotify_play_track` and `unknown`
 are in scope; high-risk/system text is gated before AI; output must pass
 closed-schema validation, deterministic grounding, and policy checks; and
 timeouts, malformed output, backend errors, and model unavailability fail
-closed ([Local AI security](SECURITY.md#L101-L118)).
+closed ([Local AI security](../../core/SECURITY.md#L101-L118)).
 
 The future typed adapter may produce only:
 
@@ -658,7 +658,7 @@ credential. Unknown always carries null slots. No adapter output is a
 `ValidatedAction`; the existing deterministic grounder and policy gate remain
 downstream. Playback controls, app actions, volume, shutdown, force-close,
 firewall, and system administration remain deterministic-only
-([architecture boundary](ARCHITECTURE.md#L158-L216)).
+([architecture boundary](../../core/ARCHITECTURE.md#L158-L216)).
 
 This plan changes no production configuration and cannot set
 `LOCAL_AI_FALLBACK_APPROVED=true`. A future successful report is research
@@ -667,14 +667,14 @@ any separate production task is even considered.
 
 ## 12. Source references
 
-- [Benchmark protocol](LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md#L69-L191)
-- [Stage A final gate and thresholds](LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L136-L210)
+- [Benchmark protocol](../benchmark/LOCAL_AI_DECISION_MODEL_BENCHMARK_PLAN.md#L69-L191)
+- [Stage A final gate and thresholds](../stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md#L136-L210)
 - [laya sequence/model](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/common.py#L45-L128)
 - [laya loader compatibility/device behavior](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L46-L207)
 - [laya typed inference](https://github.com/NandhaKishorM/laya/blob/42626c348753fbb17572a813127df2278a1ec527/laya/agent.py#L218-L313)
 - [decider model/readout](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/model.py#L5-L24)
 - [decider typed inference and system_one](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/infer.py#L23-L165)
 - [decider training path](https://github.com/Mapika/decider/blob/c4daaac28af9fea95d627015cffa2dd5a5926ee6/decider/train.py#L38-L130)
-- [pinned benchmark adapters](../scripts/local_ai_stage_a_adapters.py#L286-L314)
-- [benchmark result schema](../scripts/local_ai_benchmark_harness.py#L191-L253)
-- [security invariants](SECURITY.md#L101-L118)
+- [pinned benchmark adapters](../../../scripts/local_ai_stage_a_adapters.py#L286-L314)
+- [benchmark result schema](../../../scripts/local_ai_benchmark_harness.py#L191-L253)
+- [security invariants](../../core/SECURITY.md#L101-L118)

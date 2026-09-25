@@ -4,6 +4,40 @@
 
 ## Current Phase
 
+### 2026-09-25 Stage B Laya model-load blocked by cp950 encoding
+
+RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
+dependency bootstrap passed. Pinned Laya model and source identity verified.
+
+The first Laya model-load attempt was **blocked before device residency** by a
+Windows cp950 decoding error. Root cause identified:
+
+`
+LAYA_CP950_ROOT_CAUSE_IDENTIFIED
+classification = OTHER_DEPENDENCY_CP950
+`
+
+PyTorch `torch/_inductor/utils.py::load_template()` reads
+`torch/_inductor/kernel/templates/cutedsl_mm_grouped.py.jinja` without an
+explicit UTF-8 encoding on Windows, causing the system cp950 codec to fail at
+UTF-8 byte 0xe2 at offset 616. The cp950 fix itself is a separate task.
+
+**Current blockers (in gate order):**
+
+1. Narrow UTF-8 subprocess/environment compatibility fix validation
+2. Resume Laya model-load / device-readback gate
+3. Model residency / parameter device / forward/backward — unproven
+4. Decider — separately unqualified
+
+**Authority flags** (all remain `false`):
+
+- `training_authorized=false`
+- `model_compute_authorized=false`
+- `semantic_memory_enabled=false`
+- `local_ai_fallback_approved=false`
+
+See [GitHub Issue #68](https://github.com/QWQOUOT485/siri/issues/68) for
+detailed Stage B Laya blocker history.
 ### 2026-09-24 Stage B held-out sealed; RX 9070 XT basic tensor smoke passed
 
 Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
@@ -168,7 +202,7 @@ needs_correction, partial rejection, full acceptance only when all six rows
 are accepted, otherwise partial review or unreviewed. No decision is
 fabricated, propagated, adjudicated, or automatically resolved.
 
-[`docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
+[`docs/local_ai/stage_b/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md`](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_INDEPENDENT_REVIEW_GUIDE.md)
 now targets the frozen v6 source identities while preserving the same review
 workflow. The historical v4 and v5 manifests remain in their original
 directories. This is **not** the final Stage B corpus: v4 and v5 cannot
@@ -211,14 +245,14 @@ advisory only, and final protocol validation compares against the explicit
 literal reviewed config hash rather than deriving the identity from the
 mutable default.
 It remains offline and benchmark-only; the real corpus-build protocol is recorded in
-[`docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md`](docs/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md).
+[`docs/local_ai/stage_b/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md`](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_CORPUS_BUILD_PROTOCOL.md).
 The new-branch source evidence is **57 focused tests** and **422 unit tests**
 passed, with compileall and git diff checks passing; this remains source/unit
 evidence only, not real corpus, compute, production, Windows, Spotify, Siri, or
 model acceptance.
 
 Memory RAG / Personal RAG is documented as future research in
-[`docs/FUTURE_ROADMAP.md`](docs/FUTURE_ROADMAP.md) and `TASKS.md`. It is not
+[`docs/roadmap/FUTURE_ROADMAP.md`](docs/roadmap/FUTURE_ROADMAP.md) and `TASKS.md`. It is not
 implemented; current structured Semantic Memory remains the high-trust layer,
 retrieval remains untrusted evidence, and no vector storage, embeddings, or RAG
 runtime exists.
@@ -226,7 +260,7 @@ runtime exists.
 Stage A is complete as an evidence inventory. The control plus all eight fixed
 candidates have a reviewed run, a reviewed historical result, or an explicit
 blocker. The final comparison and gate are recorded in
-[`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md).
+[`docs/local_ai/stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/local_ai/stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md).
 
 The formal result is **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**.
 The control remains the only row with complete slot/full-semantic evidence
@@ -235,7 +269,7 @@ expected-unknown false acceptance). Typed candidates are not equivalent to
 that control. `laya` and `decider` remain architecture-only research
 candidates; neither is a Stage B finalist. The separate design/corpus/training
 plan is recorded in
-[`docs/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md`](docs/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md).
+[`docs/local_ai/stage_b/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md`](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md).
 No adaptation, training, fine-tuning, or new model download has begun.
 
 All typed routes expose no track/artist/album slots. `systemone-lite`,
@@ -324,22 +358,22 @@ Semantic Memory production enablement and Local AI promotion remain disabled.
   live continuation acceptance remains blocked/unproven. Siri voice acceptance
   was not performed; Semantic Memory remains disabled and Local AI promotion
   remains unapproved. Evidence is recorded in
-  [`docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
+  [`docs/features/spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_CANDIDATE_RECOVERY_RUNTIME_ACCEPTANCE_2026-09-20.md).
 
 ## Source of Truth
 
 依序閱讀：
 
-1. `docs/SECURITY.md` — 最高優先
-2. `docs/SPEC.md`
-3. `docs/ARCHITECTURE.md`
-4. 任務相關文件：`docs/SPOTIFY.md`、`docs/API.md`、`docs/WINDOWS.md`、`docs/NETWORKING.md`、`docs/SIRI_SHORTCUT.md`
+1. `docs/core/SECURITY.md` — 最高優先
+2. `docs/core/SPEC.md`
+3. `docs/core/ARCHITECTURE.md`
+4. 任務相關文件：`docs/features/spotify/SPOTIFY.md`、`docs/core/API.md`、`docs/core/WINDOWS.md`、`docs/core/NETWORKING.md`、`docs/features/siri_shortcut/SIRI_SHORTCUT.md`
 5. `TASKS.md`
-6. `docs/TESTING.md`
+6. `docs/core/TESTING.md`
 
 `PROJECT_STATUS.md` 只描述目前 implementation / acceptance 狀態，不能覆蓋安全規格。
 
-`docs/SOURCE_SPEC.md` 是唯讀歷史快照，不再是現行規格的 final arbiter。這個 authority blocker 已於 2026-09-19 由 `AGENTS.md` 與現行規格順序明確解決。
+`docs/core/SOURCE_SPEC.md` 是唯讀歷史快照，不再是現行規格的 final arbiter。這個 authority blocker 已於 2026-09-19 由 `AGENTS.md` 與現行規格順序明確解決。
 
 ## v1.0 Scope Freeze
 
@@ -351,7 +385,7 @@ historical base，不是目前的 `main`。本次 scope freeze **只整理文件
 implementation，也不新增 `spotify_continue` live retry 或 provider workaround**。
 
 v1.0 retained scope、known limitation、proposed blockers 與 v1.1 deferred
-items 的唯一整理見 [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FREEZE_2026-09-20.md)。
+items 的唯一整理見 [`docs/releases/v1/V1_SCOPE_FREEZE_2026-09-20.md`](docs/releases/v1/V1_SCOPE_FREEZE_2026-09-20.md)。
 `spotify_continue` 仍是 **NOT ACCEPTED**；`LOCAL_SEMANTIC_MEMORY_ENABLED`
 與 `LOCAL_AI_FALLBACK_APPROVED` 必須維持 `false`。
 
@@ -366,7 +400,7 @@ items 的唯一整理見 [`docs/V1_SCOPE_FREEZE_2026-09-20.md`](docs/V1_SCOPE_FR
 
 The final installed runtime gate passed against reviewed `main`
 `fbea4ba753fab6b672a6e4d24488381128df69bb` after PR #30 merged. The sanitized
-evidence is recorded in [`docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md).
+evidence is recorded in [`docs/releases/v1/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md`](docs/releases/v1/V1_RELEASE_CUT_RUNTIME_GATE_2026-09-20.md).
 
 - Installed Agent startup completed without a startup traceback.
 - Current loopback `GET /health` returned HTTP 200 with only `ok`, `status`,
@@ -462,7 +496,7 @@ Siri Text
   - 第二輪語音選擇回送 token
   - server-side trusted candidate selection
   - 真實 Spotify 播放成功
-- clarification 穩定流程已記錄在 `docs/SIRI_SHORTCUT.md`。
+- clarification 穩定流程已記錄在 `docs/features/siri_shortcut/SIRI_SHORTCUT.md`。
 - 換 API key 後的 iPhone → Agent → Spotify playback regression 已通過。
 
 ### Spotify deterministic path
@@ -501,7 +535,7 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Library timeout / 401 / 403 / 429 / malformed response 會安全退回原 deterministic 順序。
 - saved status 不進 AI、Shortcut 或一般 API response。
 
-2026-09-20 current-source read-only acceptance probe 使用固定 20 個 bare-title queries，加上最多 50 個只在記憶體中使用的 Recently Played title seed；得到 20 個 genuine ambiguity、1 個 saved membership、0 個 library error、0 個 API error。Accepted case 中 saved candidate 從原始 Search position 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Recently Played seed 只用來擴大搜尋語料，saved probe 的 ranking client 只暴露 Search 與 Library membership，因此這是 saved-only reorder evidence。Slice A 已取得 bounded real-account acceptance，但不代表所有未來搜尋語料都一定有 saved reorder。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py --from-recent`；詳細精確結果見 [`docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
+2026-09-20 current-source read-only acceptance probe 使用固定 20 個 bare-title queries，加上最多 50 個只在記憶體中使用的 Recently Played title seed；得到 20 個 genuine ambiguity、1 個 saved membership、0 個 library error、0 個 API error。Accepted case 中 saved candidate 從原始 Search position 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Recently Played seed 只用來擴大搜尋語料，saved probe 的 ranking client 只暴露 Search 與 Library membership，因此這是 saved-only reorder evidence。Slice A 已取得 bounded real-account acceptance，但不代表所有未來搜尋語料都一定有 saved reorder。可重跑方法位於 `scripts/spotify_saved_ranking_acceptance.py --from-recent`；詳細精確結果見 [`docs/features/spotify/evidence/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_SAVED_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Top Tracks / Top Artists source slice
 
@@ -509,14 +543,14 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - Top track / artist 只在既有最多三個 trusted genuine-ambiguity candidates 內作排序 evidence。
 - saved → top track → top artist → deterministic relevance → popularity 的順序只影響 candidate ordering；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - malformed 或失敗的 top lookup 只忽略該訊號；Library lookup 失敗時整體回到原 deterministic order。
-- source/unit regression 已完成。2026-09-20 token 已重新授權並包含 `user-top-read`、`user-read-recently-played` 與 `user-library-read`；current-source read-only probe 使用固定 20 個 bare-title 加上 bounded in-memory 的 50 個 Top Track title seed，得到 34 個 genuine ambiguity、34 個可比對 raw candidate set、0 個 API/library error，並觀察到 1 個 `top_track` candidate 從原始位置 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Top Artist data 在 19 個 candidates 命中，但本次沒有獨立的 Top-Artist-only reorder，因此目前是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。詳細結果見 [`docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。
+- source/unit regression 已完成。2026-09-20 token 已重新授權並包含 `user-top-read`、`user-read-recently-played` 與 `user-library-read`；current-source read-only probe 使用固定 20 個 bare-title 加上 bounded in-memory 的 50 個 Top Track title seed，得到 34 個 genuine ambiguity、34 個可比對 raw candidate set、0 個 API/library error，並觀察到 1 個 `top_track` candidate 從原始位置 1 提升到 final position 0，ambiguity 保留，沒有 playback 或 Library write。Top Artist data 在 19 個 candidates 命中，但本次沒有獨立的 Top-Artist-only reorder，因此目前是 **partial acceptance**，不可宣稱 Top Artist standalone real-account acceptance。詳細結果見 [`docs/features/spotify/evidence/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_TOP_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify Recently Played source slice
 
 - 固定呼叫 `GET /me/player/recently-played`，只使用 server-owned track ID / artist name 作為既有最多三個 genuine-ambiguity candidates 的 ranking evidence。
 - 排序順序維持 saved → top track → top artist → recent track → recent artist → deterministic relevance → popularity；explicit artist / album / version 仍優先，ambiguity 不會變成自動播放。
 - response limit 固定 bounded；empty/malformed history、timeout、401、403、429、缺少 scope 或 optional method 都安全忽略並退回既有 deterministic ranking。
-- source/unit regression 已完成；bounded probe 的 candidate/membership boundary 已修正為比對 server-owned URI set，不受個人化排序改變順序影響。2026-09-20 重新授權 token 的真實只讀 run 完成了 20 個 genuine ambiguity / 20 個 raw candidate set，Recently Played 命中 6 個 candidates，但沒有 saved/top signal 缺席且 recent-only 重排的 qualifying case；Search、Library、Top、Recently Played error 均為 0。Recently Played real-account acceptance 仍未通過，沒有播放或 Library write。精確證據見 [`docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md)。
+- source/unit regression 已完成；bounded probe 的 candidate/membership boundary 已修正為比對 server-owned URI set，不受個人化排序改變順序影響。2026-09-20 重新授權 token 的真實只讀 run 完成了 20 個 genuine ambiguity / 20 個 raw candidate set，Recently Played 命中 6 個 candidates，但沒有 saved/top signal 缺席且 recent-only 重排的 qualifying case；Search、Library、Top、Recently Played error 均為 0。Recently Played real-account acceptance 仍未通過，沒有播放或 Library write。精確證據見 [`docs/features/spotify/evidence/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_RECENT_RANKING_ACCEPTANCE_2026-09-20.md)。
 
 ### Spotify quota hardening and personalization read reduction
 
@@ -531,8 +565,8 @@ Spotify OAuth 使用 Authorization Code with PKCE。真實帳號 token refresh �
 - current source 已加入 closed actions：`spotify_shuffle_on/off`、`spotify_repeat_off/track/context`、`spotify_continue`；parser、`SpotifyService`、`SpotifyPlayer` 與 fixed Spotify endpoints `/me/player/shuffle`、`/me/player/repeat` 已接通。
 - `spotify_continue` 僅執行 repeat off → resume，保留既有 shuffle，不讀取或重建 queue/context；401/403/429、無裝置與 repeat 失敗都維持 bounded fail-closed behavior。
 - source/unit regression、security schema coverage、compileall、pip check 與 diff check 已完成；current-source full suite 是 **306 passed**。PR #26 post-deployment installed-host verification 另有 targeted Spotify/security **169 passed**、installed full pytest **306 passed**、compileall passed、pip check passed 與 loopback `/health` HTTP 200。先前 installed-host full suite 的 **303 passed** 僅為 earlier installed regression，不是 latest installed full suite；各 run 的既有 dependency deprecation warnings 仍分開看待。Installed source parity 已核對 157 個非敏感文件，disabled loopback `/health` smoke 通過。
-- 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
-- 2026-09-20 bounded diagnosis：targeted source/mock differential 顯示 active device、無 transfer/queue/readback 時，empty-body `PUT /me/player/play` 已足以重現 fail-closed 403；同 endpoint 的 trusted named-track body 在 mock 與 installed historical log 均成功。官方契約允許 empty body，因此目前沒有足夠證據宣稱 source request bug。PR #26 的 safe/bounded observability 已 review、merge、部署；其後在使用者手動開啟 Spotify Desktop 後，installed Agent 的一次 read-only preflight 確認 1 個 usable non-restricted、1 個 active、selected active，且 repeat=off、shuffle=false、正在播放並有 item。唯一一次 `就一直播下去` command 仍回傳 `SPOTIFY_FORBIDDEN`，sanitized `provider_reason=UNKNOWN`；因 403 沒有 post-command readback、retry 或 transfer，沒有 429/`QUOTA_EXCEEDED`。這排除了「本次沒有 active device」作為充分解釋，但仍未證明 source bug 或 provider root cause；精確診斷見 [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
+- 2026-09-20 installed runtime bounded real Spotify acceptance：shuffle on/off、repeat track/context/off 均成功；`spotify_continue` 的 repeat-off 後 readback 保留 `shuffle=true` 且仍播放，但整體回應為 `SPOTIFY_FORBIDDEN`，因此 continue 仍是 **NOT ACCEPTED / partial evidence**，未重試。測試後已恢復起始的 shuffle=false、repeat=track 狀態。沒有遇到 429/`QUOTA_EXCEEDED`，也未做 Siri voice E2E；精確 evidence 見 [`docs/features/spotify/evidence/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_STATE_CONTROLS_RUNTIME_ACCEPTANCE_2026-09-20.md)。
+- 2026-09-20 bounded diagnosis：targeted source/mock differential 顯示 active device、無 transfer/queue/readback 時，empty-body `PUT /me/player/play` 已足以重現 fail-closed 403；同 endpoint 的 trusted named-track body 在 mock 與 installed historical log 均成功。官方契約允許 empty body，因此目前沒有足夠證據宣稱 source request bug。PR #26 的 safe/bounded observability 已 review、merge、部署；其後在使用者手動開啟 Spotify Desktop 後，installed Agent 的一次 read-only preflight 確認 1 個 usable non-restricted、1 個 active、selected active，且 repeat=off、shuffle=false、正在播放並有 item。唯一一次 `就一直播下去` command 仍回傳 `SPOTIFY_FORBIDDEN`，sanitized `provider_reason=UNKNOWN`；因 403 沒有 post-command readback、retry 或 transfer，沒有 429/`QUOTA_EXCEEDED`。這排除了「本次沒有 active device」作為充分解釋，但仍未證明 source bug 或 provider root cause；精確診斷見 [`docs/features/spotify/evidence/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md)。
 - Installed alignment 保留 `.env`、local config、runtime data、Spotify token、logs、work/outputs；live token lifecycle 的正常 refresh 可能更新 token JSON，但沒有將 token 值寫入報告。Local AI controls requests 維持 `unsupported_domain`、未進 executable AI path。
 - `spotify_seek`、`spotify_set_volume`、`spotify_like_current`、`spotify_unlike_current` 尚未在本批實作；Local AI allowlist 維持不擴張。
 
@@ -620,15 +654,15 @@ Production LM Studio endpoint 必須是同機 loopback `127.0.0.1`；LAN endpoin
 
 目前完整 source test run為 **306 passed**，另有 2 個既有 dependency deprecation warnings；本次 compileall、pip check、git diff check 也都通過。GitHub 目前沒有對 HEAD 提供 Actions workflow / commit status，因此這些是 repo 記錄的本機 source evidence，不等於 hosted CI。
 
-新增的 `docs/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
+新增的 `docs/local_ai/historical/LOCAL_AI_FAIL_CLOSED_MATRIX_2026-09-20.md` 與 `tests/unit/test_local_ai_promotion_matrix.py` 固定記錄 malformed output、connection/timeout、busy、oversized response、ungrounded track、invented optional slots 與 policy rejection 的 source/unit fail-closed 結果；targeted Local AI suite 為 **38 passed**。這補齊可重跑的本機矩陣，但不等於 live transport fault injection。
 
-2026-09-20 的 loopback benchmark 三個模型、兩種模式的固定 corpus rows 已完成；完整 sanitized evidence 位於 `docs/LOCAL_AI_BENCHMARK_2026-09-20.md`，中斷過程仍保留在 `docs/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 已完成但為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 Windows/Spotify/Siri acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+2026-09-20 的 loopback benchmark 三個模型、兩種模式的固定 corpus rows 已完成；完整 sanitized evidence 位於 `docs/local_ai/benchmark/historical/LOCAL_AI_BENCHMARK_2026-09-20.md`，中斷過程仍保留在 `docs/local_ai/benchmark/historical/LOCAL_AI_BENCHMARK_2026-09-20_PARTIAL.md`。本次未改變 production AI 設定，也沒有模型推薦：`qwen3.5-0.8b` 兩種模式均無法產生可解析 JSON；`qwen2.5-coder-1.5b-instruct` 兩種模式為 95.24% supported semantic、100% semantic-retry；`qwen3-4b` strict-schema row 已完成但為 28.57% supported semantic、16.67% semantic-retry。所有已完成 rows 的 observed false execution 與 post-grounding false acceptance 都是 0%，但這仍不是 Windows/Spotify/Siri acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
-2026-09-20 real Windows Agent 已完成 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；結果與 evidence boundary 記錄在 `docs/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probe 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前以 source/unit evidence 為主，仍不是完整 promotion acceptance。該 shadow report 記錄的是 installed alignment 之前的 deployment snapshot；在後續 alignment 後，Installed Agent 的 Local AI / runtime source hash 已與 current tree 相同。read-only runtime 設定仍為 `shadow`、loopback、`qwen2.5-coder-1.5b-instruct`、2 秒、32 KiB、`LOCAL_AI_FALLBACK_APPROVED=false`，但 live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 仍未完成，不能視為 exact promotion acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
+2026-09-20 real Windows Agent 已完成 loopback/shadow safe、hostile、resolver-retry、server-owned clarification probes；結果與 evidence boundary 記錄在 `docs/local_ai/historical/LOCAL_AI_SHADOW_ACCEPTANCE_2026-09-20.md`。live probe 沒有讓 AI 結果形成 executable action；malformed/timeout/busy/oversized/grounding edge cases目前以 source/unit evidence 為主，仍不是完整 promotion acceptance。該 shadow report 記錄的是 installed alignment 之前的 deployment snapshot；在後續 alignment 後，Installed Agent 的 Local AI / runtime source hash 已與 current tree 相同。read-only runtime 設定仍為 `shadow`、loopback、`qwen2.5-coder-1.5b-instruct`、2 秒、32 KiB、`LOCAL_AI_FALLBACK_APPROVED=false`，但 live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 仍未完成，不能視為 exact promotion acceptance。`LOCAL_AI_FALLBACK_APPROVED` 仍必須維持 `false`。
 
-新的 exact-evidence independent review 位於 `docs/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
+新的 exact-evidence independent review 位於 `docs/local_ai/historical/LOCAL_AI_PROMOTION_REVIEW_2026-09-20.md`，結論為 **NO-GO**：live transport fault matrix、Siri/real-account acceptance 與 exact executable-fallback promotion boundary 尚未全部完成。新的 source/unit matrix 只補強 B1 的本機證據，沒有清除上述 live blocker。這不是模型推薦，也不改變 `LOCAL_AI_FALLBACK_APPROVED=false`。
 
-2026-09-21 Stage A final synthesis is recorded in [`docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md)。固定八個候選均有 reviewed result 或 explicit blocker，正式 gate 為 **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**。`laya` 與 `decider` 僅列為 architecture-only future research candidates，不是 finalist，沒有開始 adaptation/training。全部 typed routes 沒有 track/artist/album slots；非 control 的 RX 9070 XT backend 仍 blocked，CPU timing 不是 GPU qualification。Summary 使用既有 pilot、Batch 2A、Batch 2B evidence，沒有重跑 inference；`LOCAL_AI_FALLBACK_APPROVED=false`、production app 與 runtime authority 均未改變。
+2026-09-21 Stage A final synthesis is recorded in [`docs/local_ai/stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md`](docs/local_ai/stage_a/evidence/LOCAL_AI_DECISION_MODEL_BENCHMARK_STAGE_A_SUMMARY_2026-09-21.md)。固定八個候選均有 reviewed result 或 explicit blocker，正式 gate 為 **NO STAGE B FINALIST FROM RELEASED STAGE A MODELS**。`laya` 與 `decider` 僅列為 architecture-only future research candidates，不是 finalist，沒有開始 adaptation/training。全部 typed routes 沒有 track/artist/album slots；非 control 的 RX 9070 XT backend 仍 blocked，CPU timing 不是 GPU qualification。Summary 使用既有 pilot、Batch 2A、Batch 2B evidence，沒有重跑 inference；`LOCAL_AI_FALLBACK_APPROVED=false`、production app 與 runtime authority 均未改變。
 
 ### Promotion gate
 
@@ -648,7 +682,7 @@ set `LOCAL_AI_FALLBACK_APPROVED=true`.
 
 ## Local Semantic Recovery / Alias Memory
 
-Phase 1 source implementation 已完成一個可 review 的 Slice 1–10 vertical implementation；2026-09-20 的 current-source Windows lifecycle harness 也已通過。current Phase 1 source 已以不覆蓋 secrets / local config / runtime data 的方式 staged 到 installed Agent，並完成 installed-host regression 與 disabled loopback smoke；這仍不是 real-world acceptance complete。詳細 evidence 與界線見 [`docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md) 與 [`docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
+Phase 1 source implementation 已完成一個可 review 的 Slice 1–10 vertical implementation；2026-09-20 的 current-source Windows lifecycle harness 也已通過。current Phase 1 source 已以不覆蓋 secrets / local config / runtime data 的方式 staged 到 installed Agent，並完成 installed-host regression 與 disabled loopback smoke；這仍不是 real-world acceptance complete。詳細 evidence 與界線見 [`docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md`](docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_RUNTIME_ACCEPTANCE_2026-09-20.md) 與 [`docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
 
 Phase 1 原則：
 
@@ -667,9 +701,9 @@ Phase 1 原則：
 - source/security/concurrency regression 已納入完整 pytest suite；memory 預設仍 disabled，`LOCAL_SEMANTIC_MEMORY_FUZZY_AUTO_RETRY` 以 code-level false gate fail closed。
 - current-source Windows harness 已驗證 disabled startup、fresh SQLite schema v1/FK、controlled enabled startup、restart persistence/RAM rebuild、corrupt/unavailable fallback、fuzzy candidate-only、conflict 與 8-way concurrent confirmation；exact lookup 1,000 次的 P50/P95 為 0.0174/0.0231 ms（temporary fixture，非 installed-host benchmark）。
 - current-source staged runtime 已用真實 Spotify 帳號完成 token refresh、trusted canonical search、server-owned clarification selection、實際 playback、MemoryLearner confirmation、restart persistence 與第二次 exact hit（exact=1、fuzzy=0）；但 candidate 是由 canonical trusted search 控制性 seed，不能代替 ASR alias 的 first-occurrence candidate recovery。
-- 真實 `Sad overlxrd` first-occurrence path（使用帳號實際存在的 `死亡不是生命的終點`）仍回傳 `SPOTIFY_TRACK_NOT_FOUND`、沒有 clarification candidates；installed Windows Agent 現已包含 current Phase 1 Semantic Memory modules/config，disabled runtime smoke 也確認未建立 SQLite artifact，但 iPhone Siri voice E2E 與 installed-host real Spotify acceptance 尚未執行，因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。詳細 follow-up 見 [`docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md) 與 [`docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
+- 真實 `Sad overlxrd` first-occurrence path（使用帳號實際存在的 `死亡不是生命的終點`）仍回傳 `SPOTIFY_TRACK_NOT_FOUND`、沒有 clarification candidates；installed Windows Agent 現已包含 current Phase 1 Semantic Memory modules/config，disabled runtime smoke 也確認未建立 SQLite artifact，但 iPhone Siri voice E2E 與 installed-host real Spotify acceptance 尚未執行，因此仍不可設定 `LOCAL_SEMANTIC_MEMORY_ENABLED=true`。詳細 follow-up 見 [`docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md`](docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_REAL_ACCEPTANCE_2026-09-20.md) 與 [`docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md`](docs/features/semantic_memory/evidence/SEMANTIC_MEMORY_INSTALLED_ALIGNMENT_2026-09-20.md)。
 
-規格位於 `docs/semantic_recovery/`。
+規格位於 `docs/features/semantic_memory/recovery/`。
 
 ## Not Yet Proven / Remaining Work
 
@@ -682,7 +716,7 @@ Phase 1 原則：
      `SPOTIFY_FORBIDDEN` and sanitized `provider_reason=UNKNOWN`.
    - No retry, transfer, post-403 readback, 429, or `QUOTA_EXCEEDED` occurred.
      No source bug or safe workaround is proven; do not retry for scope freeze.
-   - See [`docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md).
+   - See [`docs/features/spotify/evidence/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md`](docs/features/spotify/evidence/SPOTIFY_CONTINUE_RESUME_403_DIAGNOSIS_2026-09-20.md).
 
 ### Optional evidence gaps, not v1.0 blockers
 
@@ -733,7 +767,7 @@ These remain valid evidence boundaries but are **not v1.0 release blockers**:
 ### Current release-gate order
 
 ```text
-1. Preserve docs/SECURITY.md invariants and closed deterministic authority.
+1. Preserve docs/core/SECURITY.md invariants and closed deterministic authority.
 2. Keep the accepted core Windows/Siri/Spotify flows and installed regression
    evidence intact at the release cut.
 3. Keep spotify_continue as a documented fail-closed known limitation.

@@ -133,7 +133,7 @@ Server flow:
 
 A successful response may include safe display metadata such as track title and artist, but must not expose OAuth tokens or internal secrets.
 
-Spotify authorization and device behavior are specified in [SPOTIFY.md](SPOTIFY.md).
+Spotify authorization and device behavior are specified in [SPOTIFY.md](../features/spotify/SPOTIFY.md).
 
 Don't make iPhone parse many different formats.
 
@@ -198,4 +198,4 @@ The HTTP client cannot submit arbitrary Spotify URL/URI/track ID, arbitrary repe
 
 `spotify_continue` means repeat off + resume and preserves the current shuffle state.
 
-See [PLAYBACK_CONTROLS.md](PLAYBACK_CONTROLS.md) for the implementation contract.
+See [PLAYBACK_CONTROLS.md](../features/spotify/PLAYBACK_CONTROLS.md) for the implementation contract.

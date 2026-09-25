@@ -8,11 +8,11 @@
 
 1. `AGENTS.md` — coding agent 規則與文件優先級
 2. `PROJECT_STATUS.md` — 現在做到哪、哪些還沒驗收
-3. `docs/SECURITY.md` — 不可突破的安全界線
+3. `docs/core/SECURITY.md` — 不可突破的安全界線
 4. `TASKS.md` — 現在真正的工作順序
 5. 任務相關規格
 
-不要從 `docs/SOURCE_SPEC.md` 推導目前行為；它是唯讀歷史快照。
+不要從 `docs/core/SOURCE_SPEC.md` 推導目前行為；它是唯讀歷史快照。
 
 ## Repository Map
 
@@ -32,18 +32,16 @@ tests/
                real Windows safe/read-only integration checks
 
 docs/
-  SECURITY.md          highest-priority invariants
-  SPEC.md              active product requirements
-  ARCHITECTURE.md      active architecture
-  API.md               HTTP contract
-  WINDOWS.md           Windows runtime/adapters
-  NETWORKING.md        LAN/firewall rules
-  SPOTIFY.md           Spotify integration
-  PLAYBACK_CONTROLS.md deterministic playback-state controls
-  SIRI_SHORTCUT.md     current iPhone Shortcut flow
-  semantic_recovery/   approved semantic-memory design
-  LOCAL_AI_*           Local AI design/review/benchmark material
-  SOURCE_SPEC.md       historical read-only source snapshot
+  README.md              documentation index
+  core/                  SECURITY, SPEC, ARCHITECTURE, API, TESTING, WINDOWS, NETWORKING, etc.
+  features/
+    spotify/             SPOTIFY, PLAYBACK_CONTROLS, evidence/
+    siri_shortcut/       SIRI_SHORTCUT, evidence/
+    semantic_memory/     evidence/, recovery/
+  local_ai/              architecture/, benchmark/, stage_a/, stage_b/, historical/
+  releases/v1/           scope freeze, release gate, identity acceptance
+  roadmap/               FUTURE_ROADMAP, OPEN_QUESTIONS
+  repository/            REPO_GUIDE
 ```
 
 ## Main Runtime Flow
@@ -80,9 +78,9 @@ Local AI is never an execution engine.
 
 Read:
 
-- `docs/SECURITY.md`
-- `docs/WINDOWS.md`
-- `docs/ARCHITECTURE.md`
+- `docs/core/SECURITY.md`
+- `docs/core/WINDOWS.md`
+- `docs/core/ARCHITECTURE.md`
 
 Preserve:
 
@@ -92,9 +90,9 @@ Preserve:
 
 Read:
 
-- `docs/SPOTIFY.md`
-- `docs/PLAYBACK_CONTROLS.md`
-- `docs/SECURITY.md`
+- `docs/features/spotify/SPOTIFY.md`
+- `docs/features/spotify/PLAYBACK_CONTROLS.md`
+- `docs/core/SECURITY.md`
 
 Track/artist/album text is search data only. Client input must never become a trusted Spotify URI, arbitrary endpoint or execution target.
 
@@ -102,7 +100,7 @@ Track/artist/album text is search data only. Client input must never become a tr
 
 Read:
 
-- `docs/SIRI_SHORTCUT.md`
+- `docs/features/siri_shortcut/SIRI_SHORTCUT.md`
 - `PROJECT_STATUS.md`
 
 The accepted clarification flow depends on the server-owned token and second dictation within the same Shortcut run.
@@ -111,12 +109,12 @@ The accepted clarification flow depends on the server-owned token and second dic
 
 Read all of:
 
-- `docs/semantic_recovery/README.md`
-- `docs/semantic_recovery/RECOVERY_PIPELINE.md`
-- `docs/semantic_recovery/MEMORY_MODEL.md`
-- `docs/semantic_recovery/SECURITY.md`
-- `docs/semantic_recovery/IMPLEMENTATION_PLAN.md`
-- `docs/semantic_recovery/TESTING.md`
+- `docs/features/semantic_memory/recovery/README.md`
+- `docs/features/semantic_memory/recovery/RECOVERY_PIPELINE.md`
+- `docs/features/semantic_memory/recovery/MEMORY_MODEL.md`
+- `docs/features/semantic_memory/recovery/SECURITY.md`
+- `docs/features/semantic_memory/recovery/IMPLEMENTATION_PLAN.md`
+- `docs/features/semantic_memory/recovery/TESTING.md`
 
 Only exact confirmed non-conflicted aliases may auto-canonicalize in Phase 1.
 
@@ -124,8 +122,8 @@ Only exact confirmed non-conflicted aliases may auto-canonicalize in Phase 1.
 
 Start with current active rules:
 
-- `docs/SECURITY.md`
-- `docs/ARCHITECTURE.md`
+- `docs/core/SECURITY.md`
+- `docs/core/ARCHITECTURE.md`
 - `PROJECT_STATUS.md`
 
 Then use the Local AI proposal/review/runbook as supporting design/evidence.
@@ -146,7 +144,7 @@ Do not treat all green tests as the same kind of acceptance.
 
 ## Before Finishing A Change
 
-- run relevant tests from `docs/TESTING.md`
+- run relevant tests from `docs/core/TESTING.md`
 - check security invariants
 - do not expose secrets
 - if real project state changed, update `PROJECT_STATUS.md`

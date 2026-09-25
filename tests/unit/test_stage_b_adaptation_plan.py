@@ -7,7 +7,13 @@ import re
 from pathlib import Path
 
 
-PLAN_PATH = Path(__file__).resolve().parents[2] / "docs" / "LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md"
+PLAN_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "local_ai"
+    / "stage_b"
+    / "LOCAL_AI_STAGE_B_ADAPTATION_PLAN.md"
+)
 
 
 def _plan_text() -> str:

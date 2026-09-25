@@ -62,7 +62,7 @@ near-duplicate validation passes.
 ## 3. Near-duplicate policy
 
 The implementation is in
-[`scripts/local_ai_stage_b_corpus.py`](../scripts/local_ai_stage_b_corpus.py).
+[`scripts/local_ai_stage_b_corpus.py`](../../../scripts/local_ai_stage_b_corpus.py).
 It uses only the Python standard library and has no network, subprocess, model,
 Spotify, LM Studio, or Windows dependency.
 

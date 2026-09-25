@@ -14,7 +14,7 @@ This document traces every requirement from the original specification ([SOURCE_
 
 | Source | Title | Destination | Status | Notes |
 |--------|-------|-------------|--------|-------|
-| #0 | GitHub / OSS research first | [SPEC.md](SPEC.md) §Dependencies, [AGENTS.md](../AGENTS.md) §External Libraries | Migrated | — |
+| #0 | GitHub / OSS research first | [SPEC.md](SPEC.md) §Dependencies, [AGENTS.md](../../AGENTS.md) §External Libraries | Migrated | — |
 | #1 | Project Goal — Siri controls Windows PC | [SPEC.md](SPEC.md) §Project Goal, [README.md](../README.md) | Migrated | — |
 | #2 | No public network solutions | [NETWORKING.md](NETWORKING.md) §No Public Network, [SECURITY.md](SECURITY.md) §LAN Security | Migrated | Intentionally Duplicated |
 | #3 | Siri voice commands | [SPEC.md](SPEC.md) §Siri Usage Experience | Migrated | — |
@@ -47,7 +47,7 @@ This document traces every requirement from the original specification ([SOURCE_
 | #30 | Optional LAN Discovery (mDNS) | [NETWORKING.md](NETWORKING.md) §Optional LAN Discovery | Migrated | — |
 | #31 | Authentication requirement | [SECURITY.md](SECURITY.md) §Authentication | Migrated | — |
 | #32 | API Key storage | [SECURITY.md](SECURITY.md) §Authentication | Migrated | — |
-| #33 | iPhone Shortcut authentication | [SECURITY.md](SECURITY.md) §Authentication, [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) | Migrated | — |
+| #33 | iPhone Shortcut authentication | [SECURITY.md](SECURITY.md) §Authentication, [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) | Migrated | — |
 | #34 | HTTP / HTTPS | [NETWORKING.md](NETWORKING.md) §HTTP vs HTTPS | Migrated | — |
 | #35 | API endpoints list | [API.md](API.md) | Migrated | — |
 | #36 | /health | [API.md](API.md) §GET /health, [SECURITY.md](SECURITY.md) §/health Endpoint Security | Migrated | — |
@@ -78,11 +78,11 @@ This document traces every requirement from the original specification ([SOURCE_
 | #61 | Windows auto-start | [WINDOWS.md](WINDOWS.md) §Auto-Start | Superseded by #102 | #102 specifies Task Scheduler only |
 | #62 | System tray (nice-to-have) | [SPEC.md](SPEC.md) §System Tray | Migrated | — |
 | #63 | Status UI (optional) | [SPEC.md](SPEC.md) §Status UI | Migrated | — |
-| #64 | iPhone Shortcut setup guide | [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) §Shortcut Setup | Migrated | — |
-| #65 | iOS Shortcut simplicity | [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) §Keep It Simple | Migrated | — |
-| #66 | Apple Local Network Permission | [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) §Local Network Permission | Migrated | — |
-| #67 | Siri response messages | [SPEC.md](SPEC.md) §Siri Responses, [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) | Migrated | — |
-| #68 | Shutdown Shortcut flow | [SIRI_SHORTCUT.md](SIRI_SHORTCUT.md) §Shutdown Confirmation, [API.md](API.md) §Shutdown Flow | Migrated | — |
+| #64 | iPhone Shortcut setup guide | [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) §Shortcut Setup | Migrated | — |
+| #65 | iOS Shortcut simplicity | [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) §Keep It Simple | Migrated | — |
+| #66 | Apple Local Network Permission | [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) §Local Network Permission | Migrated | — |
+| #67 | Siri response messages | [SPEC.md](SPEC.md) §Siri Responses, [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) | Migrated | — |
+| #68 | Shutdown Shortcut flow | [SIRI_SHORTCUT.md](../features/siri_shortcut/SIRI_SHORTCUT.md) §Shutdown Confirmation, [API.md](API.md) §Shutdown Flow | Migrated | — |
 | #69 | API response schema | [API.md](API.md) §Response Schema | Migrated | — |
 | #70 | Error handling | [SPEC.md](SPEC.md) §Error Handling, [API.md](API.md) §Error Schema | Migrated | — |
 | #71 | No stack trace to iPhone | [SECURITY.md](SECURITY.md) §Stack Trace Security | Migrated | — |
@@ -107,13 +107,13 @@ This document traces every requirement from the original specification ([SOURCE_
 | #90 | Version / GET /info | [SPEC.md](SPEC.md) §Version, [API.md](API.md) §GET /info | Migrated | — |
 | #91 | .gitignore | [SPEC.md](SPEC.md) §Git | Migrated | — |
 | #92 | requirements.txt | [SPEC.md](SPEC.md) §Dependencies | Migrated | — |
-| #93 | GitHub OSS utilization | [SPEC.md](SPEC.md) §Dependencies, [AGENTS.md](../AGENTS.md) §External Libraries | Migrated | — |
+| #93 | GitHub OSS utilization | [SPEC.md](SPEC.md) §Dependencies, [AGENTS.md](../../AGENTS.md) §External Libraries | Migrated | — |
 | #94 | No AI/LLM for v1 | [SPEC.md](SPEC.md) §Core Features / Local AI | Superseded | Superseded by the accepted 2026-09-18 product decision: V1 may use guarded Local AI under SECURITY.md constraints |
 | #95 | Future extensibility | [SPEC.md](SPEC.md) §Future Extensibility | Migrated | — |
 | #96 | Most important security baseline | [SECURITY.md](SECURITY.md) §Trusted Execution Flow | Superseded by #104 | #104 concretizes the data flow |
 | #97 | Final user experience | [SPEC.md](SPEC.md) §User Experience, [README.md](../README.md) | Migrated | — |
-| #98 | Self-verification after coding | [TASKS.md](../TASKS.md) §Definition of Done | Migrated | — |
-| #99 | Don't leave TODO | [AGENTS.md](../AGENTS.md), [SPEC.md](SPEC.md) §Dependencies | Migrated | — |
+| #98 | Self-verification after coding | [TASKS.md](../../TASKS.md) §Definition of Done | Migrated | — |
+| #99 | Don't leave TODO | [AGENTS.md](../../AGENTS.md), [SPEC.md](SPEC.md) §Dependencies | Migrated | — |
 | #100 | Final response format | [SPEC.md](SPEC.md) | Migrated | Applies to development workflow |
 
 ---
