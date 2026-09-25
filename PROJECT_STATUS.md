@@ -4,30 +4,26 @@
 
 ## Current Phase
 
-### 2026-09-25 Stage B Laya model-load blocked by cp950 encoding
+### 2026-09-25 Stage B Laya UTF-8 load cleared cp950; parameter count blocked
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
 
-The first Laya model-load attempt was **blocked before device residency** by a
-Windows cp950 decoding error. Root cause identified:
-
-`
-LAYA_CP950_ROOT_CAUSE_IDENTIFIED
-classification = OTHER_DEPENDENCY_CP950
-`
-
-PyTorch `torch/_inductor/utils.py::load_template()` reads
-`torch/_inductor/kernel/templates/cutedsl_mm_grouped.py.jinja` without an
-explicit UTF-8 encoding on Windows, causing the system cp950 codec to fail at
-UTF-8 byte 0xe2 at offset 616. The cp950 fix itself is a separate task.
+The earlier `OTHER_DEPENDENCY_CP950` failure came from a PyTorch Jinja template
+read under the Windows cp950 default. A dedicated `-X utf8` child process
+cleared that boundary and returned from the pinned Laya loader on the RX 9070 XT.
+The one authorized live attempt then stopped at **`parameter_count_mismatch`**
+against the historical 321,908,998 expectation. Its actual count was not
+emitted before the fail-closed check raised, so full device-residency
+qualification remains blocked. See
+`docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_MODEL_LOAD_PREFLIGHT_2026-09-25.md`
+for the exact source/model hashes, memory readback, and evidence limits.
 
 **Current blockers (in gate order):**
 
-1. Narrow UTF-8 subprocess/environment compatibility fix validation
-2. Resume Laya model-load / device-readback gate
-3. Model residency / parameter device / forward/backward — unproven
-4. Decider — separately unqualified
+1. Independent review of the Laya parameter-count discrepancy; no automatic retry
+2. Completed device/parameter/buffer readback and forward/backward — unproven
+3. Decider — separately unqualified
 
 **Authority flags** (all remain `false`):
 
@@ -35,6 +31,8 @@ UTF-8 byte 0xe2 at offset 616. The cp950 fix itself is a separate task.
 - `model_compute_authorized=false`
 - `semantic_memory_enabled=false`
 - `local_ai_fallback_approved=false`
+- `LOCAL_SEMANTIC_MEMORY_ENABLED=false`
+- `LOCAL_AI_FALLBACK_APPROVED=false`
 
 See [GitHub Issue #68](https://github.com/QWQOUOT485/siri/issues/68) for
 detailed Stage B Laya blocker history.
