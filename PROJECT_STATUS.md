@@ -55,9 +55,9 @@ as a training-engineering reference. See
 
 **Next gate:** Small adaptation remains separately unauthorized. Validation/
 held-out quality, Stage A regression, latency, Decider qualification, and
-production promotion remain separate unproven gates. PR #76 stays open and
-unmerged for independent review; Issue #68 stays open. No second live run
-or general training authority was granted.
+production promotion remain separate unproven gates. PR #76 independent review
+and merge are complete; Issue #68 stays open. No second live run or general
+training authority was granted.
 
 **Authority flags** (all remain `false`):
 
