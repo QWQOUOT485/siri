@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya head-only shape smoke passed on RX 9070 XT
+### 2026-09-26 Stage B Laya training-pipeline smoke passed on RX 9070 XT
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
@@ -38,18 +38,26 @@ required seal verifier performed read-only frozen-file identity checks. Model,
 source, venv, and seal identities remained unchanged. See
 `docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_FORWARD_BACKWARD_SMOKE_2026-09-26.md`.
 
-**Remaining gates:** The training-pipeline smoke is next in the accepted plan
-but remains separately unauthorized. Adaptation, validation/held-out quality,
-latency, Decider qualification, and production fallback remain unproven;
-general model compute and training remain unauthorized.
+**Current result:** `LAYA_RX9070XT_TRAINING_PIPELINE_SMOKE_PASSED`.
+The corrected task-owned selector matched the exact 40-case oracle, 40 unique
+source groups, language quotas, and 32 supported / eight blocked boundary.
+The first actual live pipeline run completed exactly four optimizer steps on
+RX 9070 XT / gfx1201. Encoder and act_head stayed frozen and byte-identical;
+allowed typed/span/validity parameters changed. Step-2 checkpoint save,
+trainable-object recreation, exact reload/resume, and cleanup all passed.
+Frozen source/model/venv/train/manifests/seal identities remained unchanged.
+No validation/held-out/Stage A or synthetic shape-fixture row became a model
+input; the existing verifier's broader reads were integrity-only. This is
+pipeline/connectivity evidence, with no quality conclusion. PR #75's merged
+head-only shape smoke remains valid prior evidence. MiniMind was used only
+as a training-engineering reference. See
+[the training-pipeline report](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_TRAINING_PIPELINE_SMOKE_2026-09-26.md).
 
-When the training-pipeline smoke is separately authorized, MiniMind may be used
-as a training-engineering reference for mixed precision, optimizer/scheduler
-wiring, gradient clipping, deterministic seeding, checkpoint save/resume, and
-experiment logging. MiniMind does not replace Laya or turn it into a causal-LM
-SFT model; Laya keeps its candidate-native encoder/decision-head/span/validity
-objectives. Distillation, LoRA, and RL remain later separately reviewed
-experiments and are not authorized by the current shape-smoke result.
+**Next gate:** Small adaptation remains separately unauthorized. Validation/
+held-out quality, Stage A regression, latency, Decider qualification, and
+production promotion remain separate unproven gates. PR #76 stays open and
+unmerged for independent review; Issue #68 stays open. No second live run
+or general training authority was granted.
 
 **Authority flags** (all remain `false`):
 

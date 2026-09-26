@@ -1,0 +1,822 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "blocked_before_model": 8,
+  "canonical_run_summary_sha256": "2f1ff9c362a132310282fd46488dbd45dbdab89dbf246a92956e354ad3ef482e",
+  "checkpoint": {
+    "all_trainable_objects_recreated": true,
+    "cleanup_verified_absent": true,
+    "completed_steps_restored": 2,
+    "next_lr": 5e-05,
+    "optimizer_state_sha256": "bbbeb6e6cfdef26cc35561cd13994d90e9fe2af483c54540be6da23911d8955b",
+    "parameter_hashes_step_2": {
+      "act_head": "7568d33742b4239cec61ef3cd24ff533a342e8f1d98158ea7f997757efa0394d",
+      "encoder": "e158bfb1ff7d701715008e6247d4a2e99b94c8384281ccfb2629dfde2016e812",
+      "span": "669295906337a87d3195f6c86cdd589d6a2aac2e492c86db7be45374325e8878",
+      "typed": "0d75e6cda3432952b05be67b7dcdba22b6c333599b1f856a8d82a1666a5edce7",
+      "validity": "7691a85ee05e0e151970bd1badb1766537f27604beb6e6dab976518f2736af3e"
+    },
+    "path": "<external-smoke-root>/pr76/step-2.pt",
+    "reload_verified": true,
+    "saved_completed_steps": 2,
+    "scheduler_state_sha256": "f464689c3b5f2d4054cdcd05eaf1de687a09c466bfc7a64a4c7be03e2990fcc9",
+    "sha256": "870258d801afa6348985da76a6c3e740b2aa40d5b8d22c4790ce36c3934d3953"
+  },
+  "checkpoint_parameter_elements": 321908995,
+  "checkpoint_state_element_count": 321908998,
+  "checkpoint_tensor_keys": 170,
+  "completed_optimizer_steps": 4,
+  "config": {
+    "autocast": "cuda bfloat16",
+    "batch_size": 8,
+    "clip_max_norm": 1.0,
+    "grad_scaler": false,
+    "loss_dtype": "float32",
+    "loss_weights": {
+      "intent": 1,
+      "span": 1,
+      "validity": 1
+    },
+    "module_mode": "eval: dropout disabled, allowed parameter gradients enabled",
+    "optimizer": {
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "foreach": false,
+      "lr": 0.0001,
+      "name": "AdamW",
+      "weight_decay": 0.0
+    },
+    "optimizer_steps": 4,
+    "scheduler": {
+      "factors": [
+        1.0,
+        0.75,
+        0.5,
+        0.25,
+        0.0
+      ],
+      "name": "LambdaLR",
+      "order": "optimizer.step then scheduler.step"
+    },
+    "seed": 1729,
+    "shuffle": false
+  },
+  "identities_after": {
+    "data": {
+      "authoritative_schema_groups_leakage_near_duplicates": "passed",
+      "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
+      "canonical_split_sha256": {
+        "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
+        "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
+        "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
+      },
+      "corpus_manifest_sha256": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
+      "provenance_manifest_sha256": "d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d",
+      "seal_manifest_sha256": "5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef",
+      "selection_manifest_sha256": "973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a",
+      "split_assignment_sha256": "84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37",
+      "split_file_sha256": {
+        "held_out.jsonl": "de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946",
+        "train.jsonl": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+        "validation.jsonl": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a"
+      },
+      "train_rows": 1800,
+      "train_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2"
+    },
+    "model_aggregate_sha256": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "model_revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "primary_weight_sha256": "9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204",
+    "source_clean": true,
+    "source_revision": "42626c348753fbb17572a813127df2278a1ec527",
+    "venv_inventory_sha256": "3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337"
+  },
+  "identities_before": {
+    "data": {
+      "authoritative_schema_groups_leakage_near_duplicates": "passed",
+      "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
+      "canonical_split_sha256": {
+        "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
+        "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
+        "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
+      },
+      "corpus_manifest_sha256": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
+      "provenance_manifest_sha256": "d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d",
+      "seal_manifest_sha256": "5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef",
+      "selection_manifest_sha256": "973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a",
+      "split_assignment_sha256": "84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37",
+      "split_file_sha256": {
+        "held_out.jsonl": "de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946",
+        "train.jsonl": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+        "validation.jsonl": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a"
+      },
+      "train_rows": 1800,
+      "train_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2"
+    },
+    "model_aggregate_sha256": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "model_revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "primary_weight_sha256": "9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204",
+    "source_clean": true,
+    "source_revision": "42626c348753fbb17572a813127df2278a1ec527",
+    "venv_inventory_sha256": "3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337"
+  },
+  "live_invocations": 1,
+  "load_seconds": 12.070722,
+  "model_eligible_rows": 32,
+  "model_loads": 1,
+  "parameter_hashes_after": {
+    "act_head": "7568d33742b4239cec61ef3cd24ff533a342e8f1d98158ea7f997757efa0394d",
+    "encoder": "e158bfb1ff7d701715008e6247d4a2e99b94c8384281ccfb2629dfde2016e812",
+    "span": "3747f3dee97509bf4086908233ce5635ea0fc070ab4e64042d6d29ad3dc32ffa",
+    "typed": "aa9d1d75f85daf6ab7318acecf04e5dd972cdc5e1765a123fd84e1831f31653f",
+    "validity": "382951fefb2fd89a7ce03a8722b97ea7ba193869408642583de8bb851133bebf"
+  },
+  "parameter_hashes_before": {
+    "act_head": "7568d33742b4239cec61ef3cd24ff533a342e8f1d98158ea7f997757efa0394d",
+    "encoder": "e158bfb1ff7d701715008e6247d4a2e99b94c8384281ccfb2629dfde2016e812",
+    "span": "69d2c733f2cb88780070c06993fa626d9e516e438b4bdc52e49b2f7f95de89a4",
+    "typed": "2feb35a346c8cf6aa13151243f55e47ef65934cc2c8eb7062030e04b14b9fbf4",
+    "validity": "f268d1c3a93dde50a5b1a67610ffa0dce8d8bcd1fffa1028012b36348ba85f05"
+  },
+  "parameter_names": {
+    "act_head": [
+      "act_head.0.weight",
+      "act_head.0.bias",
+      "act_head.2.weight",
+      "act_head.2.bias"
+    ],
+    "encoder": [
+      "encoder.embeddings.tok_embeddings.weight",
+      "encoder.embeddings.norm.weight",
+      "encoder.layers.0.attn.Wqkv.weight",
+      "encoder.layers.0.attn.Wo.weight",
+      "encoder.layers.0.mlp_norm.weight",
+      "encoder.layers.0.mlp.Wi.weight",
+      "encoder.layers.0.mlp.Wo.weight",
+      "encoder.layers.1.attn_norm.weight",
+      "encoder.layers.1.attn.Wqkv.weight",
+      "encoder.layers.1.attn.Wo.weight",
+      "encoder.layers.1.mlp_norm.weight",
+      "encoder.layers.1.mlp.Wi.weight",
+      "encoder.layers.1.mlp.Wo.weight",
+      "encoder.layers.2.attn_norm.weight",
+      "encoder.layers.2.attn.Wqkv.weight",
+      "encoder.layers.2.attn.Wo.weight",
+      "encoder.layers.2.mlp_norm.weight",
+      "encoder.layers.2.mlp.Wi.weight",
+      "encoder.layers.2.mlp.Wo.weight",
+      "encoder.layers.3.attn_norm.weight",
+      "encoder.layers.3.attn.Wqkv.weight",
+      "encoder.layers.3.attn.Wo.weight",
+      "encoder.layers.3.mlp_norm.weight",
+      "encoder.layers.3.mlp.Wi.weight",
+      "encoder.layers.3.mlp.Wo.weight",
+      "encoder.layers.4.attn_norm.weight",
+      "encoder.layers.4.attn.Wqkv.weight",
+      "encoder.layers.4.attn.Wo.weight",
+      "encoder.layers.4.mlp_norm.weight",
+      "encoder.layers.4.mlp.Wi.weight",
+      "encoder.layers.4.mlp.Wo.weight",
+      "encoder.layers.5.attn_norm.weight",
+      "encoder.layers.5.attn.Wqkv.weight",
+      "encoder.layers.5.attn.Wo.weight",
+      "encoder.layers.5.mlp_norm.weight",
+      "encoder.layers.5.mlp.Wi.weight",
+      "encoder.layers.5.mlp.Wo.weight",
+      "encoder.layers.6.attn_norm.weight",
+      "encoder.layers.6.attn.Wqkv.weight",
+      "encoder.layers.6.attn.Wo.weight",
+      "encoder.layers.6.mlp_norm.weight",
+      "encoder.layers.6.mlp.Wi.weight",
+      "encoder.layers.6.mlp.Wo.weight",
+      "encoder.layers.7.attn_norm.weight",
+      "encoder.layers.7.attn.Wqkv.weight",
+      "encoder.layers.7.attn.Wo.weight",
+      "encoder.layers.7.mlp_norm.weight",
+      "encoder.layers.7.mlp.Wi.weight",
+      "encoder.layers.7.mlp.Wo.weight",
+      "encoder.layers.8.attn_norm.weight",
+      "encoder.layers.8.attn.Wqkv.weight",
+      "encoder.layers.8.attn.Wo.weight",
+      "encoder.layers.8.mlp_norm.weight",
+      "encoder.layers.8.mlp.Wi.weight",
+      "encoder.layers.8.mlp.Wo.weight",
+      "encoder.layers.9.attn_norm.weight",
+      "encoder.layers.9.attn.Wqkv.weight",
+      "encoder.layers.9.attn.Wo.weight",
+      "encoder.layers.9.mlp_norm.weight",
+      "encoder.layers.9.mlp.Wi.weight",
+      "encoder.layers.9.mlp.Wo.weight",
+      "encoder.layers.10.attn_norm.weight",
+      "encoder.layers.10.attn.Wqkv.weight",
+      "encoder.layers.10.attn.Wo.weight",
+      "encoder.layers.10.mlp_norm.weight",
+      "encoder.layers.10.mlp.Wi.weight",
+      "encoder.layers.10.mlp.Wo.weight",
+      "encoder.layers.11.attn_norm.weight",
+      "encoder.layers.11.attn.Wqkv.weight",
+      "encoder.layers.11.attn.Wo.weight",
+      "encoder.layers.11.mlp_norm.weight",
+      "encoder.layers.11.mlp.Wi.weight",
+      "encoder.layers.11.mlp.Wo.weight",
+      "encoder.layers.12.attn_norm.weight",
+      "encoder.layers.12.attn.Wqkv.weight",
+      "encoder.layers.12.attn.Wo.weight",
+      "encoder.layers.12.mlp_norm.weight",
+      "encoder.layers.12.mlp.Wi.weight",
+      "encoder.layers.12.mlp.Wo.weight",
+      "encoder.layers.13.attn_norm.weight",
+      "encoder.layers.13.attn.Wqkv.weight",
+      "encoder.layers.13.attn.Wo.weight",
+      "encoder.layers.13.mlp_norm.weight",
+      "encoder.layers.13.mlp.Wi.weight",
+      "encoder.layers.13.mlp.Wo.weight",
+      "encoder.layers.14.attn_norm.weight",
+      "encoder.layers.14.attn.Wqkv.weight",
+      "encoder.layers.14.attn.Wo.weight",
+      "encoder.layers.14.mlp_norm.weight",
+      "encoder.layers.14.mlp.Wi.weight",
+      "encoder.layers.14.mlp.Wo.weight",
+      "encoder.layers.15.attn_norm.weight",
+      "encoder.layers.15.attn.Wqkv.weight",
+      "encoder.layers.15.attn.Wo.weight",
+      "encoder.layers.15.mlp_norm.weight",
+      "encoder.layers.15.mlp.Wi.weight",
+      "encoder.layers.15.mlp.Wo.weight",
+      "encoder.layers.16.attn_norm.weight",
+      "encoder.layers.16.attn.Wqkv.weight",
+      "encoder.layers.16.attn.Wo.weight",
+      "encoder.layers.16.mlp_norm.weight",
+      "encoder.layers.16.mlp.Wi.weight",
+      "encoder.layers.16.mlp.Wo.weight",
+      "encoder.layers.17.attn_norm.weight",
+      "encoder.layers.17.attn.Wqkv.weight",
+      "encoder.layers.17.attn.Wo.weight",
+      "encoder.layers.17.mlp_norm.weight",
+      "encoder.layers.17.mlp.Wi.weight",
+      "encoder.layers.17.mlp.Wo.weight",
+      "encoder.layers.18.attn_norm.weight",
+      "encoder.layers.18.attn.Wqkv.weight",
+      "encoder.layers.18.attn.Wo.weight",
+      "encoder.layers.18.mlp_norm.weight",
+      "encoder.layers.18.mlp.Wi.weight",
+      "encoder.layers.18.mlp.Wo.weight",
+      "encoder.layers.19.attn_norm.weight",
+      "encoder.layers.19.attn.Wqkv.weight",
+      "encoder.layers.19.attn.Wo.weight",
+      "encoder.layers.19.mlp_norm.weight",
+      "encoder.layers.19.mlp.Wi.weight",
+      "encoder.layers.19.mlp.Wo.weight",
+      "encoder.layers.20.attn_norm.weight",
+      "encoder.layers.20.attn.Wqkv.weight",
+      "encoder.layers.20.attn.Wo.weight",
+      "encoder.layers.20.mlp_norm.weight",
+      "encoder.layers.20.mlp.Wi.weight",
+      "encoder.layers.20.mlp.Wo.weight",
+      "encoder.layers.21.attn_norm.weight",
+      "encoder.layers.21.attn.Wqkv.weight",
+      "encoder.layers.21.attn.Wo.weight",
+      "encoder.layers.21.mlp_norm.weight",
+      "encoder.layers.21.mlp.Wi.weight",
+      "encoder.layers.21.mlp.Wo.weight",
+      "encoder.final_norm.weight"
+    ],
+    "span": [
+      "weight",
+      "bias"
+    ],
+    "typed": [
+      "head.layers.0.self_attn.in_proj_weight",
+      "head.layers.0.self_attn.in_proj_bias",
+      "head.layers.0.self_attn.out_proj.weight",
+      "head.layers.0.self_attn.out_proj.bias",
+      "head.layers.0.linear1.weight",
+      "head.layers.0.linear1.bias",
+      "head.layers.0.linear2.weight",
+      "head.layers.0.linear2.bias",
+      "head.layers.0.norm1.weight",
+      "head.layers.0.norm1.bias",
+      "head.layers.0.norm2.weight",
+      "head.layers.0.norm2.bias",
+      "head.layers.1.self_attn.in_proj_weight",
+      "head.layers.1.self_attn.in_proj_bias",
+      "head.layers.1.self_attn.out_proj.weight",
+      "head.layers.1.self_attn.out_proj.bias",
+      "head.layers.1.linear1.weight",
+      "head.layers.1.linear1.bias",
+      "head.layers.1.linear2.weight",
+      "head.layers.1.linear2.bias",
+      "head.layers.1.norm1.weight",
+      "head.layers.1.norm1.bias",
+      "head.layers.1.norm2.weight",
+      "head.layers.1.norm2.bias",
+      "type_emb.weight",
+      "scorer.0.weight",
+      "scorer.0.bias",
+      "scorer.1.weight",
+      "scorer.1.bias",
+      "scorer.3.weight",
+      "scorer.3.bias"
+    ],
+    "validity": [
+      "weight",
+      "bias"
+    ]
+  },
+  "rendering_equivalent_rows": 32,
+  "residency": {
+    "buffer_devices": [
+      "cuda:1"
+    ],
+    "buffer_dtypes": [
+      "torch.float32"
+    ],
+    "checkpoint_compatibility": "strict_load_state_dict_succeeded",
+    "checkpoint_state_element_count": 321908998,
+    "cpu_fallback": false,
+    "laya_reported_device": "cuda:1",
+    "parameter_count": 321908995,
+    "parameter_devices": [
+      "cuda:1"
+    ],
+    "parameter_dtypes": [
+      "torch.float32"
+    ],
+    "persistent_buffer_count": 3,
+    "persistent_buffer_names": [
+      "temperature"
+    ],
+    "persistent_temperature_buffer_count": 3,
+    "state_keys_match_parameters_and_buffers": true,
+    "trainable_parameter_count": 321908995
+  },
+  "schema": "laya-training-pipeline-smoke-v2",
+  "selected_architecture": "gfx1201",
+  "selected_device": "cuda:1",
+  "selected_gpu": "AMD Radeon RX 9070 XT",
+  "source_subset_rows": 40,
+  "status": "LAYA_RX9070XT_TRAINING_PIPELINE_SMOKE_PASSED",
+  "steps": [
+    {
+      "case_ids": [
+        "candidate-00151",
+        "candidate-00157",
+        "candidate-00337",
+        "candidate-00343",
+        "candidate-00433",
+        "candidate-00439",
+        "candidate-00445",
+        "candidate-00637"
+      ],
+      "clip_max_norm": 1.0,
+      "clip_returned_norm": 28.811553955078125,
+      "clipped_gradient_norm": 0.9999998841898352,
+      "device": "cuda:1",
+      "elapsed_seconds": 7.527861,
+      "encoder_and_act_head_gradients_absent": true,
+      "gradients_finite": true,
+      "losses": {
+        "intent": 1.943225383758545,
+        "span": 3.009040355682373,
+        "total": 5.162886619567871,
+        "validity": 0.21062076091766357
+      },
+      "lr_after": 7.500000000000001e-05,
+      "lr_before": 0.0001,
+      "selected_gpu": "AMD Radeon RX 9070 XT",
+      "step": 1,
+      "unclipped_gradient_norm": 28.811553649407067,
+      "vram": {
+        "allocated": 1554375680,
+        "peak_allocated": 1573262336,
+        "peak_reserved": 1644167168,
+        "reserved": 1644167168
+      }
+    },
+    {
+      "case_ids": [
+        "candidate-00643",
+        "candidate-00649",
+        "candidate-00721",
+        "candidate-00775",
+        "candidate-00805",
+        "candidate-00835",
+        "candidate-00865",
+        "candidate-01081"
+      ],
+      "clip_max_norm": 1.0,
+      "clip_returned_norm": 23.608882904052734,
+      "clipped_gradient_norm": 0.9999998454574439,
+      "device": "cuda:1",
+      "elapsed_seconds": 0.050907,
+      "encoder_and_act_head_gradients_absent": true,
+      "gradients_finite": true,
+      "losses": {
+        "intent": 1.1801034212112427,
+        "span": 2.818918466567993,
+        "total": 4.205172538757324,
+        "validity": 0.20615056157112122
+      },
+      "lr_after": 5e-05,
+      "lr_before": 7.500000000000001e-05,
+      "selected_gpu": "AMD Radeon RX 9070 XT",
+      "step": 2,
+      "unclipped_gradient_norm": 23.608881486488645,
+      "vram": {
+        "allocated": 1555218944,
+        "peak_allocated": 1574105600,
+        "peak_reserved": 1644167168,
+        "reserved": 1644167168
+      }
+    },
+    {
+      "case_ids": [
+        "candidate-01981",
+        "candidate-01987",
+        "candidate-01993",
+        "candidate-01999",
+        "candidate-02005",
+        "candidate-02011",
+        "candidate-02017",
+        "candidate-02023"
+      ],
+      "clip_max_norm": 1.0,
+      "clip_returned_norm": 61.45769500732422,
+      "clipped_gradient_norm": 0.9999999295516689,
+      "device": "cuda:1",
+      "elapsed_seconds": 0.05253,
+      "encoder_and_act_head_gradients_absent": true,
+      "gradients_finite": true,
+      "losses": {
+        "intent": 2.1505627632141113,
+        "span": 4.029707908630371,
+        "total": 7.871417045593262,
+        "validity": 1.6911464929580688
+      },
+      "lr_after": 2.5e-05,
+      "lr_before": 5e-05,
+      "selected_gpu": "AMD Radeon RX 9070 XT",
+      "step": 3,
+      "unclipped_gradient_norm": 61.45769636982578,
+      "vram": {
+        "allocated": 1554273792,
+        "peak_allocated": 1613070336,
+        "peak_reserved": 1665138688,
+        "reserved": 1665138688
+      }
+    },
+    {
+      "case_ids": [
+        "candidate-02281",
+        "candidate-02287",
+        "candidate-02293",
+        "candidate-02299",
+        "candidate-02437",
+        "candidate-02443",
+        "candidate-02449",
+        "candidate-02455"
+      ],
+      "clip_max_norm": 1.0,
+      "clip_returned_norm": 58.765201568603516,
+      "clipped_gradient_norm": 1.0000000253052448,
+      "device": "cuda:1",
+      "elapsed_seconds": 0.049627,
+      "encoder_and_act_head_gradients_absent": true,
+      "gradients_finite": true,
+      "losses": {
+        "intent": 2.073721408843994,
+        "span": 3.8908021450042725,
+        "total": 7.656222820281982,
+        "validity": 1.6916996240615845
+      },
+      "lr_after": 0.0,
+      "lr_before": 2.5e-05,
+      "selected_gpu": "AMD Radeon RX 9070 XT",
+      "step": 4,
+      "unclipped_gradient_norm": 58.76520570549477,
+      "vram": {
+        "allocated": 1554273792,
+        "peak_allocated": 1613070336,
+        "peak_reserved": 1665138688,
+        "reserved": 1665138688
+      }
+    }
+  ],
+  "subset_manifest": {
+    "batches": [
+      [
+        "candidate-00151",
+        "candidate-00157",
+        "candidate-00337",
+        "candidate-00343",
+        "candidate-00433",
+        "candidate-00439",
+        "candidate-00445",
+        "candidate-00637"
+      ],
+      [
+        "candidate-00643",
+        "candidate-00649",
+        "candidate-00721",
+        "candidate-00775",
+        "candidate-00805",
+        "candidate-00835",
+        "candidate-00865",
+        "candidate-01081"
+      ],
+      [
+        "candidate-01981",
+        "candidate-01987",
+        "candidate-01993",
+        "candidate-01999",
+        "candidate-02005",
+        "candidate-02011",
+        "candidate-02017",
+        "candidate-02023"
+      ],
+      [
+        "candidate-02281",
+        "candidate-02287",
+        "candidate-02293",
+        "candidate-02299",
+        "candidate-02437",
+        "candidate-02443",
+        "candidate-02449",
+        "candidate-02455"
+      ]
+    ],
+    "blocked_before_model": 8,
+    "blocked_case_ids": [
+      "candidate-03091",
+      "candidate-03097",
+      "candidate-03169",
+      "candidate-03193",
+      "candidate-03391",
+      "candidate-03397",
+      "candidate-03433",
+      "candidate-03457"
+    ],
+    "case_ids": [
+      "candidate-00151",
+      "candidate-00157",
+      "candidate-00337",
+      "candidate-00343",
+      "candidate-00433",
+      "candidate-00439",
+      "candidate-00445",
+      "candidate-00637",
+      "candidate-00643",
+      "candidate-00649",
+      "candidate-00721",
+      "candidate-00775",
+      "candidate-00805",
+      "candidate-00835",
+      "candidate-00865",
+      "candidate-01081",
+      "candidate-01981",
+      "candidate-01987",
+      "candidate-01993",
+      "candidate-01999",
+      "candidate-02005",
+      "candidate-02011",
+      "candidate-02017",
+      "candidate-02023",
+      "candidate-02281",
+      "candidate-02287",
+      "candidate-02293",
+      "candidate-02299",
+      "candidate-02437",
+      "candidate-02443",
+      "candidate-02449",
+      "candidate-02455",
+      "candidate-03091",
+      "candidate-03097",
+      "candidate-03169",
+      "candidate-03193",
+      "candidate-03391",
+      "candidate-03397",
+      "candidate-03433",
+      "candidate-03457"
+    ],
+    "language_counts": {
+      "mixed": 8,
+      "zh-Hans": 10,
+      "zh-Hant": 22
+    },
+    "language_quotas": {
+      "deterministic_only": {
+        "mixed": 1,
+        "zh-Hans": 1,
+        "zh-Hant": 2
+      },
+      "play_artist_absent_album_absent": {
+        "mixed": 0,
+        "zh-Hans": 1,
+        "zh-Hant": 3
+      },
+      "play_artist_absent_album_present": {
+        "mixed": 0,
+        "zh-Hans": 1,
+        "zh-Hant": 3
+      },
+      "play_artist_present_album_absent": {
+        "mixed": 1,
+        "zh-Hans": 1,
+        "zh-Hant": 2
+      },
+      "play_artist_present_album_present": {
+        "mixed": 1,
+        "zh-Hans": 1,
+        "zh-Hant": 2
+      },
+      "safety_only": {
+        "mixed": 1,
+        "zh-Hans": 1,
+        "zh-Hant": 2
+      },
+      "unknown_artist_only": {
+        "mixed": 2,
+        "zh-Hans": 2,
+        "zh-Hant": 4
+      },
+      "unknown_missing_track": {
+        "mixed": 2,
+        "zh-Hans": 2,
+        "zh-Hant": 4
+      }
+    },
+    "manifest_sha256": "790837099986a8b9a4976f83e90f97b423f7d1ac4227976a33b8de8c687c82eb",
+    "model_eligible_case_ids": [
+      "candidate-00151",
+      "candidate-00157",
+      "candidate-00337",
+      "candidate-00343",
+      "candidate-00433",
+      "candidate-00439",
+      "candidate-00445",
+      "candidate-00637",
+      "candidate-00643",
+      "candidate-00649",
+      "candidate-00721",
+      "candidate-00775",
+      "candidate-00805",
+      "candidate-00835",
+      "candidate-00865",
+      "candidate-01081",
+      "candidate-01981",
+      "candidate-01987",
+      "candidate-01993",
+      "candidate-01999",
+      "candidate-02005",
+      "candidate-02011",
+      "candidate-02017",
+      "candidate-02023",
+      "candidate-02281",
+      "candidate-02287",
+      "candidate-02293",
+      "candidate-02299",
+      "candidate-02437",
+      "candidate-02443",
+      "candidate-02449",
+      "candidate-02455"
+    ],
+    "model_eligible_rows": 32,
+    "per_stratum_counts": {
+      "deterministic_only": 4,
+      "play_artist_absent_album_absent": 4,
+      "play_artist_absent_album_present": 4,
+      "play_artist_present_album_absent": 4,
+      "play_artist_present_album_present": 4,
+      "safety_only": 4,
+      "unknown_artist_only": 8,
+      "unknown_missing_track": 8
+    },
+    "selection_algorithm": "canonical-first-unique-group-language-quota-v2",
+    "source_group_ids": [
+      "source-group-0026",
+      "source-group-0027",
+      "source-group-0057",
+      "source-group-0058",
+      "source-group-0073",
+      "source-group-0074",
+      "source-group-0075",
+      "source-group-0107",
+      "source-group-0108",
+      "source-group-0109",
+      "source-group-0121",
+      "source-group-0130",
+      "source-group-0135",
+      "source-group-0140",
+      "source-group-0145",
+      "source-group-0181",
+      "source-group-0331",
+      "source-group-0332",
+      "source-group-0333",
+      "source-group-0334",
+      "source-group-0335",
+      "source-group-0336",
+      "source-group-0337",
+      "source-group-0338",
+      "source-group-0381",
+      "source-group-0382",
+      "source-group-0383",
+      "source-group-0384",
+      "source-group-0407",
+      "source-group-0408",
+      "source-group-0409",
+      "source-group-0410",
+      "source-group-0516",
+      "source-group-0517",
+      "source-group-0529",
+      "source-group-0533",
+      "source-group-0566",
+      "source-group-0567",
+      "source-group-0573",
+      "source-group-0577"
+    ],
+    "source_subset_rows": 40,
+    "train_file_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+    "unique_source_groups": 40
+  },
+  "utf8_mode": 1,
+  "visible_devices": [
+    {
+      "architecture": "gfx1036",
+      "device_type": "cuda",
+      "index": 0,
+      "name": "AMD Radeon(TM) Graphics",
+      "total_memory_bytes": 13064830976
+    },
+    {
+      "architecture": "gfx1201",
+      "device_type": "cuda",
+      "index": 1,
+      "name": "AMD Radeon RX 9070 XT",
+      "total_memory_bytes": 17095983104
+    }
+  ],
+  "vram": {
+    "after_load": {
+      "allocated": 1307833856,
+      "peak_allocated": 1307833856,
+      "peak_reserved": 1333788672,
+      "reserved": 1333788672
+    },
+    "after_reload": {
+      "allocated": 1493188608,
+      "peak_allocated": 1613070336,
+      "peak_reserved": 1665138688,
+      "reserved": 1665138688
+    },
+    "after_step_1": {
+      "allocated": 1554375680,
+      "peak_allocated": 1573262336,
+      "peak_reserved": 1644167168,
+      "reserved": 1644167168
+    },
+    "after_step_2": {
+      "allocated": 1555218944,
+      "peak_allocated": 1574105600,
+      "peak_reserved": 1644167168,
+      "reserved": 1644167168
+    },
+    "after_step_3": {
+      "allocated": 1554273792,
+      "peak_allocated": 1613070336,
+      "peak_reserved": 1665138688,
+      "reserved": 1665138688
+    },
+    "after_step_4": {
+      "allocated": 1554273792,
+      "peak_allocated": 1613070336,
+      "peak_reserved": 1665138688,
+      "reserved": 1665138688
+    },
+    "baseline": {
+      "allocated": 0,
+      "peak_allocated": 0,
+      "peak_reserved": 0,
+      "reserved": 0
+    },
+    "before_step_1": {
+      "allocated": 1307859456,
+      "peak_allocated": 1307859456,
+      "peak_reserved": 1333788672,
+      "reserved": 1333788672
+    },
+    "final": {
+      "allocated": 1493188608,
+      "peak_allocated": 1613070336,
+      "peak_reserved": 1665138688,
+      "reserved": 1665138688
+    }
+  }
+}
