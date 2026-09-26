@@ -43,6 +43,14 @@ but remains separately unauthorized. Adaptation, validation/held-out quality,
 latency, Decider qualification, and production fallback remain unproven;
 general model compute and training remain unauthorized.
 
+When the training-pipeline smoke is separately authorized, MiniMind may be used
+as a training-engineering reference for mixed precision, optimizer/scheduler
+wiring, gradient clipping, deterministic seeding, checkpoint save/resume, and
+experiment logging. MiniMind does not replace Laya or turn it into a causal-LM
+SFT model; Laya keeps its candidate-native encoder/decision-head/span/validity
+objectives. Distillation, LoRA, and RL remain later separately reviewed
+experiments and are not authorized by the current shape-smoke result.
+
 **Authority flags** (all remain `false`):
 
 - `training_authorized=false`
