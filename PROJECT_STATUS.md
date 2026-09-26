@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya training-pipeline data gate blocked
+### 2026-09-26 Stage B Laya training-pipeline smoke passed on RX 9070 XT
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
@@ -38,23 +38,26 @@ required seal verifier performed read-only frozen-file identity checks. Model,
 source, venv, and seal identities remained unchanged. See
 `docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_FORWARD_BACKWARD_SMOKE_2026-09-26.md`.
 
-**Current blocker:** `STOP_LAYA_TRAINING_PIPELINE_DATA_BOUNDARY`.
-The task-authorized training-pipeline smoke stopped in its read-only data
-preflight: the exact SHA-verified 1,800-row train split has zero supported
-unknown rows with `negative_reason=unresolved_reference` and zero with
-`negative_reason=ambiguous_version`; four of each were required. The frozen
-corpus/split/seal checks passed. The prescribed 40-row subset cannot be
-formed. No live invocation, Laya model load, Laya optimizer step, or checkpoint
-occurred.
-No replacement strata or corpus edits were used. PR #75's reviewed, merged
-head-only shape smoke remains valid prior evidence. See
-[the training-pipeline data report](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_TRAINING_PIPELINE_SMOKE_2026-09-26.md).
+**Current result:** `LAYA_RX9070XT_TRAINING_PIPELINE_SMOKE_PASSED`.
+The corrected task-owned selector matched the exact 40-case oracle, 40 unique
+source groups, language quotas, and 32 supported / eight blocked boundary.
+The first actual live pipeline run completed exactly four optimizer steps on
+RX 9070 XT / gfx1201. Encoder and act_head stayed frozen and byte-identical;
+allowed typed/span/validity parameters changed. Step-2 checkpoint save,
+trainable-object recreation, exact reload/resume, and cleanup all passed.
+Frozen source/model/venv/train/manifests/seal identities remained unchanged.
+No validation/held-out/Stage A or synthetic shape-fixture row became a model
+input; the existing verifier's broader reads were integrity-only. This is
+pipeline/connectivity evidence, with no quality conclusion. PR #75's merged
+head-only shape smoke remains valid prior evidence. MiniMind was used only
+as a training-engineering reference. See
+[the training-pipeline report](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_TRAINING_PIPELINE_SMOKE_2026-09-26.md).
 
-**Next gate:** Resolve the subset specification through a separately approved
-revision before a training-pipeline smoke. Small adaptation remains separately
-unauthorized; validation/held-out quality, latency, Decider qualification, and
-production fallback remain unproven. MiniMind remains only a
-training-engineering reference; no Laya training mechanics were exercised here.
+**Next gate:** Small adaptation remains separately unauthorized. Validation/
+held-out quality, Stage A regression, latency, Decider qualification, and
+production promotion remain separate unproven gates. PR #76 stays open and
+unmerged for independent review; Issue #68 stays open. No second live run
+or general training authority was granted.
 
 **Authority flags** (all remain `false`):
 

@@ -1,282 +1,329 @@
 # Stage B Laya training-pipeline smoke — 2026-09-26
 
-## Result
+**Current result: `LAYA_RX9070XT_TRAINING_PIPELINE_SMOKE_PASSED`.**
 
-**`STOP_LAYA_TRAINING_PIPELINE_DATA_BOUNDARY`**:
-`fixed_strata_incomplete_or_duplicate`. The exact frozen 1,800-row train
-split contains **zero** supported unknown rows labeled
-`negative_reason=unresolved_reference` and **zero** labeled
-`negative_reason=ambiguous_version`. The task requires four of each.
-The prescribed 40-row source subset cannot be constructed.
+The corrected authorized smoke completed exactly four optimizer steps on
+AMD Radeon RX 9070 XT / gfx1201. Encoder and act_head remained frozen and
+byte-identical. Typed decision, project span, and project validity parameters
+changed. Step-2 checkpoint save/recreation/reload/resume passed, and the
+temporary checkpoint directory was removed and verified absent. This is
+pipeline/connectivity evidence only, with no quality conclusion.
 
-This is a read-only data preflight result. **No live child invocation, model
-load, rendering, forward/backward, Laya optimizer step, or checkpoint occurred.**
-The one live GPU invocation was not attempted. No substitute rows or strata
-were selected. No partial subset is presented as the required manifest.
+## 1. Initial task-specification blocker — historical
 
-Base `origin/main` was fetched and verified as
-`57a07b11f8ae322d39be9379f7423b924880aa0b`. Work uses isolated branch
-`codex/stage-b-laya-training-pipeline-smoke`; the final head is in the PR
-metadata. The primary worktree's existing status and Shortcut edits were
-preserved.
+Initial PR #76 head `df9b460e1469fb748f6429a257810d13eef0804b` correctly
+reported `STOP_LAYA_TRAINING_PIPELINE_DATA_BOUNDARY` /
+`fixed_strata_incomplete_or_duplicate`. Its task-owned selector requested
+four supported unknown rows for each of `missing_track`, `artist_only`,
+`unresolved_reference`, and `ambiguous_version`.
 
-## Authorization and implementation boundary
+The exact frozen 1,800-row train split contains 900 supported play rows,
+600 supported unknown rows (300 `missing_track`, 300 `artist_only`),
+180 deterministic-only and 120 safety-only rows. It contains **zero**
+supported `unresolved_reference` and **zero** supported
+`ambiguous_version` rows. The initial selector therefore could not form
+the requested subset. Full corpus/seal checks passed; no corpus defect was
+established and no labels were changed.
 
-The task authorized one bounded RX 9070 XT smoke with exactly four AdamW
-steps, including step-2 checkpoint save/reload/resume and cleanup, only after
-the fixed train identity, schema, corpus/seal, and subset gates pass. It did
-not authorize changing the frozen data or substituting another selection
-rule. The data gate failed before model access.
+That initial attempt had **zero live Laya invocations, model loads, Laya
+optimizer steps, and checkpoints**. Its canonical read-only report SHA was
+`8c489efb27475c90aec4fce9f1d5ad18cf1e5557505bf4ab4ee5968792357eda`.
+The detailed original report is preserved in that Git commit. A discarded
+draft's CPU unit test exercised four AdamW steps on a tiny toy module with
+invented tensors; it used no Laya weights or corpus examples.
 
-The [project-owned preflight](../../../../scripts/local_ai_stage_b_laya_training_pipeline_smoke.py)
-reuses the authoritative corpus and held-out-seal verifier. The retained
-implementation has no PyTorch, Laya, tokenizer, subprocess, or training
-dependency. An initial unexercised training draft was removed when this
-blocker was established; it is not part of the PR. The
-[unit tests](../../../../tests/unit/test_local_ai_stage_b_laya_training_pipeline_smoke.py)
-exercise the selector on explicitly synthetic records and prove that the
-actual frozen train file fails closed. Synthetic records never enter a model.
+The user's correction replaced only the impossible task-owned subset with
+the exact language/group quotas and oracle below. It explicitly authorized
+the **first actual live Laya training-pipeline invocation**. This was not a
+retry after a model failure, an Astra escalation, or a corpus modification.
 
-MiniMind remains only the
-[training-engineering reference](../../training/LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md)
-for future seeding, mixed precision, optimizer/scheduler, clipping,
-checkpoint, and logging work. No MiniMind runtime or causal-LM objective was
-introduced.
+## 2. Corrected authorized pipeline-smoke result
 
-## Exact source and selection rule
+### Repository and authorization
+
+- Repository: `QWQOUOT485/siri`; PR #76 remains OPEN and UNMERGED.
+- Fetched exact main/base: `57a07b11f8ae322d39be9379f7423b924880aa0b`.
+- Starting reviewed PR head: `df9b460e1469fb748f6429a257810d13eef0804b`.
+- Branch: `codex/stage-b-laya-training-pipeline-smoke`.
+- Tested/live implementation commit: `61765c1aa92df279719a1d6c751e1b514f1df4f3`.
+- Final evidence head is recorded in PR metadata after committing this report.
+- Clean isolated worktree; primary status and Shortcut edits preserved.
+- One live invocation, one Laya load, four forwards/backwards and four
+  optimizer steps; no extra quality forward or live retry.
+
+The [project-owned runner](../../../../scripts/local_ai_stage_b_laya_training_pipeline_smoke.py)
+reuses the reviewed PR #75 renderer, mask/BIO labeling, tensor collator,
+finite checks, exact device selector, load/residency and identity helpers.
+The [tests](../../../../tests/unit/test_local_ai_stage_b_laya_training_pipeline_smoke.py)
+use synthetic CPU mechanics separately from the live Laya result.
+PR #75's merged head-only shape smoke remains valid prior evidence.
+
+### Frozen data gate and exact selector
 
 Only `artifacts/local_ai/stage_b/final_v1/train.jsonl` supplies selectable
-rows. Its byte SHA-256 and 1,800-row count pass before subset selection:
+or model-training rows. Before selection, the runner verifies byte SHA
+`54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2`,
+exactly 1,800 rows, and the authoritative corpus/seal checks.
 
-`54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2`
+The existing `verify_seal()` performs closed schema validation, exact split
+identity/counts, complete source-group assignment, reviewed v6 provenance,
+Stage A leakage checks, the frozen exact near-duplicate policy, and the
+600-row/100-group held-out seal. Its internal validation/held-out/sealed,
+Stage A, and v6 reads are **integrity-only**. None supplies model inputs.
 
-Algorithm `canonical-file-first-four-per-stratum-v1` scans the canonical
-file order once, retains the first four matching rows for each fixed stratum,
-and preserves their file order. Successful selection requires exactly 40
-distinct case IDs, 32 supported IDs, eight blocked IDs, and four consecutive
-eight-ID eligible batches. It returns no manifest on an incomplete stratum.
+Selection algorithm `canonical-first-unique-group-language-quota-v2`
+scans canonical train file order. It takes the first row satisfying a
+remaining exact stratum/language quota only if its source_group_id has not
+already been selected anywhere in the subset. It then requires all quotas,
+40 distinct case IDs, 40 unique groups, the exact ordered 40-ID oracle,
+and the 32 eligible / eight blocked partition.
 
-The closed schema is `StageBRecord`. Play requires
-`ai_scope=supported`, `expected.intent=spotify_play_track`, a valid track
-span, and the exact `optional_slot_status.artist/album` values below.
-Unknown requires `ai_scope=supported`, `expected.intent=unknown`, all
-slots null, and the exact `negative_reason` value below. No text-based
-reinterpretation or relabeling occurs.
+The selector reads only typed ai_scope, expected.intent, optional_slot_status,
+negative_reason, language_tag, source_group_id and case_id. It does not
+interpret utterance text or select from loss/model output.
 
-| Requested stratum | Available train rows | Required |
-| --- | ---: | ---: |
-| play: artist present, album present | 408 | 4 |
-| play: artist present, album absent | 204 | 4 |
-| play: artist absent, album present | 174 | 4 |
-| play: artist absent, album absent | 114 | 4 |
-| supported unknown: missing_track | 300 | 4 |
-| supported unknown: artist_only | 300 | 4 |
-| supported unknown: unresolved_reference | **0** | **4** |
-| supported unknown: ambiguous_version | **0** | **4** |
-| ai_scope=deterministic_only | 180 | 4 |
-| ai_scope=safety_only | 120 | 4 |
+| Stratum | zh-Hant | zh-Hans | mixed | Total |
+| --- | ---: | ---: | ---: | ---: |
+| deterministic_only | 2 | 1 | 1 | 4 |
+| play_artist_absent_album_absent | 3 | 1 | 0 | 4 |
+| play_artist_absent_album_present | 3 | 1 | 0 | 4 |
+| play_artist_present_album_absent | 2 | 1 | 1 | 4 |
+| play_artist_present_album_present | 2 | 1 | 1 | 4 |
+| safety_only | 2 | 1 | 1 | 4 |
+| unknown_artist_only | 4 | 2 | 2 | 8 |
+| unknown_missing_track | 4 | 2 | 2 | 8 |
+| **Total** | **22** | **10** | **8** | **40** |
 
-These counts sum to 1,800. The 40 selected case IDs/source-group IDs, subset
-manifest SHA, 32 eligible IDs, eight blocked IDs, and four batch memberships
-are **unavailable because selection failed**. The synthetic unit test proves
-the intended 40/32/8 and 4×8 partitions when all ten strata exist; that is
-source evidence only.
+Play rows all have supported spotify_play_track labels and valid required
+track spans. The two supported-unknown strata retain all-null slots.
+Observed totals: **16 play, 16 supported unknown, four deterministic-only,
+four safety-only; 40 unique groups; 32 model-eligible; eight blocked before
+rendering**. No row was shuffled or used twice.
 
-## Corpus and seal checks
+Subset manifest canonical SHA:
+`790837099986a8b9a4976f83e90f97b423f7d1ac4227976a33b8de8c687c82eb`.
 
-`verify_seal()` runs the existing authoritative `validate_protocol_corpus`
-and frozen-source checks: closed schema, exact split identities/counts,
-whole source-group assignment, reviewed v6 provenance, Stage A leakage,
-and the frozen exact near-duplicate policy. It also verifies the read-only
-600-row/100-group seal and persistent source/seal authority flags.
+The exact 40 case IDs and matching source-group IDs are stored, in canonical
+order, in the sanitized [structured result](LAYA_TRAINING_PIPELINE_SMOKE_RESULT_2026-09-26.json).
+These are the four fixed eligible batches:
 
-The verifier internally reads final train/validation/held-out files, the
-sealed held-out bytes, Stage A fixture, and reviewed v6 source/review
-artifacts **solely for integrity**. Those other files supply no selectable
-rows, rendering inputs, optimizer batches, or quality measurements.
+- Step 1: `candidate-00151`, `candidate-00157`, `candidate-00337`, `candidate-00343`, `candidate-00433`, `candidate-00439`, `candidate-00445`, `candidate-00637`.
+- Step 2: `candidate-00643`, `candidate-00649`, `candidate-00721`, `candidate-00775`, `candidate-00805`, `candidate-00835`, `candidate-00865`, `candidate-01081`.
+- Step 3: `candidate-01981`, `candidate-01987`, `candidate-01993`, `candidate-01999`, `candidate-02005`, `candidate-02011`, `candidate-02017`, `candidate-02023`.
+- Step 4: `candidate-02281`, `candidate-02287`, `candidate-02293`, `candidate-02299`, `candidate-02437`, `candidate-02443`, `candidate-02449`, `candidate-02455`.
 
-All corpus/split/selection/provenance/seal identities in the structured record
-below passed unchanged before/after this read-only preflight. The canonical
-corpus SHA is `a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13`.
-The byte split hashes differ intentionally from canonical-record split hashes.
+Blocked before the renderer:
+`candidate-03091`, `candidate-03097`, `candidate-03169`, `candidate-03193`, `candidate-03391`, `candidate-03397`, `candidate-03433`, `candidate-03457`.
 
-## Compute fields not reached
+### Renderer, labels, and device
 
-PR #75's reviewed head-only shape smoke remains valid prior evidence.
-This task made no new renderer-equivalence, strict-load/residency, GPU, dtype,
-VRAM, gradient, parameter-freeze/mutation, loss, LR, or checkpoint claim.
+All 32 eligible rows matched the pinned upstream build_sequence input IDs
+and marker positions. The independent pre-live real-tokenizer audit also
+matched all 32 (maximum sequence length 36). No required state was truncated.
+User-state masks excluded prompt/options/special/padding positions. Play
+labels included TRACK BIO; unknown labels were O-only. The deterministic
+intent mapping is spotify_play_track → play, unknown → unknown; validity
+targets are 1 and 0 respectively.
 
-The prescribed values remain unexecuted task configuration: seed 1729;
-encoder and act_head frozen; allowed typed decision `type_emb`, optional
-non-encoder `head`, and `scorer`, plus project span and validity heads;
-AdamW LR 1e-4, weight decay 0, betas (0.9, 0.999), eps 1e-8;
-four fixed batch-8 steps; LR factors 1, 0.75, 0.50, 0.25;
-gradient clip max norm 1.0; unit-weight intent CE + masked BIO CE +
-validity BCE; qualified AMD Radeon RX 9070 XT / gfx1201.
+The same live child used the qualified Python
+`D:/ai/venvs/siri-stage-b-rocm10-gfx1201/Scripts/python.exe`, Python 3.14.7,
+with `-B -X utf8`, `utf8_mode=1`, HF_HUB_OFFLINE=1 and
+TRANSFORMERS_OFFLINE=1. The parent removed PYTHONPATH and used raw-byte
+stdout/stderr transport. A child audit hook prohibited network connect and
+DNS operations.
 
-No checkpoint/task directory was created, so checkpoint path, SHA, reload,
-resume, cleanup, and parameter hashes are not applicable. No new model
-artifact was written under canonical `D:\ai\ai\laya`.
+Same-child package checks passed: pip 26.2.1, torch 2.13.0+rocm10.0.0,
+HIP 7.15.26333, transformers 4.57.6, safetensors 0.7.0,
+huggingface-hub 0.36.2, numpy 2.3.5.
 
-The task supplied these qualified identities; they were **not requalified
-by a live child** because the data boundary stopped first:
+Enumeration found AMD Radeon(TM) Graphics / gfx1036 at cuda:0 and the
+unique AMD Radeon RX 9070 XT / gfx1201 at explicit **cuda:1**. The iGPU was
+not selected. Strict Laya load succeeded in 12.070722 s.
+Every model parameter and buffer resided on cuda:1, cpu_fallback=false:
+321,908,995 parameters + three persistent temperature buffer elements =
+321,908,998 state elements. This residency readback occurred before the
+freeze policy and optimizer creation; its initial trainable count is not
+the allowed optimizer parameter count.
 
-| Identity | Task-supplied value |
+### Loss, freeze policy, and optimizer wiring
+
+- Entire encoder and upstream act_head: requires_grad=false, gradients
+  absent after each backward and before/after clipping.
+- Trainable: upstream type_emb, optional non-encoder head, scorer;
+  project span_head (768 → 7) and validity_head (768 → 1).
+- Head initialization seed: **1729**, with exact initial hashes below.
+- Module eval mode disables dropout while preserving allowed-head autograd.
+  No encoder layer was unfrozen, and no act-head loss was invented.
+- BF16 CUDA autocast for the qualified Laya forward; project head losses,
+  accumulation and logs in float32. No GradScaler.
+- Total loss = intent CE + user-state-masked BIO CE + validity BCE;
+  each weight is exactly 1.
+- AdamW: LR 1e-4, weight_decay=0, betas=(0.9, 0.999), eps=1e-8;
+  foreach=false explicitly uses the ordinary implementation.
+- LambdaLR factors for step entry: 1, .75, .50, .25. Order is
+  optimizer.step then scheduler.step; after the fourth step LR becomes 0.
+- clip_grad_norm_ maximum norm=1.0, after backward and before optimizer.
+  All outputs, losses, gradients, updated parameters and optimizer state
+  passed finite/device checks. AdamW scalar step counters may remain CPU;
+  parameter-shaped optimizer tensors remained on cuda:1.
+
+MiniMind was used only as the local
+[training-engineering reference](../../training/LOCAL_AI_MINIMIND_TRAINING_REFERENCE.md)
+for these mechanics. No MiniMind runtime, causal-LM SFT, autoregressive
+JSON, LoRA, distillation, or RL was introduced.
+
+### Four exact step readbacks
+
+Loss values are connectivity evidence, **not model quality**. LR decimals
+below preserve the actual float readback; 0.00007500000000000001 is the
+declared 1e-4 × 0.75 floating-point value.
+
+| Step | Intent CE | Span CE | Validity BCE | Total | LR before | LR after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1.943225383758545 | 3.009040355682373 | 0.21062076091766357 | 5.162886619567871 | 0.0001 | 0.00007500000000000001 |
+| 2 | 1.1801034212112427 | 2.818918466567993 | 0.20615056157112122 | 4.205172538757324 | 0.00007500000000000001 | 0.00005 |
+| 3 | 2.1505627632141113 | 4.029707908630371 | 1.6911464929580688 | 7.871417045593262 | 0.00005 | 0.000025 |
+| 4 | 2.073721408843994 | 3.8908021450042725 | 1.6916996240615845 | 7.656222820281982 | 0.000025 | 0 |
+
+| Step | Unclipped aggregate norm | clip_grad_norm_ returned | Measured post-clip norm | Elapsed seconds |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 28.811553649407067 | 28.811553955078125 | 0.9999998841898352 | 7.527861 |
+| 2 | 23.608881486488645 | 23.608882904052734 | 0.9999998454574439 | 0.050907 |
+| 3 | 61.45769636982578 | 61.45769500732422 | 0.9999999295516689 | 0.05253 |
+| 4 | 58.76520570549477 | 58.765201568603516 | 1.0000000253052448 | 0.049627 |
+
+Post-clip norm uses a 1.00001 numerical tolerance around the requested
+maximum 1.0; the tiny step-4 rounding excess is recorded without alteration.
+There were exactly four optimizer calls and no fifth step.
+
+### Parameter-mutation proof
+
+SHA-256 includes parameter names, shapes, dtypes and raw contiguous bytes.
+
+| Group | Before | After | Result |
+| --- | --- | --- | --- |
+| act_head | `7568d33742b4239cec61ef3cd24ff533a342e8f1d98158ea7f997757efa0394d` | `7568d33742b4239cec61ef3cd24ff533a342e8f1d98158ea7f997757efa0394d` | unchanged |
+| encoder | `e158bfb1ff7d701715008e6247d4a2e99b94c8384281ccfb2629dfde2016e812` | `e158bfb1ff7d701715008e6247d4a2e99b94c8384281ccfb2629dfde2016e812` | unchanged |
+| span | `69d2c733f2cb88780070c06993fa626d9e516e438b4bdc52e49b2f7f95de89a4` | `3747f3dee97509bf4086908233ce5635ea0fc070ab4e64042d6d29ad3dc32ffa` | changed |
+| typed | `2feb35a346c8cf6aa13151243f55e47ef65934cc2c8eb7062030e04b14b9fbf4` | `aa9d1d75f85daf6ab7318acecf04e5dd972cdc5e1765a123fd84e1831f31653f` | changed |
+| validity | `f268d1c3a93dde50a5b1a67610ffa0dce8d8bcd1fffa1028012b36348ba85f05` | `382951fefb2fd89a7ce03a8722b97ea7ba193869408642583de8bb851133bebf` | changed |
+
+Exact parameter-name sets are in the structured result. The changed group
+hashes prove that at least one parameter changed in each required trainable
+group. They establish connectivity only.
+
+### Step-2 checkpoint save/reload/resume/cleanup
+
+The exact task directory `D:/ai/ai/stage_b_training_pipeline_smoke/pr76/`
+was verified absent before the live child; no pre-existing directory was
+deleted. After optimizer step 2, the child created it exclusively and wrote
+one checkpoint, sanitized path `<external-smoke-root>/pr76/step-2.pt`.
+
+Checkpoint SHA:
+`870258d801afa6348985da76a6c3e740b2aa40d5b8d22c4790ce36c3934d3953`.
+
+It contains only allowed trainable Laya state, span/validity states,
+optimizer/scheduler state, completed step 2, seed/config, subset SHA and
+pinned identities. No frozen encoder or act-head weights were saved.
+
+All trainable model/head and optimizer/scheduler objects were destroyed and
+recreated using the pinned upstream model constructor and new project heads.
+Frozen encoder, act_head and temperature references were retained unchanged.
+After restore, exact group hashes matched step-2 state; optimizer and
+scheduler state hashes matched:
+
+- Optimizer: `bbbeb6e6cfdef26cc35561cd13994d90e9fe2af483c54540be6da23911d8955b`.
+- Scheduler: `f464689c3b5f2d4054cdcd05eaf1de687a09c466bfc7a64a4c7be03e2990fcc9`.
+- Completed step restored: **2**.
+- Next LR restored: **0.00005**.
+- Steps **3 and 4** then completed from restored state.
+
+The child collected final evidence, verified immutable identities, deleted
+the task-owned checkpoint directory, and verified that it no longer existed.
+An external post-run existence check also confirmed absence. No binary
+checkpoint was committed or left in canonical Laya storage.
+
+### VRAM and immutable identities
+
+All byte counts below refer to the selected RX 9070 XT. Timings are
+descriptive smoke readbacks, not latency qualification.
+
+| Phase | Allocated bytes | Reserved bytes | Peak allocated | Peak reserved |
+| --- | ---: | ---: | ---: | ---: |
+| baseline | 0 | 0 | 0 | 0 |
+| after_load | 1307833856 | 1333788672 | 1307833856 | 1333788672 |
+| before_step_1 | 1307859456 | 1333788672 | 1307859456 | 1333788672 |
+| after_step_1 | 1554375680 | 1644167168 | 1573262336 | 1644167168 |
+| after_step_2 | 1555218944 | 1644167168 | 1574105600 | 1644167168 |
+| after_reload | 1493188608 | 1665138688 | 1613070336 | 1665138688 |
+| after_step_3 | 1554273792 | 1665138688 | 1613070336 | 1665138688 |
+| after_step_4 | 1554273792 | 1665138688 | 1613070336 | 1665138688 |
+| final | 1493188608 | 1665138688 | 1613070336 | 1665138688 |
+
+These exact identities were verified unchanged before/after in the live child:
+
+| Identity | Before = after |
 | --- | --- |
-| Qualified Python | `D:\ai\venvs\siri-stage-b-rocm10-gfx1201\Scripts\python.exe` |
-| Laya source revision | `42626c348753fbb17572a813127df2278a1ec527` |
+| Pinned source revision, clean | `42626c348753fbb17572a813127df2278a1ec527` |
 | Model revision | `052592a15d198d9ad47da779604259b10b47b7aa` |
-| Primary weight SHA | `9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204` |
-| Model aggregate SHA | `eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf` |
-| Venv inventory SHA | `3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337` |
+| Model aggregate | `eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf` |
+| Primary weight | `9d628fd971b700382ac6f65920a86f149777b2e748e0c955fb3b19695aa8f204` |
+| Qualified venv inventory | `3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337` |
+| canonical_corpus_sha256 | `a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13` |
+| corpus_manifest_sha256 | `297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c` |
+| provenance_manifest_sha256 | `d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d` |
+| seal_manifest_sha256 | `5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef` |
+| selection_manifest_sha256 | `973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a` |
+| split_assignment_sha256 | `84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37` |
+| train_sha256 | `54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2` |
 
-## Sanitized structured result
+The structured result also records the byte hashes of all three frozen
+split files and the distinct canonical split hashes. No source, tokenizer,
+model/config, venv, frozen corpus/manifest, or seal mutation occurred.
 
-Reproduce the data preflight with the ordinary project test Python:
+Canonical sanitized run-summary SHA:
+`2f1ff9c362a132310282fd46488dbd45dbdab89dbf246a92956e354ad3ef482e`.
 
-```powershell
-& D:/ai/siri-spec/.venv/Scripts/python.exe -B -X utf8 scripts/local_ai_stage_b_laya_training_pipeline_smoke.py
-```
+Hashing uses UTF-8 JSON, sorted keys, ASCII escaping, compact separators and
+nonfinite JSON rejection, excluding only canonical_run_summary_sha256.
+Timing and memory are measured fields; canonical serialization of the same
+record is deterministic, not a claim that later hardware runs are bitwise
+identical. The [complete structured record](LAYA_TRAINING_PIPELINE_SMOKE_RESULT_2026-09-26.json)
+contains no utterance text, private/provider IDs, secrets, or environment dump.
 
-Exit code 1 is the expected fail-closed result. This command contains no model
-compute. Canonical SHA-256 uses UTF-8 JSON with sorted keys, ASCII escaping,
-compact separators, and nonfinite JSON values rejected; the hash excludes
-only the `canonical_report_sha256` field itself. It is a **data-preflight
-report hash**, not a successful training-run-summary hash.
+### Repository validation and test environment
 
-```json
-{
-  "authority_flags": {
-    "LOCAL_AI_FALLBACK_APPROVED": false,
-    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
-    "local_ai_fallback_approved": false,
-    "model_compute_authorized": false,
-    "semantic_memory_enabled": false,
-    "training_authorized": false
-  },
-  "available_per_stratum": {
-    "deterministic_only": 180,
-    "play_artist_absent_album_absent": 114,
-    "play_artist_absent_album_present": 174,
-    "play_artist_present_album_absent": 204,
-    "play_artist_present_album_present": 408,
-    "safety_only": 120,
-    "unknown_ambiguous_version": 0,
-    "unknown_artist_only": 300,
-    "unknown_missing_track": 300,
-    "unknown_unresolved_reference": 0
-  },
-  "blocker": "fixed_strata_incomplete_or_duplicate",
-  "canonical_report_sha256": "8c489efb27475c90aec4fce9f1d5ad18cf1e5557505bf4ab4ee5968792357eda",
-  "checkpoint_created": false,
-  "data_identity_after": {
-    "authoritative_schema_groups_leakage_near_duplicates": "passed",
-    "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
-    "canonical_split_sha256": {
-      "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
-      "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
-      "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
-    },
-    "corpus_manifest_sha256": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
-    "provenance_manifest_sha256": "d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d",
-    "seal_manifest_sha256": "5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef",
-    "selection_manifest_sha256": "973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a",
-    "split_assignment_sha256": "84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37",
-    "split_file_sha256": {
-      "held_out.jsonl": "de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946",
-      "train.jsonl": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
-      "validation.jsonl": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a"
-    },
-    "train_rows": 1800,
-    "train_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2"
-  },
-  "data_identity_before": {
-    "authoritative_schema_groups_leakage_near_duplicates": "passed",
-    "canonical_corpus_sha256": "a7a7a673bbb5155bce7b163a3ef4a6bf8c3885b9a0c2b81a208d4a9304854e13",
-    "canonical_split_sha256": {
-      "test": "6c9d960bd299c3c4cc07aa5f341b775d408d2b2f4191954512f588519d683594",
-      "train": "c3793a6b8e4bb5068f5bd1d027c1b967be5fd18b88992db2b363270a4a832964",
-      "validation": "9f3028c83e0c3f7e5402c239abe9f194a3e06309b43f3cd9344fb3475fdf21cd"
-    },
-    "corpus_manifest_sha256": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
-    "provenance_manifest_sha256": "d8158ead4034db387f9e4b7fa315b6ce60dcfe09f96caf909d4da5bcc7732e9d",
-    "seal_manifest_sha256": "5606a4803788577d29bda39e9d40319a43098d857c795d7c8a882f2f842b6eef",
-    "selection_manifest_sha256": "973237c6b1437387f1bba21396fd4c60e0d0395112c07e1003e4764f676e143a",
-    "split_assignment_sha256": "84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37",
-    "split_file_sha256": {
-      "held_out.jsonl": "de392544b7a294cdf850ce2706509684b05c4ca346402c7ec60cf9031f979946",
-      "train.jsonl": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
-      "validation.jsonl": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a"
-    },
-    "train_rows": 1800,
-    "train_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2"
-  },
-  "deficient_strata": {
-    "unknown_ambiguous_version": 0,
-    "unknown_unresolved_reference": 0
-  },
-  "live_invocations": 0,
-  "model_loads": 0,
-  "optimizer_steps": 0,
-  "repo_base": "57a07b11f8ae322d39be9379f7423b924880aa0b",
-  "required_per_stratum": {
-    "deterministic_only": 4,
-    "play_artist_absent_album_absent": 4,
-    "play_artist_absent_album_present": 4,
-    "play_artist_present_album_absent": 4,
-    "play_artist_present_album_present": 4,
-    "safety_only": 4,
-    "unknown_ambiguous_version": 4,
-    "unknown_artist_only": 4,
-    "unknown_missing_track": 4,
-    "unknown_unresolved_reference": 4
-  },
-  "schema": "laya-training-pipeline-data-preflight-v1",
-  "status": "STOP_LAYA_TRAINING_PIPELINE_DATA_BOUNDARY"
-}
-```
+Only the qualified Python executable was used for this correction. It has
+no pytest installation. For CPU test invocations only, the existing
+D:/ai/siri-spec/.venv/Lib/site-packages directory was appended to sys.path
+after qualified paths, then pytest ran through runpy. Both environments use
+Python 3.14.7; qualified packages retained import precedence. No package was
+installed or venv changed. That test-only path was not propagated into the
+live child. CPU toy tests are separate from the one four-step Laya smoke.
 
-## Validation
+- New focused selector/pipeline suite: **24 passed**.
+- Combined selector/pipeline/shape/load/hardware/corpus/seal suite:
+  **108 passed**.
+- Full unit suite: **670 passed**, two existing deprecation warnings (273.07 s).
+- Windows integration: **5 passed**.
+- Compileall and git diff --check: passed; **29 Markdown relative links** resolved.
+- Frozen artifacts/fixtures and production app: zero diff. All three protected
+  primary status/Shortcut SHA-256 values match their starting identities.
+- No quality benchmark was run.
 
-- Focused new preflight tests: 17 passed.
-- Focused preflight/shape/load/hardware/corpus/seal regression: 101 passed.
-- Full unit suite: 663 passed, two existing deprecation warnings (288.72 s).
-- Windows integration: 5 passed.
-- `python -m compileall -q app scripts tests`: passed.
-- `git diff --check`: passed; 27 Markdown relative links resolved.
-- Frozen `artifacts/`, `tests/fixtures/`, and production `app/`: zero diff.
-- Primary `PROJECT_STATUS.md`, `docs/SIRI_SHORTCUT.md`, and
-  `docs/SIRI_SHORTCUT_V2.md` SHA-256 values match their starting identities.
-- No quality benchmarks were run.
+### Current state and remaining gates
 
-The initial draft's test run exposed the absent strata (four fixture setup
-errors) and an unused wrong hardware test import (one failure). That draft
-also ran one four-step AdamW CPU unit test on a tiny randomly initialized
-toy module and invented tensors, with no Laya weights or corpus examples.
-Those four toy unit steps are not a Laya training-pipeline result. No GPU
-or Laya model was used. The draft training code/tests were removed; the
-retained narrow suite passes and performs no optimizer operations. There
-was no live Laya attempt or retry. The structured report's zero optimizer
-count describes the retained data-preflight invocation.
+PROJECT_STATUS records the corrected PASS; the initial selector blocker is
+historical only. Issue #68 remains OPEN and PR #76 remains OPEN/UNMERGED for
+independent review. The next gate is the **small adaptation run, still
+separately unauthorized**. Validation/held-out quality, Stage A regression,
+latency, Decider qualification and production promotion remain separate.
 
-## Status and remaining gates
-
-`PROJECT_STATUS.md` records this exact dataset blocker. Issue #68 remains
-OPEN. The PR remains OPEN and UNMERGED for independent review.
-
-The smallest next action is a separately approved revision to the
-predeclared subset rule using strata actually present in the frozen train
-file, or a separately reviewed future corpus revision. This task does
-neither. The training-pipeline smoke remains unproven; small adaptation is
-still separately unauthorized. Validation/held-out quality, Stage A model
-regression, latency, Decider qualification, and production promotion remain
-separate gates.
-
-No validation/held-out/Stage A/synthetic-fixture Laya input, Laya optimizer step,
-model retry, quality evaluation, threshold/hyperparameter tuning, encoder or
-act-head training, LoRA, distillation, RL, Spotify/Siri/Windows action,
-production app change, frozen artifact change, or network model call occurred.
-All six persistent authority flags remain false:
+No validation/held-out/Stage A/synthetic-shape row became a Laya optimizer
+input. No threshold/hyperparameter tuning, encoder/act-head training,
+persistent checkpoint, LoRA, distillation, RL, Spotify/Siri/Windows action,
+production app edit, frozen artifact edit, or network model call occurred.
+This one bounded task changed no persistent/global authority flag:
 
 ```text
 training_authorized=false
