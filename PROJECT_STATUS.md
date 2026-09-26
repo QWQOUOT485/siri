@@ -4,60 +4,40 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya training-pipeline smoke passed on RX 9070 XT
+### 2026-09-26 Stage B Laya small adaptation safety triage passed
 
-RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
-dependency bootstrap passed. Pinned Laya model and source identity verified.
+**Current result:** `LAYA_RX9070XT_SMALL_ADAPTATION_TRIAGE_PASSED`.
+The one authorized RX 9070 XT / gfx1201 run selected the exact stratified
+600-row / 100-whole-group train subset, gated 102 deterministic/safety rows,
+and trained 498 supported rows for three fixed epochs / **189 optimizer
+steps**. Encoder and act_head remained frozen and byte-identical; only the
+allowed typed/span/validity groups changed. Constant AdamW LR 1e-4 and the
+fixed 0.5 validation rule were not tuned.
 
-The earlier `OTHER_DEPENDENCY_CP950` failure came from a PyTorch Jinja template
-read under the Windows cp950 default. A dedicated `-X utf8` child process
-cleared that boundary. Metadata-only checkpoint inspection reconciled the
-historical count: **321,908,995 parameters + 3 persistent `temperature`
-buffer elements = 321,908,998 checkpoint/state elements**. The one additional
-authorized live load passed strict checkpoint loading and residency readback:
-Laya, all parameters, and all buffers were on the unique RX 9070 XT /
-`gfx1201` at `cuda:1`; trainable parameter count 321,908,995; parameter and
-buffer dtypes `torch.float32`; `cpu_fallback=false`. Load was 16.048 s;
-baseline VRAM allocated/reserved 0/0, after and peak
-1,307,833,856/1,333,788,672 bytes. Model aggregate and venv inventory
-hashes were identical before/after. See
-`docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_MODEL_LOAD_PREFLIGHT_2026-09-25.md`
-for the exact source/model hashes, memory readback, and evidence limits.
+The final research checkpoint was saved, all trainable objects recreated,
+and serialized parameter hashes exactly restored before **one untouched
+600-row validation pass**: 540 supported rows reached the model, 60 were
+blocked before rendering. Safety triage passed: unknown recall **240/240**,
+conditional unknown false acceptance **0/240**, blocked **60/60** with zero
+leakage, predicted play without valid grounded track **0**.
 
-PR #72 independent review and merge are complete.
+Diagnostic quality is poor: play recall **11/300**, track exact-span
+**0/300**, full semantic **240/540**. This is not a final quality gate pass.
+No held-out/Stage A model input, calibration, threshold/hyperparameter tuning,
+second validation, retry, LoRA, or production promotion occurred. MiniMind
+was only a training-engineering reference. Frozen source/model/venv/corpus/
+manifests/seal identities stayed unchanged. The external final checkpoint is
+retained with read-only attributes for research review only.
 
-The dedicated synthetic 64-row shape fixture passed schema, span/BIO/mask,
-null, and exact pinned-renderer equivalence checks. The one authorized fixed
-eight-row `cuda:1` smoke called the pinned typed model forward once and a
-provisional head-only loss backward once. Typed `[8,2]`, action `[8,2]`,
-hidden `[8,36,768]`, span `[8,36,7]`, and validity `[8]` outputs were finite
-on RX 9070 XT. Typed/span/validity gradients were finite and nonzero;
-encoder gradients were absent. No optimizer, step, checkpoint, training, or
-quality evaluation occurred; no Stage A/B row entered the model smoke. The
-required seal verifier performed read-only frozen-file identity checks. Model,
-source, venv, and seal identities remained unchanged. See
-`docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_FORWARD_BACKWARD_SMOKE_2026-09-26.md`.
+Prior merged load, PR #75 shape and PR #76 pipeline smoke remain valid.
+See [small adaptation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SMALL_ADAPTATION_2026-09-26.md)
+and its complete sanitized JSON for hashes, IDs, metrics and limitations.
 
-**Current result:** `LAYA_RX9070XT_TRAINING_PIPELINE_SMOKE_PASSED`.
-The corrected task-owned selector matched the exact 40-case oracle, 40 unique
-source groups, language quotas, and 32 supported / eight blocked boundary.
-The first actual live pipeline run completed exactly four optimizer steps on
-RX 9070 XT / gfx1201. Encoder and act_head stayed frozen and byte-identical;
-allowed typed/span/validity parameters changed. Step-2 checkpoint save,
-trainable-object recreation, exact reload/resume, and cleanup all passed.
-Frozen source/model/venv/train/manifests/seal identities remained unchanged.
-No validation/held-out/Stage A or synthetic shape-fixture row became a model
-input; the existing verifier's broader reads were integrity-only. This is
-pipeline/connectivity evidence, with no quality conclusion. PR #75's merged
-head-only shape smoke remains valid prior evidence. MiniMind was used only
-as a training-engineering reference. See
-[the training-pipeline report](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_TRAINING_PIPELINE_SMOKE_2026-09-26.md).
-
-**Next gate:** Small adaptation remains separately unauthorized. Validation/
-held-out quality, Stage A regression, latency, Decider qualification, and
-production promotion remain separate unproven gates. PR #76 independent review
-and merge are complete; Issue #68 stays open. No second live run or general
-training authority was granted.
+**Next gate:** Independent review of this narrow PR. Full head-only adaptation
+remains separately unauthorized. Held-out quality, Stage A regression,
+calibration, final slot/semantic gates, latency, Decider qualification and
+production promotion remain separate. Issue #68 stays OPEN. No second live
+run or general training authority is granted.
 
 **Authority flags** (all remain `false`):
 
@@ -68,8 +48,6 @@ training authority was granted.
 - `LOCAL_SEMANTIC_MEMORY_ENABLED=false`
 - `LOCAL_AI_FALLBACK_APPROVED=false`
 
-See [GitHub Issue #68](https://github.com/QWQOUOT485/siri/issues/68) for
-detailed Stage B Laya blocker history.
 ### 2026-09-24 Stage B held-out sealed; RX 9070 XT basic tensor smoke passed
 
 Issue #53 is CLOSED. Frozen v6 remains the 3,600-row / 600-group source and
