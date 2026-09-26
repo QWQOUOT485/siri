@@ -25,7 +25,7 @@ All four historical files were hashed before and after; byte identity is require
 
 | New file | SHA-256 |
 | --- | --- |
-| local_ai_stage_b_laya_span_decoder.py | `f58d8efd1819c431c7e5fe6a0c42e4bfeba100cea76e5fbba99205d0ba2c2ee1` |
+| local_ai_stage_b_laya_span_decoder.py | `7a8a8348ddbac15f8eac0b3c5c67cff24075f81db6febc49ac99b08e366cf221` |
 | local_ai_stage_b_laya_span_seam_implementation_verify.py | `35203544303153cab0df03145bddb21a6c6f08f0d97f5b4f213cedfab115c3e2` |
 
 ## Frozen tokenizer and input identities
@@ -79,8 +79,10 @@ Issues #80 and #82 were snapshotted read-only (title/body/state/updatedAt/commen
 
 [Complete sanitized result](LAYA_SPAN_SEAM_IMPLEMENTATION_RESULT_2026-09-26.json). Canonical hash uses sorted compact ASCII JSON, UTF-8 and no NaN, excluding only its own hash field.
 
-Canonical result SHA-256: `70f76a404f0a376aa7094f9d3778cdc5023877c080bb429a6ee45d9bfaf1c745`.
+Canonical result SHA-256: `2e5962c7fc2aa88c79de97dc2f11996446f8afc4e2fb8d310c4a567ff06ee21c`.
 
 Focused new decoder/verifier + design/audit/adapter/historical decoder suites: **176 passed**, including **67 new tests**. Full unit: **835 passed**, two existing dependency deprecation warnings, 266.02 seconds. Windows integration: **5 passed**. Compileall/diff checks and **26 relative links** passed. Historical source hashes match before/after; app/frozen artifacts/fixtures have zero diff; primary dirty hashes unchanged. Qualified Python only; pytest appends existing primary test dependencies read-only in its CPU process, never into the verifier child. No package changes.
 
 Next gate: independent implementation review. Any later research/runtime integration and model training require separate review/authorization; full head-only adaptation remains unauthorized.
+
+Final staged checking found one extra EOF blank line in the new decoder. It was removed without logic changes; the actual tokenizer verifier was rerun to bind the final source SHA, preserving all 1,200 parity outputs and exact counts. The 67 new tests passed again. Full-suite results above precede this whitespace-only cleanup. Final base-to-head diff check passes.

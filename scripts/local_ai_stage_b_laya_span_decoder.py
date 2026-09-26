@@ -92,4 +92,3 @@ def decode(typed_index: int, validity_probability: float, labels: list[int],
         a, b = first[0], last[1]
         spans[slot] = {'start': a, 'end': b}
     return finish(spans, text)
-

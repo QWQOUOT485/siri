@@ -7,7 +7,7 @@
     "semantic_memory_enabled": false,
     "training_authorized": false
   },
-  "canonical_result_sha256": "70f76a404f0a376aa7094f9d3778cdc5023877c080bb429a6ee45d9bfaf1c745",
+  "canonical_result_sha256": "2e5962c7fc2aa88c79de97dc2f11996446f8afc4e2fb8d310c4a567ff06ee21c",
   "historical_after": {
     "local_ai_stage_b_laya_adapter.py": "cdda28ad4821d1c032d74ac23d6b0aba54f15d4f342616512d5a64faca751f8e",
     "local_ai_stage_b_laya_small_adaptation.py": "85832ab8a28780c93a0742db1db178f8458e536812f73181308f8057d9b2633e",
@@ -124,7 +124,7 @@
   },
   "schema": "laya-s3-implementation-v1",
   "source_hashes": {
-    "local_ai_stage_b_laya_span_decoder.py": "f58d8efd1819c431c7e5fe6a0c42e4bfeba100cea76e5fbba99205d0ba2c2ee1",
+    "local_ai_stage_b_laya_span_decoder.py": "7a8a8348ddbac15f8eac0b3c5c67cff24075f81db6febc49ac99b08e366cf221",
     "local_ai_stage_b_laya_span_seam_implementation_verify.py": "35203544303153cab0df03145bddb21a6c6f08f0d97f5b4f213cedfab115c3e2"
   },
   "splits": {
