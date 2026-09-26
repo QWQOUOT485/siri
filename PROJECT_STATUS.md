@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya UTF-8 load and RX 9070 XT residency passed
+### 2026-09-26 Stage B Laya head-only shape smoke passed on RX 9070 XT
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
@@ -26,9 +26,30 @@ for the exact source/model hashes, memory readback, and evidence limits.
 
 PR #72 independent review and merge are complete.
 
-**Remaining gates:** Forward/inference/backward, adapter smoke, and
-training-path checks require separate authorization and have not run. Decider
-remains separately unqualified; model compute and training remain unauthorized.
+The dedicated synthetic 64-row shape fixture passed schema, span/BIO/mask,
+null, and exact pinned-renderer equivalence checks. The one authorized fixed
+eight-row `cuda:1` smoke called the pinned typed model forward once and a
+provisional head-only loss backward once. Typed `[8,2]`, action `[8,2]`,
+hidden `[8,36,768]`, span `[8,36,7]`, and validity `[8]` outputs were finite
+on RX 9070 XT. Typed/span/validity gradients were finite and nonzero;
+encoder gradients were absent. No optimizer, step, checkpoint, training, or
+quality evaluation occurred; no Stage A/B row entered the model smoke. The
+required seal verifier performed read-only frozen-file identity checks. Model,
+source, venv, and seal identities remained unchanged. See
+`docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_FORWARD_BACKWARD_SMOKE_2026-09-26.md`.
+
+**Remaining gates:** The training-pipeline smoke is next in the accepted plan
+but remains separately unauthorized. Adaptation, validation/held-out quality,
+latency, Decider qualification, and production fallback remain unproven;
+general model compute and training remain unauthorized.
+
+When the training-pipeline smoke is separately authorized, MiniMind may be used
+as a training-engineering reference for mixed precision, optimizer/scheduler
+wiring, gradient clipping, deterministic seeding, checkpoint save/resume, and
+experiment logging. MiniMind does not replace Laya or turn it into a causal-LM
+SFT model; Laya keeps its candidate-native encoder/decision-head/span/validity
+objectives. Distillation, LoRA, and RL remain later separately reviewed
+experiments and are not authorized by the current shape-smoke result.
 
 **Authority flags** (all remain `false`):
 
