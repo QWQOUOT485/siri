@@ -4,32 +4,32 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya span-seam design oracle feasible
+### 2026-09-26 Stage B reviewed S3 implementation verified
 
-**Current design result:** `LAYA_SPAN_SEAM_DESIGN_S3_FEASIBLE`.
-PR #81 review/merge is complete; S0 reproduces its existing structural blocker.
-Separate tokenizer/gold-BIO simulations favor **S3: strict slot isolation plus
-outer Unicode-whitespace tightening**. Validation exact spans are TRACK 297/300,
-ARTIST 126/126, ALBUM 203/204, passing integer gates 285/120/194. S4 was not evaluated.
-Train ALBUM 549/582 (94.33%) remains a disclosed limitation. This is theoretical
-oracle feasibility, not learned quality improvement or a PR #79 rescore.
+**Current result:** `LAYA_SPAN_SEAM_S3_IMPLEMENTATION_VERIFIED`.
+PR #83 review/merge is complete; S3 design remains feasible. The new reusable
+S3 decoder matches the unchanged design helper on **900/900 train + 300/300
+validation plays**, zero entire-output mismatches. Exact oracle counts:
+train TRACK **886/900**, ARTIST **612/612**, ALBUM **549/582 (94.33%)**;
+validation TRACK **297/300**, ARTIST **126/126**, ALBUM **203/204**.
+The train ALBUM limitation and three validation TRACK/one ALBUM failures remain.
+This proves implementation parity, not learned model-quality improvement.
 
-All 34 validation B-case TRACK failures (57 missing-slot outputs total) come
-from the current whole-row order check on unselected O offsets [0,1] then[0,2].
-The proposed isolation accepts only valid monotonic O/O overlap outside selected
-spans; true reversals and conflicts involving selected slots still fail closed.
-All 24 adversarial safety cases passed. Existing adapter/decoder/audit behavior
-is unchanged; no model weights, checkpoint, GPU/model/training or protected
-held-out/Stage A rows were used. Broad existing regression tests are separate.
+All 24 reviewed adversaries and 28 implementation checks passed. Four historical
+source files, including PR #79 decode and PR #83 design helper, remain byte-identical.
+No production Laya/BIO decoder path was added or wired into app; historical
+research runners remain unchanged. No model weights, checkpoint, GPU/model
+compute, training, held-out or Stage A verifier inputs were used. Broad existing
+regression fixture/integrity tests are separate.
 
-See [span-seam design](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN.md)
-and [oracle evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN_2026-09-26.md).
+See [S3 implementation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_IMPLEMENTATION_2026-09-26.md)
+and [reviewed design](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN.md).
 
-**Next gate:** Independent design review. Runtime seam implementation and
-verification require separate approval; full head-only adaptation remains
-unauthorized. Held-out quality, Stage A regression, calibration, final quality/
-latency, Decider and production remain separate. Issue #68 stays OPEN; Issue #80
-is untouched. No general model-compute or training authority is granted.
+**Next gate:** Independent implementation review. Future research/runtime wiring
+and training require separate authorization; full head-only adaptation remains
+unauthorized. Issue #68 stays OPEN; Issues #80 and #82 are untouched. Held-out,
+Stage A, calibration, final quality/latency, Decider and production remain
+separate gates. No general model-compute or training authority is granted.
 
 **Authority flags** (all remain `false`):
 

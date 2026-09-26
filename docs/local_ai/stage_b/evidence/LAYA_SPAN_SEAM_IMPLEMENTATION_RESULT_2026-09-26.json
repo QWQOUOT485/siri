@@ -1,0 +1,778 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "08e8173175f5a879b7677cde2fdaedbc844ae5e4dc790b1d81bb174c46d4bcbb",
+  "historical_after": {
+    "local_ai_stage_b_laya_adapter.py": "cdda28ad4821d1c032d74ac23d6b0aba54f15d4f342616512d5a64faca751f8e",
+    "local_ai_stage_b_laya_small_adaptation.py": "85832ab8a28780c93a0742db1db178f8458e536812f73181308f8057d9b2633e",
+    "local_ai_stage_b_laya_span_representability_audit.py": "6615121c5d4e637916777650e248ebff5a2e9380b45b4238702e4efe9d7d0087",
+    "local_ai_stage_b_laya_span_seam_design.py": "7b739acf83bbf57db72ac79684fbe807eb3fd2b3ecc5e3e28c1324f150a5db72"
+  },
+  "historical_before": {
+    "local_ai_stage_b_laya_adapter.py": "cdda28ad4821d1c032d74ac23d6b0aba54f15d4f342616512d5a64faca751f8e",
+    "local_ai_stage_b_laya_small_adaptation.py": "85832ab8a28780c93a0742db1db178f8458e536812f73181308f8057d9b2633e",
+    "local_ai_stage_b_laya_span_representability_audit.py": "6615121c5d4e637916777650e248ebff5a2e9380b45b4238702e4efe9d7d0087",
+    "local_ai_stage_b_laya_span_seam_design.py": "7b739acf83bbf57db72ac79684fbe807eb3fd2b3ecc5e3e28c1324f150a5db72"
+  },
+  "inputs": {
+    "train": {
+      "rows": 1800,
+      "sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+      "supported_play": 900
+    },
+    "validation": {
+      "rows": 600,
+      "sha256": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a",
+      "supported_play": 300
+    }
+  },
+  "process_boundary": {
+    "app_modified": false,
+    "checkpoint_opened": false,
+    "gpu_access": false,
+    "held_out_rows_opened": false,
+    "model_compute": false,
+    "model_weights_opened": false,
+    "offline": true,
+    "opened_corpus_splits": [
+      "train",
+      "validation"
+    ],
+    "protected_open_attempts": 0,
+    "stage_a_rows_opened": false,
+    "torch_imported_incidentally": true,
+    "utf8_mode": 1
+  },
+  "repo_base": "db987d26e7561391876de3e27afa113460efdde5",
+  "reviewed_design_sha": "99bb654c9be4499054d930103416551e7583ed5c6fbf979de7ad4820274acf04",
+  "safety_inventory": {
+    "forbidden_text": {
+      "exact_adapter_policy_reused": true,
+      "passed": 4,
+      "total": 4
+    },
+    "implementation": {
+      "cases": [
+        "typed_unknown",
+        "validity_below_half",
+        "validity_nan",
+        "validity_above_one",
+        "length_mismatch",
+        "invalid_label",
+        "non_user_label",
+        "non_user_offset",
+        "invalid_o_offset",
+        "valid_o_overlap",
+        "decreasing_o_start",
+        "decreasing_o_end",
+        "track_o_overlap",
+        "track_artist_conflict",
+        "track_album_conflict",
+        "optional_conflict",
+        "malformed_optional",
+        "malformed_track_clears_all",
+        "forbidden_url",
+        "forbidden_spotify",
+        "forbidden_path",
+        "forbidden_command",
+        "punctuation_not_trimmed",
+        "no_expansion",
+        "literal_substring",
+        "empty_after_tightening",
+        "historical_decoder_hash_unchanged",
+        "design_helper_hash_unchanged"
+      ],
+      "passed": 28,
+      "total": 28
+    },
+    "reviewed": {
+      "cases": [
+        "leading_ascii",
+        "leading_tab",
+        "leading_em_space",
+        "trailing_whitespace",
+        "both_whitespace",
+        "parentheses_retained",
+        "hyphen_retained",
+        "apostrophe_retained",
+        "cjk_punctuation_retained",
+        "empty_tightened",
+        "orphan_track_inside",
+        "duplicate_track_begin",
+        "discontinuous_track",
+        "two_track_spans",
+        "invalid_raw_offset",
+        "track_crosses_non_user",
+        "malformed_artist_isolated",
+        "malformed_album_isolated",
+        "malformed_track_valid_optional",
+        "overlap_track_optional",
+        "overlap_optional_only",
+        "no_expansion",
+        "non_whitespace_never_deleted",
+        "literal_substring"
+      ],
+      "passed": 24,
+      "total": 24
+    }
+  },
+  "schema": "laya-s3-implementation-v1",
+  "source_hashes": {
+    "local_ai_stage_b_laya_span_decoder.py": "f497267fdbf916a193191d64b0b59853fa7473a27a1a592c1ce47498bfafd845",
+    "local_ai_stage_b_laya_span_seam_implementation_verify.py": "35203544303153cab0df03145bddb21a6c6f08f0d97f5b4f213cedfab115c3e2"
+  },
+  "splits": {
+    "train": {
+      "denominators": {
+        "album": 582,
+        "artist": 612,
+        "track": 900
+      },
+      "design_exact": {
+        "album": 549,
+        "artist": 612,
+        "track": 886
+      },
+      "implementation_exact": {
+        "album": 549,
+        "artist": 612,
+        "track": 886
+      },
+      "parity": {
+        "equal": 900,
+        "mismatches": 0,
+        "total": 900
+      },
+      "retained_non_exact": {
+        "album": [
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00153",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 13,
+              "start": 5
+            },
+            "case_id": "candidate-00159",
+            "gold": {
+              "end": 12,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 23,
+              "start": 16
+            },
+            "case_id": "candidate-00172",
+            "gold": {
+              "end": 22,
+              "start": 16
+            }
+          },
+          {
+            "actual": {
+              "end": 21,
+              "start": 14
+            },
+            "case_id": "candidate-00173",
+            "gold": {
+              "end": 20,
+              "start": 14
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00177",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 13,
+              "start": 5
+            },
+            "case_id": "candidate-00183",
+            "gold": {
+              "end": 12,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00195",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00201",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 13,
+              "start": 5
+            },
+            "case_id": "candidate-00207",
+            "gold": {
+              "end": 12,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00225",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00243",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00249",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 14,
+              "start": 5
+            },
+            "case_id": "candidate-00255",
+            "gold": {
+              "end": 13,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00267",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00273",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00459",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00501",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 17,
+              "start": 10
+            },
+            "case_id": "candidate-00508",
+            "gold": {
+              "end": 16,
+              "start": 10
+            }
+          },
+          {
+            "actual": {
+              "end": 15,
+              "start": 8
+            },
+            "case_id": "candidate-00509",
+            "gold": {
+              "end": 14,
+              "start": 8
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00525",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00573",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00723",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00729",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 25,
+              "start": 17
+            },
+            "case_id": "candidate-00733",
+            "gold": {
+              "end": 25,
+              "start": 18
+            }
+          },
+          {
+            "actual": {
+              "end": 13,
+              "start": 5
+            },
+            "case_id": "candidate-00735",
+            "gold": {
+              "end": 12,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00753",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00765",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 22,
+              "start": 13
+            },
+            "case_id": "candidate-00805",
+            "gold": {
+              "end": 22,
+              "start": 14
+            }
+          },
+          {
+            "actual": {
+              "end": 27,
+              "start": 18
+            },
+            "case_id": "candidate-00806",
+            "gold": {
+              "end": 27,
+              "start": 19
+            }
+          },
+          {
+            "actual": {
+              "end": 22,
+              "start": 13
+            },
+            "case_id": "candidate-00808",
+            "gold": {
+              "end": 22,
+              "start": 14
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 5
+            },
+            "case_id": "candidate-00819",
+            "gold": {
+              "end": 7,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 11,
+              "start": 5
+            },
+            "case_id": "candidate-00825",
+            "gold": {
+              "end": 10,
+              "start": 5
+            }
+          },
+          {
+            "actual": {
+              "end": 68,
+              "start": 43
+            },
+            "case_id": "candidate-00970",
+            "gold": {
+              "end": 67,
+              "start": 43
+            }
+          }
+        ],
+        "artist": [],
+        "track": [
+          {
+            "actual": {
+              "end": 6,
+              "start": 1
+            },
+            "case_id": "candidate-00199",
+            "gold": {
+              "end": 6,
+              "start": 2
+            }
+          },
+          {
+            "actual": {
+              "end": 17,
+              "start": 9
+            },
+            "case_id": "candidate-00213",
+            "gold": {
+              "end": 17,
+              "start": 10
+            }
+          },
+          {
+            "actual": {
+              "end": 23,
+              "start": 12
+            },
+            "case_id": "candidate-00279",
+            "gold": {
+              "end": 23,
+              "start": 13
+            }
+          },
+          {
+            "actual": {
+              "end": 18,
+              "start": 11
+            },
+            "case_id": "candidate-00513",
+            "gold": {
+              "end": 17,
+              "start": 11
+            }
+          },
+          {
+            "actual": {
+              "end": 9,
+              "start": 2
+            },
+            "case_id": "candidate-00706",
+            "gold": {
+              "end": 8,
+              "start": 2
+            }
+          },
+          {
+            "actual": {
+              "end": 8,
+              "start": 1
+            },
+            "case_id": "candidate-00707",
+            "gold": {
+              "end": 7,
+              "start": 1
+            }
+          },
+          {
+            "actual": {
+              "end": 29,
+              "start": 4
+            },
+            "case_id": "candidate-00986",
+            "gold": {
+              "end": 28,
+              "start": 4
+            }
+          },
+          {
+            "actual": {
+              "end": 52,
+              "start": 27
+            },
+            "case_id": "candidate-00987",
+            "gold": {
+              "end": 51,
+              "start": 27
+            }
+          },
+          {
+            "actual": {
+              "end": 34,
+              "start": 9
+            },
+            "case_id": "candidate-00989",
+            "gold": {
+              "end": 33,
+              "start": 9
+            }
+          },
+          {
+            "actual": {
+              "end": 27,
+              "start": 4
+            },
+            "case_id": "candidate-00990",
+            "gold": {
+              "end": 26,
+              "start": 4
+            }
+          },
+          {
+            "actual": {
+              "end": 27,
+              "start": 4
+            },
+            "case_id": "candidate-01130",
+            "gold": {
+              "end": 26,
+              "start": 4
+            }
+          },
+          {
+            "actual": {
+              "end": 31,
+              "start": 8
+            },
+            "case_id": "candidate-01131",
+            "gold": {
+              "end": 30,
+              "start": 8
+            }
+          },
+          {
+            "actual": {
+              "end": 32,
+              "start": 9
+            },
+            "case_id": "candidate-01133",
+            "gold": {
+              "end": 31,
+              "start": 9
+            }
+          },
+          {
+            "actual": {
+              "end": 25,
+              "start": 4
+            },
+            "case_id": "candidate-01134",
+            "gold": {
+              "end": 24,
+              "start": 4
+            }
+          }
+        ]
+      }
+    },
+    "validation": {
+      "denominators": {
+        "album": 204,
+        "artist": 126,
+        "track": 300
+      },
+      "design_exact": {
+        "album": 203,
+        "artist": 126,
+        "track": 297
+      },
+      "implementation_exact": {
+        "album": 203,
+        "artist": 126,
+        "track": 297
+      },
+      "parity": {
+        "equal": 300,
+        "mismatches": 0,
+        "total": 300
+      },
+      "retained_non_exact": {
+        "album": [
+          {
+            "actual": {
+              "end": 54,
+              "start": 29
+            },
+            "case_id": "candidate-01258",
+            "gold": {
+              "end": 53,
+              "start": 29
+            }
+          }
+        ],
+        "artist": [],
+        "track": [
+          {
+            "actual": {
+              "end": 29,
+              "start": 4
+            },
+            "case_id": "candidate-01274",
+            "gold": {
+              "end": 28,
+              "start": 4
+            }
+          },
+          {
+            "actual": {
+              "end": 34,
+              "start": 9
+            },
+            "case_id": "candidate-01277",
+            "gold": {
+              "end": 33,
+              "start": 9
+            }
+          },
+          {
+            "actual": {
+              "end": 27,
+              "start": 4
+            },
+            "case_id": "candidate-01278",
+            "gold": {
+              "end": 26,
+              "start": 4
+            }
+          }
+        ]
+      }
+    }
+  },
+  "status": "LAYA_SPAN_SEAM_S3_IMPLEMENTATION_VERIFIED",
+  "tokenizer_identity": {
+    "full_model_aggregate_recomputed": false,
+    "reviewed_full_model_aggregate_sha256": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "verified_local_files": {
+      "rl_agent_config.json": {
+        "sha256": "25061739243b617ad88d1219ba6f8a9c86c5881ca28df024fa2d9b3b2fcc30c6",
+        "size_bytes": 472
+      },
+      "tokenizer/tokenizer.json": {
+        "sha256": "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f",
+        "size_bytes": 34363188
+      },
+      "tokenizer/tokenizer_config.json": {
+        "sha256": "2c0c4d82d4b4bc6b4ac40b2375e067a1645f78b381a9774248d47915f33d751f",
+        "size_bytes": 545
+      }
+    },
+    "weight_files_opened": false
+  },
+  "train_album_limitation": {
+    "denominator": 582,
+    "exact": 549,
+    "nonwhite_trim_forbidden": true,
+    "rate": 0.9432989690721649
+  }
+}
