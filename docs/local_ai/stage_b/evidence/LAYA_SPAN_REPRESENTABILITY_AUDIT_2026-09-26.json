@@ -1,0 +1,1847 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "1785052a43f1e20662ce27da9d57d857b3ff132af156afc3d7f7cebf602de2f5",
+  "inputs": {
+    "train": {
+      "rows": 1800,
+      "sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+      "supported_play": 900
+    },
+    "validation": {
+      "rows": 600,
+      "sha256": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a",
+      "supported_play": 300
+    }
+  },
+  "optional_slot_remaining_blockers": [
+    "artist",
+    "album"
+  ],
+  "pr79_play_cross_reference": [
+    {
+      "case_id": "candidate-01205",
+      "end_delta": 0,
+      "expected_track": {
+        "end": 31,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 31,
+        "start": 8
+      },
+      "start_delta": -1,
+      "whitespace_diagnostic": "leading_whitespace_only"
+    },
+    {
+      "case_id": "candidate-01211",
+      "end_delta": 0,
+      "expected_track": {
+        "end": 26,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 26,
+        "start": 15
+      },
+      "start_delta": 6,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01218",
+      "end_delta": -23,
+      "expected_track": {
+        "end": 33,
+        "start": 4
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 10,
+        "start": 3
+      },
+      "start_delta": -1,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01253",
+      "end_delta": 0,
+      "expected_track": {
+        "end": 31,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 31,
+        "start": 8
+      },
+      "start_delta": -1,
+      "whitespace_diagnostic": "leading_whitespace_only"
+    },
+    {
+      "case_id": "candidate-01268",
+      "end_delta": -7,
+      "expected_track": {
+        "end": 32,
+        "start": 4
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 25,
+        "start": 21
+      },
+      "start_delta": 17,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01277",
+      "end_delta": -15,
+      "expected_track": {
+        "end": 33,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 18,
+        "start": 8
+      },
+      "start_delta": -1,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01284",
+      "end_delta": 15,
+      "expected_track": {
+        "end": 12,
+        "start": 4
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 27,
+        "start": 23
+      },
+      "start_delta": 19,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01391",
+      "end_delta": 0,
+      "expected_track": {
+        "end": 24,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 24,
+        "start": 8
+      },
+      "start_delta": -1,
+      "whitespace_diagnostic": "leading_whitespace_only"
+    },
+    {
+      "case_id": "candidate-01402",
+      "end_delta": 0,
+      "expected_track": {
+        "end": 20,
+        "start": 3
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 20,
+        "start": 9
+      },
+      "start_delta": 6,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01403",
+      "end_delta": -7,
+      "expected_track": {
+        "end": 26,
+        "start": 9
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 19,
+        "start": 15
+      },
+      "start_delta": 6,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    },
+    {
+      "case_id": "candidate-01472",
+      "end_delta": -6,
+      "expected_track": {
+        "end": 32,
+        "start": 10
+      },
+      "gold_category": "C",
+      "recorded_predicted_track": {
+        "end": 26,
+        "start": 22
+      },
+      "start_delta": 12,
+      "whitespace_diagnostic": "non_whitespace_boundary_error"
+    }
+  ],
+  "pr79_rescored": false,
+  "prior_result_sha256": "4836d1fa2bf5a499cd8f4dfed9d23fd07620af4976963aecb4c397f148de7bd8",
+  "process_boundary": {
+    "held_out_rows_opened": false,
+    "model_compute_calls": 0,
+    "model_weights_opened": false,
+    "offline": true,
+    "opened_corpus_splits": [
+      "train",
+      "validation"
+    ],
+    "protected_open_attempts": 0,
+    "stage_a_rows_opened": false,
+    "tokenizer_only": true,
+    "torch_imported_incidentally": true,
+    "trained_artifact_accessed": false,
+    "utf8_mode": 1
+  },
+  "repo_base": "7c55924c7ae5f90f519c3d73889b04d0c430423b",
+  "schema": "laya-span-representability-v1",
+  "source_sha256": {
+    "local_ai_stage_b_laya_adapter.py": "cdda28ad4821d1c032d74ac23d6b0aba54f15d4f342616512d5a64faca751f8e",
+    "local_ai_stage_b_laya_small_adaptation.py": "85832ab8a28780c93a0742db1db178f8458e536812f73181308f8057d9b2633e"
+  },
+  "splits": {
+    "train": {
+      "blocked_unrendered_null_target_rows": 300,
+      "slots": {
+        "album": {
+          "any_token_exact_nonrepresentable": 248,
+          "any_token_exact_rate": 0.5738831615120275,
+          "any_token_exact_representable": 334,
+          "boundary_alignment": {
+            "both_boundaries_exact": 334,
+            "first_token_start_exact": 362,
+            "last_token_end_exact": 553
+          },
+          "categories": {
+            "A": 155,
+            "B": 179,
+            "C": 248
+          },
+          "category_rates": {
+            "A": 0.2663230240549828,
+            "B": 0.3075601374570447,
+            "C": 0.4261168384879725
+          },
+          "current_label_roundtrip_exact": 155,
+          "current_label_roundtrip_not_exact": 427,
+          "current_label_roundtrip_rate": 0.2663230240549828,
+          "denominator": 582,
+          "examples": {
+            "both": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00970",
+                "category": "C",
+                "current_decoded": {
+                  "end": 68,
+                  "start": 42
+                },
+                "gold": {
+                  "end": 67,
+                  "start": 43
+                },
+                "slot": "album",
+                "target_boundary": "both",
+                "target_first_start": 42,
+                "target_last_end": 68,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              }
+            ],
+            "exact_boundary": [
+              {
+                "any_exact_interval": [
+                  30,
+                  33
+                ],
+                "case_id": "candidate-00151",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 22,
+                  "start": 17
+                },
+                "slot": "album",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 17,
+                "target_last_end": 22,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  34,
+                  37
+                ],
+                "case_id": "candidate-00152",
+                "category": "A",
+                "current_decoded": {
+                  "end": 27,
+                  "start": 22
+                },
+                "gold": {
+                  "end": 27,
+                  "start": 22
+                },
+                "slot": "album",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 22,
+                "target_last_end": 27,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  31,
+                  34
+                ],
+                "case_id": "candidate-00154",
+                "category": "A",
+                "current_decoded": {
+                  "end": 21,
+                  "start": 16
+                },
+                "gold": {
+                  "end": 21,
+                  "start": 16
+                },
+                "slot": "album",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 16,
+                "target_last_end": 21,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  28,
+                  31
+                ],
+                "case_id": "candidate-00155",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 19,
+                  "start": 14
+                },
+                "slot": "album",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 14,
+                "target_last_end": 19,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  29,
+                  32
+                ],
+                "case_id": "candidate-00156",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 20,
+                  "start": 15
+                },
+                "slot": "album",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 15,
+                "target_last_end": 20,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00733",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 25,
+                  "start": 18
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 17,
+                "target_last_end": 25,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00805",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 22,
+                  "start": 14
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 13,
+                "target_last_end": 22,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00806",
+                "category": "C",
+                "current_decoded": {
+                  "end": 27,
+                  "start": 18
+                },
+                "gold": {
+                  "end": 27,
+                  "start": 19
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 18,
+                "target_last_end": 27,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00808",
+                "category": "C",
+                "current_decoded": {
+                  "end": 22,
+                  "start": 13
+                },
+                "gold": {
+                  "end": 22,
+                  "start": 14
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 13,
+                "target_last_end": 22,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00865",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 59,
+                  "start": 41
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 40,
+                "target_last_end": 59,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ],
+            "last_ends_after": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00153",
+                "category": "C",
+                "current_decoded": {
+                  "end": 11,
+                  "start": 5
+                },
+                "gold": {
+                  "end": 10,
+                  "start": 5
+                },
+                "slot": "album",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 5,
+                "target_last_end": 11,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00159",
+                "category": "C",
+                "current_decoded": {
+                  "end": 13,
+                  "start": 5
+                },
+                "gold": {
+                  "end": 12,
+                  "start": 5
+                },
+                "slot": "album",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 5,
+                "target_last_end": 13,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00172",
+                "category": "C",
+                "current_decoded": {
+                  "end": 23,
+                  "start": 16
+                },
+                "gold": {
+                  "end": 22,
+                  "start": 16
+                },
+                "slot": "album",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 16,
+                "target_last_end": 23,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00173",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 20,
+                  "start": 14
+                },
+                "slot": "album",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 14,
+                "target_last_end": 21,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00177",
+                "category": "C",
+                "current_decoded": {
+                  "end": 11,
+                  "start": 5
+                },
+                "gold": {
+                  "end": 10,
+                  "start": 5
+                },
+                "slot": "album",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 5,
+                "target_last_end": 11,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 1,
+            "exact_boundary": 334,
+            "first_begins_before": 219,
+            "last_ends_after": 28,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 179,
+            "missing_or_multiple_span": 219,
+            "non_whitespace_boundary_error": 29,
+            "trailing_whitespace_only": 0
+          }
+        },
+        "artist": {
+          "any_token_exact_nonrepresentable": 196,
+          "any_token_exact_rate": 0.6797385620915033,
+          "any_token_exact_representable": 416,
+          "boundary_alignment": {
+            "both_boundaries_exact": 416,
+            "first_token_start_exact": 416,
+            "last_token_end_exact": 612
+          },
+          "categories": {
+            "A": 257,
+            "B": 159,
+            "C": 196
+          },
+          "category_rates": {
+            "A": 0.4199346405228758,
+            "B": 0.25980392156862747,
+            "C": 0.3202614379084967
+          },
+          "current_label_roundtrip_exact": 257,
+          "current_label_roundtrip_not_exact": 355,
+          "current_label_roundtrip_rate": 0.4199346405228758,
+          "denominator": 612,
+          "examples": {
+            "exact_boundary": [
+              {
+                "any_exact_interval": [
+                  24,
+                  26
+                ],
+                "case_id": "candidate-00151",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 13,
+                  "start": 10
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 10,
+                "target_last_end": 13,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  27,
+                  29
+                ],
+                "case_id": "candidate-00152",
+                "category": "A",
+                "current_decoded": {
+                  "end": 18,
+                  "start": 15
+                },
+                "gold": {
+                  "end": 18,
+                  "start": 15
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 15,
+                "target_last_end": 18,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  30,
+                  32
+                ],
+                "case_id": "candidate-00153",
+                "category": "A",
+                "current_decoded": {
+                  "end": 22,
+                  "start": 19
+                },
+                "gold": {
+                  "end": 22,
+                  "start": 19
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 19,
+                "target_last_end": 22,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  22,
+                  24
+                ],
+                "case_id": "candidate-00154",
+                "category": "A",
+                "current_decoded": {
+                  "end": 10,
+                  "start": 7
+                },
+                "gold": {
+                  "end": 10,
+                  "start": 7
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 7,
+                "target_last_end": 10,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  23,
+                  25
+                ],
+                "case_id": "candidate-00155",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 11,
+                  "start": 8
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 8,
+                "target_last_end": 11,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00865",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 35,
+                  "start": 29
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 28,
+                "target_last_end": 35,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00867",
+                "category": "C",
+                "current_decoded": {
+                  "end": 62,
+                  "start": 55
+                },
+                "gold": {
+                  "end": 62,
+                  "start": 56
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 55,
+                "target_last_end": 62,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00868",
+                "category": "C",
+                "current_decoded": {
+                  "end": 38,
+                  "start": 31
+                },
+                "gold": {
+                  "end": 38,
+                  "start": 32
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 31,
+                "target_last_end": 38,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00869",
+                "category": "C",
+                "current_decoded": {
+                  "end": 41,
+                  "start": 34
+                },
+                "gold": {
+                  "end": 41,
+                  "start": 35
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 34,
+                "target_last_end": 41,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00871",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 36,
+                  "start": 23
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 22,
+                "target_last_end": 36,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 0,
+            "exact_boundary": 416,
+            "first_begins_before": 196,
+            "last_ends_after": 0,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 147,
+            "missing_or_multiple_span": 208,
+            "non_whitespace_boundary_error": 0,
+            "trailing_whitespace_only": 0
+          }
+        },
+        "track": {
+          "any_token_exact_nonrepresentable": 251,
+          "any_token_exact_rate": 0.7211111111111111,
+          "any_token_exact_representable": 649,
+          "boundary_alignment": {
+            "both_boundaries_exact": 649,
+            "first_token_start_exact": 652,
+            "last_token_end_exact": 889
+          },
+          "categories": {
+            "A": 299,
+            "B": 350,
+            "C": 251
+          },
+          "category_rates": {
+            "A": 0.3322222222222222,
+            "B": 0.3888888888888889,
+            "C": 0.2788888888888889
+          },
+          "current_label_roundtrip_exact": 299,
+          "current_label_roundtrip_not_exact": 601,
+          "current_label_roundtrip_rate": 0.3322222222222222,
+          "denominator": 900,
+          "examples": {
+            "both": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00986",
+                "category": "C",
+                "current_decoded": {
+                  "end": 29,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 28,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 3,
+                "target_last_end": 29,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00987",
+                "category": "C",
+                "current_decoded": {
+                  "end": 52,
+                  "start": 26
+                },
+                "gold": {
+                  "end": 51,
+                  "start": 27
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 26,
+                "target_last_end": 52,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00989",
+                "category": "C",
+                "current_decoded": {
+                  "end": 34,
+                  "start": 8
+                },
+                "gold": {
+                  "end": 33,
+                  "start": 9
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 8,
+                "target_last_end": 34,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00990",
+                "category": "C",
+                "current_decoded": {
+                  "end": 27,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 26,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 3,
+                "target_last_end": 27,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01130",
+                "category": "C",
+                "current_decoded": {
+                  "end": 27,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 26,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 3,
+                "target_last_end": 27,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              }
+            ],
+            "exact_boundary": [
+              {
+                "any_exact_interval": [
+                  18,
+                  20
+                ],
+                "case_id": "candidate-00151",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 6,
+                  "start": 2
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 2,
+                "target_last_end": 6,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  21,
+                  23
+                ],
+                "case_id": "candidate-00152",
+                "category": "A",
+                "current_decoded": {
+                  "end": 11,
+                  "start": 7
+                },
+                "gold": {
+                  "end": 11,
+                  "start": 7
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 7,
+                "target_last_end": 11,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  24,
+                  26
+                ],
+                "case_id": "candidate-00153",
+                "category": "A",
+                "current_decoded": {
+                  "end": 15,
+                  "start": 11
+                },
+                "gold": {
+                  "end": 15,
+                  "start": 11
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 11,
+                "target_last_end": 15,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  18,
+                  20
+                ],
+                "case_id": "candidate-00154",
+                "category": "A",
+                "current_decoded": {
+                  "end": 6,
+                  "start": 2
+                },
+                "gold": {
+                  "end": 6,
+                  "start": 2
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 2,
+                "target_last_end": 6,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  18,
+                  20
+                ],
+                "case_id": "candidate-00155",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 5,
+                  "start": 1
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 1,
+                "target_last_end": 5,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00199",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 6,
+                  "start": 2
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 1,
+                "target_last_end": 6,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00213",
+                "category": "C",
+                "current_decoded": {
+                  "end": 17,
+                  "start": 9
+                },
+                "gold": {
+                  "end": 17,
+                  "start": 10
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 9,
+                "target_last_end": 17,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00279",
+                "category": "C",
+                "current_decoded": {
+                  "end": 23,
+                  "start": 12
+                },
+                "gold": {
+                  "end": 23,
+                  "start": 13
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 12,
+                "target_last_end": 23,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00866",
+                "category": "C",
+                "current_decoded": {
+                  "end": 26,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 26,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 3,
+                "target_last_end": 26,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00867",
+                "category": "C",
+                "current_decoded": {
+                  "end": 52,
+                  "start": 29
+                },
+                "gold": {
+                  "end": 52,
+                  "start": 30
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 29,
+                "target_last_end": 52,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              }
+            ],
+            "last_ends_after": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00513",
+                "category": "C",
+                "current_decoded": {
+                  "end": 18,
+                  "start": 11
+                },
+                "gold": {
+                  "end": 17,
+                  "start": 11
+                },
+                "slot": "track",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 11,
+                "target_last_end": 18,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00706",
+                "category": "C",
+                "current_decoded": {
+                  "end": 9,
+                  "start": 2
+                },
+                "gold": {
+                  "end": 8,
+                  "start": 2
+                },
+                "slot": "track",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 2,
+                "target_last_end": 9,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-00707",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 7,
+                  "start": 1
+                },
+                "slot": "track",
+                "target_boundary": "last_ends_after",
+                "target_first_start": 1,
+                "target_last_end": 8,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 8,
+            "exact_boundary": 649,
+            "first_begins_before": 240,
+            "last_ends_after": 3,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 237,
+            "missing_or_multiple_span": 352,
+            "non_whitespace_boundary_error": 12,
+            "trailing_whitespace_only": 0
+          }
+        }
+      },
+      "supported_unknown_o_only_rows": 600
+    },
+    "validation": {
+      "blocked_unrendered_null_target_rows": 60,
+      "slots": {
+        "album": {
+          "any_token_exact_nonrepresentable": 204,
+          "any_token_exact_rate": 0.0,
+          "any_token_exact_representable": 0,
+          "boundary_alignment": {
+            "both_boundaries_exact": 0,
+            "first_token_start_exact": 0,
+            "last_token_end_exact": 203
+          },
+          "categories": {
+            "A": 0,
+            "B": 0,
+            "C": 204
+          },
+          "category_rates": {
+            "A": 0.0,
+            "B": 0.0,
+            "C": 1.0
+          },
+          "current_label_roundtrip_exact": 0,
+          "current_label_roundtrip_not_exact": 204,
+          "current_label_roundtrip_rate": 0.0,
+          "denominator": 204,
+          "examples": {
+            "both": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01258",
+                "category": "C",
+                "current_decoded": {
+                  "end": 54,
+                  "start": 28
+                },
+                "gold": {
+                  "end": 53,
+                  "start": 29
+                },
+                "slot": "album",
+                "target_boundary": "both",
+                "target_first_start": 28,
+                "target_last_end": 54,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01189",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 39,
+                  "start": 18
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 17,
+                "target_last_end": 39,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01190",
+                "category": "C",
+                "current_decoded": {
+                  "end": 39,
+                  "start": 17
+                },
+                "gold": {
+                  "end": 39,
+                  "start": 18
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 17,
+                "target_last_end": 39,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01191",
+                "category": "C",
+                "current_decoded": {
+                  "end": 29,
+                  "start": 7
+                },
+                "gold": {
+                  "end": 29,
+                  "start": 8
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 7,
+                "target_last_end": 29,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01192",
+                "category": "C",
+                "current_decoded": {
+                  "end": 41,
+                  "start": 19
+                },
+                "gold": {
+                  "end": 41,
+                  "start": 20
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 19,
+                "target_last_end": 41,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01193",
+                "category": "C",
+                "current_decoded": {
+                  "end": 42,
+                  "start": 20
+                },
+                "gold": {
+                  "end": 42,
+                  "start": 21
+                },
+                "slot": "album",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 20,
+                "target_last_end": 42,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 1,
+            "exact_boundary": 0,
+            "first_begins_before": 203,
+            "last_ends_after": 0,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 185,
+            "missing_or_multiple_span": 18,
+            "non_whitespace_boundary_error": 1,
+            "trailing_whitespace_only": 0
+          }
+        },
+        "artist": {
+          "any_token_exact_nonrepresentable": 116,
+          "any_token_exact_rate": 0.07936507936507936,
+          "any_token_exact_representable": 10,
+          "boundary_alignment": {
+            "both_boundaries_exact": 10,
+            "first_token_start_exact": 10,
+            "last_token_end_exact": 126
+          },
+          "categories": {
+            "A": 10,
+            "B": 0,
+            "C": 116
+          },
+          "category_rates": {
+            "A": 0.07936507936507936,
+            "B": 0.0,
+            "C": 0.9206349206349206
+          },
+          "current_label_roundtrip_exact": 10,
+          "current_label_roundtrip_not_exact": 116,
+          "current_label_roundtrip_rate": 0.07936507936507936,
+          "denominator": 126,
+          "examples": {
+            "exact_boundary": [
+              {
+                "any_exact_interval": [
+                  23,
+                  26
+                ],
+                "case_id": "candidate-01160",
+                "category": "A",
+                "current_decoded": {
+                  "end": 45,
+                  "start": 22
+                },
+                "gold": {
+                  "end": 45,
+                  "start": 22
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 22,
+                "target_last_end": 45,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  23,
+                  26
+                ],
+                "case_id": "candidate-01164",
+                "category": "A",
+                "current_decoded": {
+                  "end": 43,
+                  "start": 20
+                },
+                "gold": {
+                  "end": 43,
+                  "start": 20
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 20,
+                "target_last_end": 43,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  26,
+                  27
+                ],
+                "case_id": "candidate-01166",
+                "category": "A",
+                "current_decoded": {
+                  "end": 44,
+                  "start": 36
+                },
+                "gold": {
+                  "end": 44,
+                  "start": 36
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 36,
+                "target_last_end": 44,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  26,
+                  27
+                ],
+                "case_id": "candidate-01170",
+                "category": "A",
+                "current_decoded": {
+                  "end": 42,
+                  "start": 34
+                },
+                "gold": {
+                  "end": 42,
+                  "start": 34
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 34,
+                "target_last_end": 42,
+                "whitespace_diagnostic": "exact"
+              },
+              {
+                "any_exact_interval": [
+                  24,
+                  26
+                ],
+                "case_id": "candidate-01172",
+                "category": "A",
+                "current_decoded": {
+                  "end": 45,
+                  "start": 31
+                },
+                "gold": {
+                  "end": 45,
+                  "start": 31
+                },
+                "slot": "artist",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 31,
+                "target_last_end": 45,
+                "whitespace_diagnostic": "exact"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01159",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 47,
+                  "start": 24
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 23,
+                "target_last_end": 47,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01161",
+                "category": "C",
+                "current_decoded": {
+                  "end": 52,
+                  "start": 28
+                },
+                "gold": {
+                  "end": 52,
+                  "start": 29
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 28,
+                "target_last_end": 52,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01162",
+                "category": "C",
+                "current_decoded": {
+                  "end": 50,
+                  "start": 26
+                },
+                "gold": {
+                  "end": 50,
+                  "start": 27
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 26,
+                "target_last_end": 50,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01163",
+                "category": "C",
+                "current_decoded": {
+                  "end": 53,
+                  "start": 29
+                },
+                "gold": {
+                  "end": 53,
+                  "start": 30
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 29,
+                "target_last_end": 53,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01165",
+                "category": "C",
+                "current_decoded": null,
+                "gold": {
+                  "end": 46,
+                  "start": 38
+                },
+                "slot": "artist",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 37,
+                "target_last_end": 46,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 0,
+            "exact_boundary": 10,
+            "first_begins_before": 116,
+            "last_ends_after": 0,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 111,
+            "missing_or_multiple_span": 5,
+            "non_whitespace_boundary_error": 0,
+            "trailing_whitespace_only": 0
+          }
+        },
+        "track": {
+          "any_token_exact_nonrepresentable": 266,
+          "any_token_exact_rate": 0.11333333333333333,
+          "any_token_exact_representable": 34,
+          "boundary_alignment": {
+            "both_boundaries_exact": 34,
+            "first_token_start_exact": 34,
+            "last_token_end_exact": 297
+          },
+          "categories": {
+            "A": 0,
+            "B": 34,
+            "C": 266
+          },
+          "category_rates": {
+            "A": 0.0,
+            "B": 0.11333333333333333,
+            "C": 0.8866666666666667
+          },
+          "current_label_roundtrip_exact": 0,
+          "current_label_roundtrip_not_exact": 300,
+          "current_label_roundtrip_rate": 0.0,
+          "denominator": 300,
+          "examples": {
+            "both": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01274",
+                "category": "C",
+                "current_decoded": {
+                  "end": 29,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 28,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 3,
+                "target_last_end": 29,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01277",
+                "category": "C",
+                "current_decoded": {
+                  "end": 34,
+                  "start": 8
+                },
+                "gold": {
+                  "end": 33,
+                  "start": 9
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 8,
+                "target_last_end": 34,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01278",
+                "category": "C",
+                "current_decoded": {
+                  "end": 27,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 26,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "both",
+                "target_first_start": 3,
+                "target_last_end": 27,
+                "whitespace_diagnostic": "non_whitespace_boundary_error"
+              }
+            ],
+            "exact_boundary": [
+              {
+                "any_exact_interval": [
+                  19,
+                  21
+                ],
+                "case_id": "candidate-01159",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 20,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 3,
+                "target_last_end": 20,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  19,
+                  24
+                ],
+                "case_id": "candidate-01165",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 34,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 3,
+                "target_last_end": 34,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  19,
+                  22
+                ],
+                "case_id": "candidate-01171",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 29,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 3,
+                "target_last_end": 29,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  19,
+                  23
+                ],
+                "case_id": "candidate-01177",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 16,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 3,
+                "target_last_end": 16,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              },
+              {
+                "any_exact_interval": [
+                  19,
+                  21
+                ],
+                "case_id": "candidate-01183",
+                "category": "B",
+                "current_decoded": null,
+                "gold": {
+                  "end": 10,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "exact_boundary",
+                "target_first_start": 3,
+                "target_last_end": 10,
+                "whitespace_diagnostic": "missing_or_multiple_span"
+              }
+            ],
+            "first_begins_before": [
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01160",
+                "category": "C",
+                "current_decoded": {
+                  "end": 21,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 21,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 3,
+                "target_last_end": 21,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01161",
+                "category": "C",
+                "current_decoded": {
+                  "end": 25,
+                  "start": 7
+                },
+                "gold": {
+                  "end": 25,
+                  "start": 8
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 7,
+                "target_last_end": 25,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01162",
+                "category": "C",
+                "current_decoded": {
+                  "end": 20,
+                  "start": 2
+                },
+                "gold": {
+                  "end": 20,
+                  "start": 3
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 2,
+                "target_last_end": 20,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01163",
+                "category": "C",
+                "current_decoded": {
+                  "end": 26,
+                  "start": 8
+                },
+                "gold": {
+                  "end": 26,
+                  "start": 9
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 8,
+                "target_last_end": 26,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              },
+              {
+                "any_exact_interval": null,
+                "case_id": "candidate-01164",
+                "category": "C",
+                "current_decoded": {
+                  "end": 19,
+                  "start": 3
+                },
+                "gold": {
+                  "end": 19,
+                  "start": 4
+                },
+                "slot": "track",
+                "target_boundary": "first_begins_before",
+                "target_first_start": 3,
+                "target_last_end": 19,
+                "whitespace_diagnostic": "leading_whitespace_only"
+              }
+            ]
+          },
+          "target_boundaries": {
+            "both": 3,
+            "exact_boundary": 34,
+            "first_begins_before": 263,
+            "last_ends_after": 0,
+            "other": 0
+          },
+          "whitespace_mismatches": {
+            "both_whitespace_only": 0,
+            "leading_whitespace_only": 263,
+            "missing_or_multiple_span": 34,
+            "non_whitespace_boundary_error": 3,
+            "trailing_whitespace_only": 0
+          }
+        }
+      },
+      "supported_unknown_o_only_rows": 240
+    }
+  },
+  "status": "STOP_LAYA_SPAN_REPRESENTATION_TRACK_BELOW_GATE",
+  "tokenizer_identity": {
+    "full_model_aggregate_recomputed": false,
+    "reviewed_full_model_aggregate_sha256": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "verified_local_files": {
+      "rl_agent_config.json": {
+        "sha256": "25061739243b617ad88d1219ba6f8a9c86c5881ca28df024fa2d9b3b2fcc30c6",
+        "size_bytes": 472
+      },
+      "tokenizer/tokenizer.json": {
+        "sha256": "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f",
+        "size_bytes": 34363188
+      },
+      "tokenizer/tokenizer_config.json": {
+        "sha256": "2c0c4d82d4b4bc6b4ac40b2375e067a1645f78b381a9774248d47915f33d751f",
+        "size_bytes": 545
+      }
+    },
+    "weight_files_opened": false
+  }
+}

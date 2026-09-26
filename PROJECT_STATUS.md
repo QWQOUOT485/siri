@@ -4,40 +4,32 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya small adaptation safety triage passed
+### 2026-09-26 Stage B Laya exact-span representation blocked
 
-**Current result:** `LAYA_RX9070XT_SMALL_ADAPTATION_TRIAGE_PASSED`.
-The one authorized RX 9070 XT / gfx1201 run selected the exact stratified
-600-row / 100-whole-group train subset, gated 102 deterministic/safety rows,
-and trained 498 supported rows for three fixed epochs / **189 optimizer
-steps**. Encoder and act_head remained frozen and byte-identical; only the
-allowed typed/span/validity groups changed. Constant AdamW LR 1e-4 and the
-fixed 0.5 validation rule were not tuned.
+**Current result:** `STOP_LAYA_SPAN_REPRESENTATION_TRACK_BELOW_GATE`.
+PR #79 review/merge is complete. Its small-adaptation safety triage passed,
+but diagnostic quality remains poor (play 11/300, TRACK exact 0/300).
+The tokenizer-only audit found validation whole-token exact representability
+of TRACK **34/300**, ARTIST **10/126**, ALBUM **0/204**; current gold-BIO strict
+round trips are respectively **0/300**, **10/126**, **0/204**. The current
+token-BIO/raw-character seam therefore structurally blocks the 95% TRACK gate.
+This is structural evidence, not a new model-quality benchmark or PR #79 rescore.
 
-The final research checkpoint was saved, all trainable objects recreated,
-and serialized parameter hashes exactly restored before **one untouched
-600-row validation pass**: 540 supported rows reached the model, 60 were
-blocked before rendering. Safety triage passed: unknown recall **240/240**,
-conditional unknown false acceptance **0/240**, blocked **60/60** with zero
-leakage, predicted play without valid grounded track **0**.
+Only frozen train/validation rows and local tokenizer/config were audited.
+No model weights/checkpoint, held-out/Stage A rows, GPU/model compute or training
+were used by the audit. Existing broad regression tests are separate fixture/
+integrity checks. No held-out/Stage A model input occurred. Prior merged load,
+PR #75 shape, PR #76 pipeline and PR #79 safety evidence remain valid.
 
-Diagnostic quality is poor: play recall **11/300**, track exact-span
-**0/300**, full semantic **240/540**. This is not a final quality gate pass.
-No held-out/Stage A model input, calibration, threshold/hyperparameter tuning,
-second validation, retry, LoRA, or production promotion occurred. MiniMind
-was only a training-engineering reference. Frozen source/model/venv/corpus/
-manifests/seal identities stayed unchanged. The external final checkpoint is
-retained with read-only attributes for research review only.
+See [representability evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_REPRESENTABILITY_AUDIT_2026-09-26.md)
+and [small adaptation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SMALL_ADAPTATION_2026-09-26.md).
 
-Prior merged load, PR #75 shape and PR #76 pipeline smoke remain valid.
-See [small adaptation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SMALL_ADAPTATION_2026-09-26.md)
-and its complete sanitized JSON for hashes, IDs, metrics and limitations.
-
-**Next gate:** Independent review of this narrow PR. Full head-only adaptation
-remains separately unauthorized. Held-out quality, Stage A regression,
-calibration, final slot/semantic gates, latency, Decider qualification and
-production promotion remain separate. Issue #68 stays OPEN. No second live
-run or general training authority is granted.
+**Next gate:** Separately review a span representation/target/decoder seam
+proposal preserving strict raw-character grounding. No trimming or decoder
+change is approved. Full head-only adaptation remains separately unauthorized.
+Held-out quality, Stage A regression, calibration, final quality/latency,
+Decider and production promotion remain separate. Issue #68 stays OPEN.
+This tokenizer audit grants no model-compute or general training authority.
 
 **Authority flags** (all remain `false`):
 
