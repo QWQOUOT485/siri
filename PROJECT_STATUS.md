@@ -4,7 +4,7 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya head-only shape smoke passed on RX 9070 XT
+### 2026-09-26 Stage B Laya training-pipeline data gate blocked
 
 RX 9070 XT / gfx1201 hardware tensor gate passed (PR #65 merged). Laya ROCm
 dependency bootstrap passed. Pinned Laya model and source identity verified.
@@ -38,18 +38,23 @@ required seal verifier performed read-only frozen-file identity checks. Model,
 source, venv, and seal identities remained unchanged. See
 `docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_FORWARD_BACKWARD_SMOKE_2026-09-26.md`.
 
-**Remaining gates:** The training-pipeline smoke is next in the accepted plan
-but remains separately unauthorized. Adaptation, validation/held-out quality,
-latency, Decider qualification, and production fallback remain unproven;
-general model compute and training remain unauthorized.
+**Current blocker:** `STOP_LAYA_TRAINING_PIPELINE_DATA_BOUNDARY`.
+The task-authorized training-pipeline smoke stopped in its read-only data
+preflight: the exact SHA-verified 1,800-row train split has zero supported
+unknown rows with `negative_reason=unresolved_reference` and zero with
+`negative_reason=ambiguous_version`; four of each were required. The frozen
+corpus/split/seal checks passed. The prescribed 40-row subset cannot be
+formed. No live invocation, Laya model load, Laya optimizer step, or checkpoint
+occurred.
+No replacement strata or corpus edits were used. PR #75's reviewed, merged
+head-only shape smoke remains valid prior evidence. See
+[the training-pipeline data report](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_TRAINING_PIPELINE_SMOKE_2026-09-26.md).
 
-When the training-pipeline smoke is separately authorized, MiniMind may be used
-as a training-engineering reference for mixed precision, optimizer/scheduler
-wiring, gradient clipping, deterministic seeding, checkpoint save/resume, and
-experiment logging. MiniMind does not replace Laya or turn it into a causal-LM
-SFT model; Laya keeps its candidate-native encoder/decision-head/span/validity
-objectives. Distillation, LoRA, and RL remain later separately reviewed
-experiments and are not authorized by the current shape-smoke result.
+**Next gate:** Resolve the subset specification through a separately approved
+revision before a training-pipeline smoke. Small adaptation remains separately
+unauthorized; validation/held-out quality, latency, Decider qualification, and
+production fallback remain unproven. MiniMind remains only a
+training-engineering reference; no Laya training mechanics were exercised here.
 
 **Authority flags** (all remain `false`):
 
