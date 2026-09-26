@@ -173,6 +173,41 @@ control. Production Local AI authority remains unchanged, and
   gate passes.
 - Design notes: [Memory RAG / Personal RAG](docs/roadmap/FUTURE_ROADMAP.md#memory-rag--personal-rag--future-research).
 
+### P2.7 — Multi-source music provider / NetEase Cloud Music research
+
+Roadmap-only investigation for adding NetEase Cloud Music as an additional
+music source alongside Spotify. This does **not** authorize a production
+integration, account migration, playback-source bypass, or any change to the
+current Spotify acceptance boundary.
+
+- Evaluate `NeteaseCloudMusicApiEnhanced/api-enhanced` as a candidate
+  third-party NetEase Cloud Music adapter for search, playlists, lyrics,
+  recommendations, favorites/account metadata, and other provider data.
+- Treat the NetEase API as an external, non-official dependency. Pin versions,
+  isolate failures, keep credentials/cookies local, and do not make core music
+  control depend on this service being available.
+- Introduce a project-owned music-provider boundary before any implementation,
+  e.g. `MusicProvider`, so Agent intents remain provider-neutral.
+- Keep player/device controls such as play/pause/next/previous/volume/current
+  media separable from catalog/account APIs where practical; Windows media
+  control can remain the resilient local control path.
+- Target a future multi-source layout such as Spotify + NetEase + local music,
+  with explicit provider selection and bounded fallback when the preferred
+  provider cannot resolve a requested track.
+- A possible future policy is Spotify-first or preference-based search, then
+  NetEase fallback for tracks unavailable on Spotify. Automatic fallback must
+  preserve deterministic grounding/clarification and must never treat a fuzzy
+  third-party match as trusted execution authority.
+- Region/licensing restrictions, unavailable/"grey" tracks, unblock features,
+  and provider-specific workarounds are **not** assumed to be stable supported
+  capabilities. Do not build core acceptance around bypass behavior.
+- First deliverable, if scheduled, should be a docs/PoC feasibility gate:
+  provider interface, auth/cookie handling, search/result normalization,
+  playback handoff strategy, failure isolation, security/privacy review, and
+  acceptance tests.
+- Reference repository:
+  https://github.com/neteasecloudmusicapienhanced/api-enhanced
+
 ### P3 — Project infrastructure
 
 - Add hosted CI for unit/security tests if separately scheduled.
