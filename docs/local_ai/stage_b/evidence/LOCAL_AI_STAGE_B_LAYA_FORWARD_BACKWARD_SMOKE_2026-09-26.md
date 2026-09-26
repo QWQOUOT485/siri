@@ -94,6 +94,19 @@ invented.
 | Post-backward | 1,435,402,752 | 1,497,366,528 |
 | Peak | 1,452,687,872 | 1,497,366,528 |
 
+## Repository validation
+
+- Tested implementation commit: `cc2882f1f32f7ffdef3892b3aa730ad48466069c`.
+- Focused adapter/fixture/smoke, existing load, hardware, and seal tests: 49 passed.
+- Full unit suite: 646 passed, two existing deprecation warnings.
+- Windows integration suite: 5 passed.
+- `python -m compileall -q app scripts tests`: passed.
+- `git diff --check` and changed Markdown relative-link checks: passed.
+- Protected/frozen artifacts and `app/`: zero diff. Only the two named
+  research helpers changed under `scripts/`.
+- PR #75 remains OPEN/unmerged; Issue #68 remains OPEN. No hosted CI result
+  was reported at handoff.
+
 ## Remaining gates
 
 The next proposed training-pipeline smoke is **separately unauthorized**.
