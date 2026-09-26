@@ -4,32 +4,32 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B Laya exact-span representation blocked
+### 2026-09-26 Stage B Laya span-seam design oracle feasible
 
-**Current result:** `STOP_LAYA_SPAN_REPRESENTATION_TRACK_BELOW_GATE`.
-PR #79 review/merge is complete. Its small-adaptation safety triage passed,
-but diagnostic quality remains poor (play 11/300, TRACK exact 0/300).
-The tokenizer-only audit found validation whole-token exact representability
-of TRACK **34/300**, ARTIST **10/126**, ALBUM **0/204**; current gold-BIO strict
-round trips are respectively **0/300**, **10/126**, **0/204**. The current
-token-BIO/raw-character seam therefore structurally blocks the 95% TRACK gate.
-This is structural evidence, not a new model-quality benchmark or PR #79 rescore.
+**Current design result:** `LAYA_SPAN_SEAM_DESIGN_S3_FEASIBLE`.
+PR #81 review/merge is complete; S0 reproduces its existing structural blocker.
+Separate tokenizer/gold-BIO simulations favor **S3: strict slot isolation plus
+outer Unicode-whitespace tightening**. Validation exact spans are TRACK 297/300,
+ARTIST 126/126, ALBUM 203/204, passing integer gates 285/120/194. S4 was not evaluated.
+Train ALBUM 549/582 (94.33%) remains a disclosed limitation. This is theoretical
+oracle feasibility, not learned quality improvement or a PR #79 rescore.
 
-Only frozen train/validation rows and local tokenizer/config were audited.
-No model weights/checkpoint, held-out/Stage A rows, GPU/model compute or training
-were used by the audit. Existing broad regression tests are separate fixture/
-integrity checks. No held-out/Stage A model input occurred. Prior merged load,
-PR #75 shape, PR #76 pipeline and PR #79 safety evidence remain valid.
+All 34 validation B-case TRACK failures (57 missing-slot outputs total) come
+from the current whole-row order check on unselected O offsets [0,1] then[0,2].
+The proposed isolation accepts only valid monotonic O/O overlap outside selected
+spans; true reversals and conflicts involving selected slots still fail closed.
+All 24 adversarial safety cases passed. Existing adapter/decoder/audit behavior
+is unchanged; no model weights, checkpoint, GPU/model/training or protected
+held-out/Stage A rows were used. Broad existing regression tests are separate.
 
-See [representability evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_REPRESENTABILITY_AUDIT_2026-09-26.md)
-and [small adaptation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SMALL_ADAPTATION_2026-09-26.md).
+See [span-seam design](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN.md)
+and [oracle evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN_2026-09-26.md).
 
-**Next gate:** Separately review a span representation/target/decoder seam
-proposal preserving strict raw-character grounding. No trimming or decoder
-change is approved. Full head-only adaptation remains separately unauthorized.
-Held-out quality, Stage A regression, calibration, final quality/latency,
-Decider and production promotion remain separate. Issue #68 stays OPEN.
-This tokenizer audit grants no model-compute or general training authority.
+**Next gate:** Independent design review. Runtime seam implementation and
+verification require separate approval; full head-only adaptation remains
+unauthorized. Held-out quality, Stage A regression, calibration, final quality/
+latency, Decider and production remain separate. Issue #68 stays OPEN; Issue #80
+is untouched. No general model-compute or training authority is granted.
 
 **Authority flags** (all remain `false`):
 

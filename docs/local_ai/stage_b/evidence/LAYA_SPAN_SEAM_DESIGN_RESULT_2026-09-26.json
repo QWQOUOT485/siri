@@ -1,0 +1,2399 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "99bb654c9be4499054d930103416551e7583ed5c6fbf979de7ad4820274acf04",
+  "inputs": {
+    "train": {
+      "rows": 1800,
+      "sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+      "supported_play": 900
+    },
+    "validation": {
+      "rows": 600,
+      "sha256": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a",
+      "supported_play": 300
+    }
+  },
+  "integer_thresholds": {
+    "album": 194,
+    "artist": 120,
+    "track": 285
+  },
+  "pr81_canonical_sha": "1785052a43f1e20662ce27da9d57d857b3ff132af156afc3d7f7cebf602de2f5",
+  "preferred_design": "S3",
+  "process_boundary": {
+    "checkpoint_opened": false,
+    "decoder_runtime_modified": false,
+    "held_out_rows_opened": false,
+    "model_compute_occurred": false,
+    "model_weights_opened": false,
+    "offline": true,
+    "opened_corpus_splits": [
+      "train",
+      "validation"
+    ],
+    "protected_open_attempts": 0,
+    "stage_a_rows_opened": false,
+    "torch_imported_incidentally": true,
+    "utf8_mode": 1
+  },
+  "rationale": "All integer gates and 24 safety adversaries passed; smallest deterministic seam.",
+  "repo_base": "a69e96284280eaf2aa2b9b59b70814520edeb51d",
+  "s4_evaluated": false,
+  "safety_matrix": {
+    "cases": [
+      "leading_ascii",
+      "leading_tab",
+      "leading_em_space",
+      "trailing_whitespace",
+      "both_whitespace",
+      "parentheses_retained",
+      "hyphen_retained",
+      "apostrophe_retained",
+      "cjk_punctuation_retained",
+      "empty_tightened",
+      "orphan_track_inside",
+      "duplicate_track_begin",
+      "discontinuous_track",
+      "two_track_spans",
+      "invalid_raw_offset",
+      "track_crosses_non_user",
+      "malformed_artist_isolated",
+      "malformed_album_isolated",
+      "malformed_track_valid_optional",
+      "overlap_track_optional",
+      "overlap_optional_only",
+      "no_expansion",
+      "non_whitespace_never_deleted",
+      "literal_substring"
+    ],
+    "passed": 24,
+    "total": 24
+  },
+  "schema": "laya-span-seam-design-v1",
+  "splits": {
+    "train": {
+      "boundary_distribution": {
+        "album": {
+          "end_delta": {
+            "0": 553,
+            "1": 29
+          },
+          "languages": {
+            "mixed": {
+              "end_delta": {
+                "0": 215,
+                "1": 1
+              },
+              "rows": 216,
+              "start_delta": {
+                "-1": 216
+              }
+            },
+            "zh-Hans": {
+              "end_delta": {
+                "0": 77,
+                "1": 7
+              },
+              "rows": 84,
+              "start_delta": {
+                "-1": 4,
+                "0": 80
+              }
+            },
+            "zh-Hant": {
+              "end_delta": {
+                "0": 261,
+                "1": 21
+              },
+              "rows": 282,
+              "start_delta": {
+                "0": 282
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "contains_non_whitespace": 4,
+            "empty": 362,
+            "whitespace_only": 216
+          },
+          "start_delta": {
+            "-1": 220,
+            "0": 362
+          },
+          "suffix_whitespace": {
+            "contains_non_whitespace": 29,
+            "empty": 553
+          },
+          "templates": {
+            "play_hans_conversational": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "-1": 1,
+                "0": 13
+              }
+            },
+            "play_hans_direct": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "-1": 2,
+                "0": 12
+              }
+            },
+            "play_hans_homophone": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_particle": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "-1": 1,
+                "0": 13
+              }
+            },
+            "play_hans_spacing": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_word_order": {
+              "end_delta": {
+                "0": 7,
+                "1": 7
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hant_conversational": {
+              "end_delta": {
+                "0": 47
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_hant_direct": {
+              "end_delta": {
+                "0": 47
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_hant_homophone": {
+              "end_delta": {
+                "0": 45,
+                "1": 2
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_hant_particle": {
+              "end_delta": {
+                "0": 45,
+                "1": 2
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_hant_spacing": {
+              "end_delta": {
+                "0": 47
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_hant_word_order": {
+              "end_delta": {
+                "0": 30,
+                "1": 17
+              },
+              "rows": 47,
+              "start_delta": {
+                "0": 47
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 36
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 36
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 36
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 36
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 35,
+                "1": 1
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 36
+              },
+              "rows": 36,
+              "start_delta": {
+                "-1": 36
+              }
+            }
+          }
+        },
+        "artist": {
+          "end_delta": {
+            "0": 612
+          },
+          "languages": {
+            "mixed": {
+              "end_delta": {
+                "0": 294
+              },
+              "rows": 294,
+              "start_delta": {
+                "-1": 196,
+                "0": 98
+              }
+            },
+            "zh-Hans": {
+              "end_delta": {
+                "0": 84
+              },
+              "rows": 84,
+              "start_delta": {
+                "0": 84
+              }
+            },
+            "zh-Hant": {
+              "end_delta": {
+                "0": 234
+              },
+              "rows": 234,
+              "start_delta": {
+                "0": 234
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "empty": 416,
+            "whitespace_only": 196
+          },
+          "start_delta": {
+            "-1": 196,
+            "0": 416
+          },
+          "suffix_whitespace": {
+            "empty": 612
+          },
+          "templates": {
+            "play_hans_conversational": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_direct": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_homophone": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_particle": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_spacing": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hans_word_order": {
+              "end_delta": {
+                "0": 14
+              },
+              "rows": 14,
+              "start_delta": {
+                "0": 14
+              }
+            },
+            "play_hant_conversational": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_hant_direct": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_hant_homophone": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_hant_particle": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_hant_spacing": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_hant_word_order": {
+              "end_delta": {
+                "0": 39
+              },
+              "rows": 39,
+              "start_delta": {
+                "0": 39
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "0": 49
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "0": 49
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            }
+          }
+        },
+        "track": {
+          "end_delta": {
+            "0": 889,
+            "1": 11
+          },
+          "languages": {
+            "mixed": {
+              "end_delta": {
+                "0": 286,
+                "1": 8
+              },
+              "rows": 294,
+              "start_delta": {
+                "-1": 245,
+                "0": 49
+              }
+            },
+            "zh-Hans": {
+              "end_delta": {
+                "0": 144
+              },
+              "rows": 144,
+              "start_delta": {
+                "0": 144
+              }
+            },
+            "zh-Hant": {
+              "end_delta": {
+                "0": 459,
+                "1": 3
+              },
+              "rows": 462,
+              "start_delta": {
+                "-1": 3,
+                "0": 459
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "contains_non_whitespace": 3,
+            "empty": 652,
+            "whitespace_only": 245
+          },
+          "start_delta": {
+            "-1": 248,
+            "0": 652
+          },
+          "suffix_whitespace": {
+            "contains_non_whitespace": 11,
+            "empty": 889
+          },
+          "templates": {
+            "play_hans_conversational": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hans_direct": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hans_homophone": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hans_particle": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hans_spacing": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hans_word_order": {
+              "end_delta": {
+                "0": 24
+              },
+              "rows": 24,
+              "start_delta": {
+                "0": 24
+              }
+            },
+            "play_hant_conversational": {
+              "end_delta": {
+                "0": 77
+              },
+              "rows": 77,
+              "start_delta": {
+                "0": 77
+              }
+            },
+            "play_hant_direct": {
+              "end_delta": {
+                "0": 77
+              },
+              "rows": 77,
+              "start_delta": {
+                "-1": 1,
+                "0": 76
+              }
+            },
+            "play_hant_homophone": {
+              "end_delta": {
+                "0": 76,
+                "1": 1
+              },
+              "rows": 77,
+              "start_delta": {
+                "0": 77
+              }
+            },
+            "play_hant_particle": {
+              "end_delta": {
+                "0": 76,
+                "1": 1
+              },
+              "rows": 77,
+              "start_delta": {
+                "0": 77
+              }
+            },
+            "play_hant_spacing": {
+              "end_delta": {
+                "0": 77
+              },
+              "rows": 77,
+              "start_delta": {
+                "0": 77
+              }
+            },
+            "play_hant_word_order": {
+              "end_delta": {
+                "0": 76,
+                "1": 1
+              },
+              "rows": 77,
+              "start_delta": {
+                "-1": 2,
+                "0": 75
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 47,
+                "1": 2
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 47,
+                "1": 2
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "0": 49
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 47,
+                "1": 2
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 49
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 47,
+                "1": 2
+              },
+              "rows": 49,
+              "start_delta": {
+                "-1": 49
+              }
+            }
+          }
+        }
+      },
+      "rates": {
+        "S0": {
+          "album": {
+            "denominator": 582,
+            "exact": 155,
+            "rate": 0.2663230240549828
+          },
+          "artist": {
+            "denominator": 612,
+            "exact": 257,
+            "rate": 0.4199346405228758
+          },
+          "track": {
+            "denominator": 900,
+            "exact": 299,
+            "rate": 0.3322222222222222
+          }
+        },
+        "S1": {
+          "album": {
+            "denominator": 582,
+            "exact": 334,
+            "rate": 0.5738831615120275
+          },
+          "artist": {
+            "denominator": 612,
+            "exact": 404,
+            "rate": 0.6601307189542484
+          },
+          "track": {
+            "denominator": 900,
+            "exact": 536,
+            "rate": 0.5955555555555555
+          }
+        },
+        "S2": {
+          "album": {
+            "denominator": 582,
+            "exact": 334,
+            "rate": 0.5738831615120275
+          },
+          "artist": {
+            "denominator": 612,
+            "exact": 416,
+            "rate": 0.6797385620915033
+          },
+          "track": {
+            "denominator": 900,
+            "exact": 649,
+            "rate": 0.7211111111111111
+          }
+        },
+        "S3": {
+          "album": {
+            "denominator": 582,
+            "exact": 549,
+            "rate": 0.9432989690721649
+          },
+          "artist": {
+            "denominator": 612,
+            "exact": 612,
+            "rate": 1.0
+          },
+          "track": {
+            "denominator": 900,
+            "exact": 886,
+            "rate": 0.9844444444444445
+          }
+        }
+      },
+      "root_cause_affected_slots": {},
+      "root_cause_counts": {},
+      "root_cause_records": [],
+      "root_cause_unique_rows": 0
+    },
+    "validation": {
+      "boundary_distribution": {
+        "album": {
+          "end_delta": {
+            "0": 203,
+            "1": 1
+          },
+          "languages": {
+            "en": {
+              "end_delta": {
+                "0": 96
+              },
+              "rows": 96,
+              "start_delta": {
+                "-1": 96
+              }
+            },
+            "mixed": {
+              "end_delta": {
+                "0": 107,
+                "1": 1
+              },
+              "rows": 108,
+              "start_delta": {
+                "-1": 108
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "whitespace_only": 204
+          },
+          "start_delta": {
+            "-1": 204
+          },
+          "suffix_whitespace": {
+            "contains_non_whitespace": 1,
+            "empty": 203
+          },
+          "templates": {
+            "play_en_asr_spacing": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_conversational": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_direct": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_polite": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_punctuation_loss": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_word_order": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 18
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 18
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 18
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 18
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 17,
+                "1": 1
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 18
+              },
+              "rows": 18,
+              "start_delta": {
+                "-1": 18
+              }
+            }
+          }
+        },
+        "artist": {
+          "end_delta": {
+            "0": 126
+          },
+          "languages": {
+            "en": {
+              "end_delta": {
+                "0": 96
+              },
+              "rows": 96,
+              "start_delta": {
+                "-1": 96
+              }
+            },
+            "mixed": {
+              "end_delta": {
+                "0": 30
+              },
+              "rows": 30,
+              "start_delta": {
+                "-1": 20,
+                "0": 10
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "empty": 10,
+            "whitespace_only": 116
+          },
+          "start_delta": {
+            "-1": 116,
+            "0": 10
+          },
+          "suffix_whitespace": {
+            "empty": 126
+          },
+          "templates": {
+            "play_en_asr_spacing": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_conversational": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_direct": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_polite": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_punctuation_loss": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_word_order": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "-1": 5
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "0": 5
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "-1": 5
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "0": 5
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "-1": 5
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 5
+              },
+              "rows": 5,
+              "start_delta": {
+                "-1": 5
+              }
+            }
+          }
+        },
+        "track": {
+          "end_delta": {
+            "0": 297,
+            "1": 3
+          },
+          "languages": {
+            "en": {
+              "end_delta": {
+                "0": 96
+              },
+              "rows": 96,
+              "start_delta": {
+                "-1": 96
+              }
+            },
+            "mixed": {
+              "end_delta": {
+                "0": 201,
+                "1": 3
+              },
+              "rows": 204,
+              "start_delta": {
+                "-1": 170,
+                "0": 34
+              }
+            }
+          },
+          "prefix_whitespace": {
+            "empty": 34,
+            "whitespace_only": 266
+          },
+          "start_delta": {
+            "-1": 266,
+            "0": 34
+          },
+          "suffix_whitespace": {
+            "contains_non_whitespace": 3,
+            "empty": 297
+          },
+          "templates": {
+            "play_en_asr_spacing": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_conversational": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_direct": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_polite": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_punctuation_loss": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_en_word_order": {
+              "end_delta": {
+                "0": 16
+              },
+              "rows": 16,
+              "start_delta": {
+                "-1": 16
+              }
+            },
+            "play_mixed_asr_case": {
+              "end_delta": {
+                "0": 33,
+                "1": 1
+              },
+              "rows": 34,
+              "start_delta": {
+                "-1": 34
+              }
+            },
+            "play_mixed_asr_spacing": {
+              "end_delta": {
+                "0": 33,
+                "1": 1
+              },
+              "rows": 34,
+              "start_delta": {
+                "-1": 34
+              }
+            },
+            "play_mixed_code_switch": {
+              "end_delta": {
+                "0": 34
+              },
+              "rows": 34,
+              "start_delta": {
+                "0": 34
+              }
+            },
+            "play_mixed_conversational": {
+              "end_delta": {
+                "0": 33,
+                "1": 1
+              },
+              "rows": 34,
+              "start_delta": {
+                "-1": 34
+              }
+            },
+            "play_mixed_particle": {
+              "end_delta": {
+                "0": 34
+              },
+              "rows": 34,
+              "start_delta": {
+                "-1": 34
+              }
+            },
+            "play_mixed_word_order": {
+              "end_delta": {
+                "0": 34
+              },
+              "rows": 34,
+              "start_delta": {
+                "-1": 34
+              }
+            }
+          }
+        }
+      },
+      "rates": {
+        "S0": {
+          "album": {
+            "denominator": 204,
+            "exact": 0,
+            "rate": 0.0
+          },
+          "artist": {
+            "denominator": 126,
+            "exact": 10,
+            "rate": 0.07936507936507936
+          },
+          "track": {
+            "denominator": 300,
+            "exact": 0,
+            "rate": 0.0
+          }
+        },
+        "S1": {
+          "album": {
+            "denominator": 204,
+            "exact": 185,
+            "rate": 0.9068627450980392
+          },
+          "artist": {
+            "denominator": 126,
+            "exact": 121,
+            "rate": 0.9603174603174603
+          },
+          "track": {
+            "denominator": 300,
+            "exact": 263,
+            "rate": 0.8766666666666667
+          }
+        },
+        "S2": {
+          "album": {
+            "denominator": 204,
+            "exact": 0,
+            "rate": 0.0
+          },
+          "artist": {
+            "denominator": 126,
+            "exact": 10,
+            "rate": 0.07936507936507936
+          },
+          "track": {
+            "denominator": 300,
+            "exact": 34,
+            "rate": 0.11333333333333333
+          }
+        },
+        "S3": {
+          "album": {
+            "denominator": 204,
+            "exact": 203,
+            "rate": 0.9950980392156863
+          },
+          "artist": {
+            "denominator": 126,
+            "exact": 126,
+            "rate": 1.0
+          },
+          "track": {
+            "denominator": 300,
+            "exact": 297,
+            "rate": 0.99
+          }
+        }
+      },
+      "root_cause_affected_slots": {
+        "album": 18,
+        "artist": 5,
+        "track": 34
+      },
+      "root_cause_counts": {
+        "token_offset_ordering:O->O": 57
+      },
+      "root_cause_records": [
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01159",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "artist",
+          "case_id": "candidate-01159",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01165",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "artist",
+          "case_id": "candidate-01165",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01171",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "artist",
+          "case_id": "candidate-01171",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01177",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "artist",
+          "case_id": "candidate-01177",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01183",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "artist",
+          "case_id": "candidate-01183",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01189",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01189",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01195",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01195",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01201",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01201",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01207",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01207",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01213",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01213",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01219",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01219",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01225",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01225",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01231",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01231",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01237",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01237",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01243",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01243",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01249",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01249",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01255",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01255",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01261",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01261",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01267",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01267",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01273",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01273",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01279",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01279",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01285",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01285",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01291",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "album",
+          "case_id": "candidate-01291",
+          "category": "C",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01339",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01345",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01351",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01357",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01363",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01369",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01375",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01381",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01387",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01393",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        },
+        {
+          "affected_slot": "track",
+          "case_id": "candidate-01399",
+          "category": "B",
+          "offset": [
+            0,
+            2
+          ],
+          "previous_index": 16,
+          "previous_offset": [
+            0,
+            1
+          ],
+          "previous_slot": "O",
+          "reason": "token_offset_ordering",
+          "slot": "O",
+          "token_index": 17
+        }
+      ],
+      "root_cause_unique_rows": 34
+    }
+  },
+  "status": "LAYA_SPAN_SEAM_DESIGN_S3_FEASIBLE",
+  "tokenizer_identity": {
+    "full_model_aggregate_recomputed": false,
+    "reviewed_full_model_aggregate_sha256": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "verified_local_files": {
+      "rl_agent_config.json": {
+        "sha256": "25061739243b617ad88d1219ba6f8a9c86c5881ca28df024fa2d9b3b2fcc30c6",
+        "size_bytes": 472
+      },
+      "tokenizer/tokenizer.json": {
+        "sha256": "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f",
+        "size_bytes": 34363188
+      },
+      "tokenizer/tokenizer_config.json": {
+        "sha256": "2c0c4d82d4b4bc6b4ac40b2375e067a1645f78b381a9774248d47915f33d751f",
+        "size_bytes": 545
+      }
+    },
+    "weight_files_opened": false
+  }
+}
