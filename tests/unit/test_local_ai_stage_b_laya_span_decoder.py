@@ -31,7 +31,7 @@ def test_added_implementation_contract(case):
     assert decoder.decode(**{k:v for k,v in case.items() if k not in ('name','expected')})==case['expected']
 
 
-@pytest.mark.parametrize('typed,validity',[(2,1),(-1,1),(True,1),(0,-.1),(0,float('inf')),(0,'1'),(0,True)])
+@pytest.mark.parametrize('typed,validity',[(2,1),(-1,1),(True,1),(0,-.1),(0,float('inf')),(0,'1'),(0,True),(0,10**400),(0,-10**400)])
 def test_closed_typed_and_finite_validity(typed,validity):
     assert decoder.decode(typed,validity,[1],[True],[(0,3)],'abc')==decoder.NULL
 

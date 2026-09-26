@@ -49,7 +49,7 @@ def decode(typed_index: int, validity_probability: float, labels: list[int],
     """Decode reviewed S3 raw spans; no execution/provider authority or offset repair."""
     if (type(typed_index) is not int or typed_index not in (0, 1) or typed_index != 0
             or type(validity_probability) not in (int, float)
-            or not math.isfinite(validity_probability) or not 0.5 <= validity_probability <= 1):
+            or not 0.5 <= validity_probability <= 1 or not math.isfinite(validity_probability)):
         return dict(NULL)
     if (not isinstance(text, str) or not all(isinstance(v, (list, tuple)) for v in (labels, mask, offsets))
             or any(type(v) is not bool for v in mask)):
