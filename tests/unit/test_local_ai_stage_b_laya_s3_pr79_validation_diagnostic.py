@@ -264,3 +264,28 @@ def test_durable_result_if_present():
     for item in value['analysis']['structural_oracle_gap'].values():assert item['gap']==item['gold_bio_ceiling']-item['learned_exact']
     assert len(value['analysis']['historical_eleven_plays'])==11
     assert 'utterance' not in json.dumps(value)
+
+
+@pytest.mark.parametrize('name',list(d.audit.FLAGS))
+def test_active_authority_drift_fails(monkeypatch,name):
+    for key in d.audit.FLAGS:monkeypatch.delenv(key,raising=False)
+    d.authority_check()
+    monkeypatch.setenv(name,'true')
+    with pytest.raises(ValueError,match='authority'):d.authority_check()
+    monkeypatch.setenv(name,'FALSE');d.authority_check()
+
+
+def test_reviewed_canonical_bindings_real_and_drift(monkeypatch):
+    bindings=d.reviewed_bindings()
+    assert bindings['LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.json']=='38bdead38e5dea83cf45e522279e7280fdfa0aeb08d8d6e12984cff1d7591d87'
+    assert bindings['LAYA_SPAN_SEAM_IMPLEMENTATION_RESULT_2026-09-26.json']==d.research.IMPLEMENTATION_SHA
+    def mismatch(*args):raise ValueError('evidence_identity')
+    monkeypatch.setattr(d.research,'canonical_evidence',mismatch)
+    with pytest.raises(ValueError,match='evidence_identity'):d.reviewed_bindings()
+
+
+@pytest.mark.parametrize('label',[d.CHECKPOINT,d.RESTORE,d.DATA,d.DEVICE,d.SOURCE,d.REPRODUCTION,d.SAFETY])
+def test_post_identity_preserves_specific_stop_label(label):
+    assert d.failure_record(ValueError(label+':post_check'))=={'status':label,'blocker':label+':post_check'}
+    source=inspect.getsource(d.child)
+    assert source.count('result.update(failure_record(exc))')==2

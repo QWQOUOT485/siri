@@ -127,7 +127,29 @@ def accepted_evidence() -> dict[str, Any]:
     return research.canonical_evidence('LAYA_SMALL_ADAPTATION_RESULT_2026-09-26.json', research.PR79_SHA)
 
 
+def authority_check() -> None:
+    require(all(os.environ.get(k, 'false').casefold() == 'false' for k in audit.FLAGS), BLOCKER, 'authority')
+
+
+def reviewed_bindings() -> dict[str, str]:
+    bindings = {'LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.json':
+        '38bdead38e5dea83cf45e522279e7280fdfa0aeb08d8d6e12984cff1d7591d87',
+        'LAYA_SPAN_SEAM_IMPLEMENTATION_RESULT_2026-09-26.json': research.IMPLEMENTATION_SHA}
+    for name, digest in bindings.items():
+        research.canonical_evidence(name, digest)
+    return bindings
+
+
+def failure_record(exc: Exception) -> dict[str, str]:
+    reason = str(exc)
+    label = reason.split(':', 1)[0]
+    return {'status': label if label in (DATA, SOURCE, CHECKPOINT, RESTORE, DEVICE, REPRODUCTION, SAFETY, 'STOP_REVIEWED_STATE_CHANGED') else BLOCKER,
+        'blocker': reason if isinstance(exc, (ValueError, PermissionError, pinned.GateError)) else type(exc).__name__}
+
+
 def no_compute_identity() -> tuple[dict[str, Any], list[Any], dict[str, Any]]:
+    authority_check()
+    reviewed = reviewed_bindings()
     require(Path(sys.executable).resolve() == pinned.PYTHON.resolve() and sys.version_info[:3] == (3, 14, 7), BLOCKER, 'python')
     require(sys.flags.utf8_mode == 1 and sys.dont_write_bytecode, BLOCKER, 'process_flags')
     require(all(os.environ.get(k) == '1' for k in ('HF_HUB_OFFLINE', 'TRANSFORMERS_OFFLINE'))
@@ -144,7 +166,7 @@ def no_compute_identity() -> tuple[dict[str, Any], list[Any], dict[str, Any]]:
     except Exception as exc:
         raise ValueError(DATA + ':validation_identity_or_schema') from exc
     report79 = ROOT / 'docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SMALL_ADAPTATION_2026-09-26.md'
-    identity = {'sources': source_identity(), 'runner_sha256': sha(Path(__file__)),
+    identity = {'reviewed_canonical_bindings': reviewed, 'sources': source_identity(), 'runner_sha256': sha(Path(__file__)),
         'source_revision': pinned.source_identity(), 'packages': packages, 'venv_sha256': inventory,
         'tokenizer': audit.tokenizer_identity(), 'checkpoint': checkpoint_identity(),
         'validation_sha256': sha(VALIDATION), 'validation_composition': composition,
@@ -445,10 +467,7 @@ def child() -> dict[str, Any]:
         result['analysis'] = analysis(rows, old, new, decisions)
         result['status'] = PASS
     except Exception as exc:
-        reason = str(exc)
-        label = reason.split(':', 1)[0]
-        result.update(status=label if label in (DATA, SOURCE, CHECKPOINT, RESTORE, DEVICE, REPRODUCTION, SAFETY, 'STOP_REVIEWED_STATE_CHANGED') else BLOCKER,
-            blocker=reason if isinstance(exc, (ValueError, PermissionError, pinned.GateError)) else type(exc).__name__)
+        result.update(failure_record(exc))
     finally:
         if hook is not None:
             hook.remove()
@@ -461,7 +480,7 @@ def child() -> dict[str, Any]:
                     result['model_after'] = model_identity()
                     require(result['model_after'] == result['model_before'], SOURCE, 'model_changed')
             except Exception as exc:
-                result.update(status=SOURCE, blocker=str(exc) if isinstance(exc, ValueError) else type(exc).__name__)
+                result.update(failure_record(exc))
         result['process_boundary'] = {'utf8_mode': sys.flags.utf8_mode, 'dont_write_bytecode': sys.dont_write_bytecode,
             'offline': True, 'raw_byte_transport': True, 'opened_row_sources': sorted(opened), 'denied_operations': dict(Counter(denied)),
             'train_rows_opened': False, 'held_out_rows_opened': False, 'stage_a_rows_opened': False,
