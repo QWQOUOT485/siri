@@ -4,31 +4,33 @@
 
 ## Current Phase
 
-### 2026-09-27 Versioned Laya S3 research path preflight passed
+### 2026-09-27 PR #79 checkpoint / S3 diagnostic blocked during load
 
-**Current result:** `LAYA_S3_VERSIONED_RESEARCH_PATH_PREFLIGHT_PASSED`.
-PR #84 merged at `c3f863f006356db2e179ea7f4207ac099effa604`; the S3 implementation
-remains verified. New `laya-s3-research-v1` owns distinct decoder/result/checkpoint
-provenance and dispatches only to the reviewed S3 decoder. Synthetic dispatch
-records S3 once and historical decode zero times; no duplicate seam or fallback.
+**Current result:** `LAYA_PR79_S3_DIAGNOSTIC_NEW_BLOCKER` — `FileNotFoundError`
+during the one authorized base-model load attempt. Attempted loads 1, completed
+loads 0; checkpoint loads, validation passes/forwards and training/backward all 0.
+No retry occurred. Exact missing path/cause is unknown from the retained result;
+blocked dependency write probes are not proven to be the cause.
 
-The no-compute preflight reproduces PR #79's exact 600-row/100-group selector
-(498 eligible, 102 blocked) and deterministic 3-epoch/189-step future schedule.
-All 24 recipe fields match actual PR #79 config and canonical evidence, with
-source-backed mode/freeze/optimizer checks. Six historical source hashes,
-including PR #79 runner and S3 decoder, remain unchanged. No app wiring,
-model weights/checkpoint access, GPU, inference or training occurred. The
-future checkpoint namespace is only defined; no directory was created.
+PR #85 reviewed head `d2c240982d04a9fd1793c5607a5831dc187a527b` is merged at
+`6c1373dd9e7985616a76042756e7da2ddad16ade`. The versioned S3 research path
+remains accepted. Validation SHA/composition (600 rows, 540 eligible, 60 blocked)
+and 540 renderer comparisons passed. Exact RX 9070 XT/gfx1201 was selected.
+Checkpoint, model, tokenizer, source and venv identities remain unchanged.
 
-See [versioned research-path evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.md)
-and [verified S3 implementation](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_IMPLEMENTATION_2026-09-26.md).
+**NON_ACCEPTANCE_DIAGNOSTIC_ONLY:** no historical reproduction or S3 quality/
+safety comparison was reached; no new metric, failure decomposition or quality
+conclusion exists. Accepted PR #79 metrics remain frozen. Seven historical
+sources are byte-identical. No training, train/held-out/Stage A live row access,
+checkpoint mutation or app wiring. Six persistent flags remain false.
 
-**Next gate:** Independent path/preflight review, then separately authorized
-validation-only diagnostic inference using the existing PR #79 checkpoint.
-No checkpoint is loaded by this task. Full head-only adaptation remains
-unauthorized; no model-quality improvement is claimed. Held-out and Stage A
-remain sealed/out of scope. Issue #68 stays OPEN; Issues #80/#82 remain unchanged.
-No general model-compute or training authority is granted.
+See [diagnostic blocker evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_2026-09-27.md)
+and [versioned path evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.md).
+
+**Next gate:** independent blocker review, then a separately authorized targeted
+load diagnostic with sanitized failing-path/stage capture. Further validation and
+full head-only adaptation remain unauthorized. Issue #68 stays OPEN;
+Issues #80/#82 unchanged. No general model-compute or training authority.
 
 **Authority flags** (all remain `false`):
 
