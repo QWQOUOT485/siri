@@ -129,9 +129,13 @@ No optimizer, backward, training, checkpoint mutation, validation tuning, second
 - Windows integration: **5 passed**. This is the existing integration suite, not Siri/Spotify client E2E acceptance.
 - Qualified Python `-B -X utf8` used throughout. CPU pytest appends the existing ordinary-project site-packages read-only; that addition is never propagated into the live child.
 - `python -m compileall -q app scripts tests`: passed.
-- `git diff --check`: passed; Markdown relative links: **26 checked**, all resolved.
+- Workingtree-only `git diff --check`: passed. Base-to-head `git diff --check 6c1373dd9e7985616a76042756e7da2ddad16ade`: **one warning** at frozen runner line531, new blank line at EOF. The executed source is deliberately preserved byte-for-byte; this whitespace deviation is not fixed after live. Markdown relative links: **26 checked**, all resolved.
 - Seven historical/reviewed sources and PR #79 evidence unchanged; zero diff under `app/`, frozen `artifacts/`, and `tests/fixtures/`.
 - Primary worktree's PROJECT_STATUS/Shortcut/ShortcutV2 hashes unchanged: `968907d1545ade5fe7be6e4958af2ccc23781a9f138fbfe1deae5bddb8e864bc`, `31a6ffc09aa25a819b506157cc847c0482bb72eff96827a5bc8fc9e76e259c89`, `934a932464238ff3594ad90f36c4934b95a7b8b3ce59737dcc785484b01e1484`.
 - Issues #80/#82 title/body/state/comments/updatedAt equal read-only pre-task snapshots. Issue #68 current section records this blocker and corrects PR #85 to merged, preserving reviewed history.
 
 No further model execution is permitted in this task.
+
+## Review deviation
+
+Final independent review caught that the earlier diff-check claim covered only the workingtree, not the complete PR. The base-to-head check exits1 solely for the frozen runner's extra EOF blank line. No runner change or live retry was made; exact executed-source SHA remains `4b259bd9629628aeb3d25ad231521a745cfec81ac0ea6ce6786386259ef94b4f`. This report correction changes documentation only.
