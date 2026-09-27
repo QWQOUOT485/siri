@@ -4,33 +4,33 @@
 
 ## Current Phase
 
-### 2026-09-27 Laya base-model load succeeds with controlled scratch writes
+### 2026-09-27 PR79 checkpoint / S3 validation-only diagnostic passed
 
-**Current result:** `LAYA_BASE_MODEL_LOAD_ROOT_CAUSE_DIAGNOSTIC_PASSED`.
-PR #86 blocker evidence merged reviewed head `deb074e5a9c4390ab8c4c77f40e4d7337d2f4a5a`
-at `fcb378031e2befff1ba7477952041647a5b8cc4a`. One newly authorized base-model load
-attempt completed on cuda:1 / RX 9070 XT / gfx1201. Full PR #72 residency
-readback passed; model/source/tokenizer/venv and historical evidence are unchanged.
+**Current result:** `LAYA_PR79_CHECKPOINT_S3_VALIDATION_DIAGNOSTIC_PASSED`.
+PR #87 merged at `144dc020344936c017f13ccf9253902d5af54c44`; its controlled-scratch
+load path was reused for one authorized diagnostic: one base load, one PR #79
+checkpoint restore, 34 batches / 540 supported validation rows, 60 blocked before
+rendering. Scratch was cleaned; checkpoint/model/source/venv remained unchanged.
 
-All 21 filesystem events stayed within dedicated scratch (including two write
-opens for temporary dependency probes); protected/outside/network denials were 0.
-Scratch was cleaned. The frozen automated blanket-guard-regression flag is
-**false** because no nonempty scratch files survived dependency cleanup. The
-successful load and temporary-write chain are consistent with the hypothesis;
-the exact prior FileNotFoundError linkage is not conclusively established.
+Historical predictions reproduced 540/540 complete PR #79 objects and all quality
+aggregates exactly. Uncalibrated typed probability means differ slightly (see
+evidence); accepted PR #79 metrics remain frozen. S3 diagnostic play recall is
+12/300 versus historical 11/300, TRACK exact 3/300 versus 0/300, semantic accuracy
+241/540 versus 240/540. Both preserve unknown recall 240/240, false acceptance
+0/240, blocked 60/60, zero leakage and zero play-without-TRACK.
 
-Checkpoint opens/loads, dataset passes, forward, validation, training/backward
-all 0. No train/held-out/Stage A access or app wiring. No historical-vs-S3 quality
-result exists; accepted PR #79 metrics and PR #86 blocker evidence remain frozen.
-All six persistent flags remain false.
+Dominant gold-play first failures: invalid/missing TRACK 218/300, typed-not-play
+70/300; validity 0, non-exact emitted TRACK 9, optional-slot error 2, fully exact 1.
+The S3 gold-BIO structural ceilings remain TRACK 297/300, ARTIST 126/126 and ALBUM
+203/204; these are not achieved model scores. This PASS is diagnostic-only, not
+quality acceptance. No training, live train/held-out/Stage A input or app wiring.
+All six persistent flags remain false. Issue #68 stays OPEN; Issues #80/#82 unchanged.
 
-See [load diagnostic evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_BASE_MODEL_LOAD_ROOT_CAUSE_2026-09-27.md)
-and [historical PR #86 blocker](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_2026-09-27.md).
+See [retry diagnostic evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_RETRY_2026-09-27.md).
 
-**Next gate:** independent review of the load/guard evidence, then a future
-explicit authorization for PR #79 checkpoint + S3 validation-only diagnostic.
-No further execution is authorized here; full head-only adaptation remains
-unauthorized. Issue #68 stays OPEN; Issues #80/#82 unchanged.
+**Next gate:** independent review of the diagnostic, then separately authorized
+span/BIO learning and typed-decision diagnosis/design before any adaptation
+proposal. No further compute or full head-only adaptation is authorized.
 
 **Authority flags** (all remain `false`):
 
