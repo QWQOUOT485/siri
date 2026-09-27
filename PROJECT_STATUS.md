@@ -4,32 +4,31 @@
 
 ## Current Phase
 
-### 2026-09-26 Stage B reviewed S3 implementation verified
+### 2026-09-27 Versioned Laya S3 research path preflight passed
 
-**Current result:** `LAYA_SPAN_SEAM_S3_IMPLEMENTATION_VERIFIED`.
-PR #83 review/merge is complete; S3 design remains feasible. The new reusable
-S3 decoder matches the unchanged design helper on **900/900 train + 300/300
-validation plays**, zero entire-output mismatches. Exact oracle counts:
-train TRACK **886/900**, ARTIST **612/612**, ALBUM **549/582 (94.33%)**;
-validation TRACK **297/300**, ARTIST **126/126**, ALBUM **203/204**.
-The train ALBUM limitation and three validation TRACK/one ALBUM failures remain.
-This proves implementation parity, not learned model-quality improvement.
+**Current result:** `LAYA_S3_VERSIONED_RESEARCH_PATH_PREFLIGHT_PASSED`.
+PR #84 merged at `c3f863f006356db2e179ea7f4207ac099effa604`; the S3 implementation
+remains verified. New `laya-s3-research-v1` owns distinct decoder/result/checkpoint
+provenance and dispatches only to the reviewed S3 decoder. Synthetic dispatch
+records S3 once and historical decode zero times; no duplicate seam or fallback.
 
-All 24 reviewed adversaries and 28 implementation checks passed. Four historical
-source files, including PR #79 decode and PR #83 design helper, remain byte-identical.
-No production Laya/BIO decoder path was added or wired into app; historical
-research runners remain unchanged. No model weights, checkpoint, GPU/model
-compute, training, held-out or Stage A verifier inputs were used. Broad existing
-regression fixture/integrity tests are separate.
+The no-compute preflight reproduces PR #79's exact 600-row/100-group selector
+(498 eligible, 102 blocked) and deterministic 3-epoch/189-step future schedule.
+All 24 recipe fields match actual PR #79 config and canonical evidence, with
+source-backed mode/freeze/optimizer checks. Six historical source hashes,
+including PR #79 runner and S3 decoder, remain unchanged. No app wiring,
+model weights/checkpoint access, GPU, inference or training occurred. The
+future checkpoint namespace is only defined; no directory was created.
 
-See [S3 implementation evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_IMPLEMENTATION_2026-09-26.md)
-and [reviewed design](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_DESIGN.md).
+See [versioned research-path evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.md)
+and [verified S3 implementation](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_SEAM_IMPLEMENTATION_2026-09-26.md).
 
-**Next gate:** Independent implementation review. Future research/runtime wiring
-and training require separate authorization; full head-only adaptation remains
-unauthorized. Issue #68 stays OPEN; Issues #80 and #82 are untouched. Held-out,
-Stage A, calibration, final quality/latency, Decider and production remain
-separate gates. No general model-compute or training authority is granted.
+**Next gate:** Independent path/preflight review, then separately authorized
+validation-only diagnostic inference using the existing PR #79 checkpoint.
+No checkpoint is loaded by this task. Full head-only adaptation remains
+unauthorized; no model-quality improvement is claimed. Held-out and Stage A
+remain sealed/out of scope. Issue #68 stays OPEN; Issues #80/#82 remain unchanged.
+No general model-compute or training authority is granted.
 
 **Authority flags** (all remain `false`):
 
