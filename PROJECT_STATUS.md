@@ -4,33 +4,33 @@
 
 ## Current Phase
 
-### 2026-09-27 PR #79 checkpoint / S3 diagnostic blocked during load
+### 2026-09-27 Laya base-model load succeeds with controlled scratch writes
 
-**Current result:** `LAYA_PR79_S3_DIAGNOSTIC_NEW_BLOCKER` — `FileNotFoundError`
-during the one authorized base-model load attempt. Attempted loads 1, completed
-loads 0; checkpoint loads, validation passes/forwards and training/backward all 0.
-No retry occurred. Exact missing path/cause is unknown from the retained result;
-blocked dependency write probes are not proven to be the cause.
+**Current result:** `LAYA_BASE_MODEL_LOAD_ROOT_CAUSE_DIAGNOSTIC_PASSED`.
+PR #86 blocker evidence merged reviewed head `deb074e5a9c4390ab8c4c77f40e4d7337d2f4a5a`
+at `fcb378031e2befff1ba7477952041647a5b8cc4a`. One newly authorized base-model load
+attempt completed on cuda:1 / RX 9070 XT / gfx1201. Full PR #72 residency
+readback passed; model/source/tokenizer/venv and historical evidence are unchanged.
 
-PR #85 reviewed head `d2c240982d04a9fd1793c5607a5831dc187a527b` is merged at
-`6c1373dd9e7985616a76042756e7da2ddad16ade`. The versioned S3 research path
-remains accepted. Validation SHA/composition (600 rows, 540 eligible, 60 blocked)
-and 540 renderer comparisons passed. Exact RX 9070 XT/gfx1201 was selected.
-Checkpoint, model, tokenizer, source and venv identities remain unchanged.
+All 21 filesystem events stayed within dedicated scratch (including two write
+opens for temporary dependency probes); protected/outside/network denials were 0.
+Scratch was cleaned. The frozen automated blanket-guard-regression flag is
+**false** because no nonempty scratch files survived dependency cleanup. The
+successful load and temporary-write chain are consistent with the hypothesis;
+the exact prior FileNotFoundError linkage is not conclusively established.
 
-**NON_ACCEPTANCE_DIAGNOSTIC_ONLY:** no historical reproduction or S3 quality/
-safety comparison was reached; no new metric, failure decomposition or quality
-conclusion exists. Accepted PR #79 metrics remain frozen. Seven historical
-sources are byte-identical. No training, train/held-out/Stage A live row access,
-checkpoint mutation or app wiring. Six persistent flags remain false.
+Checkpoint opens/loads, dataset passes, forward, validation, training/backward
+all 0. No train/held-out/Stage A access or app wiring. No historical-vs-S3 quality
+result exists; accepted PR #79 metrics and PR #86 blocker evidence remain frozen.
+All six persistent flags remain false.
 
-See [diagnostic blocker evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_2026-09-27.md)
-and [versioned path evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_RESEARCH_PATH_PREFLIGHT_2026-09-27.md).
+See [load diagnostic evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_BASE_MODEL_LOAD_ROOT_CAUSE_2026-09-27.md)
+and [historical PR #86 blocker](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_2026-09-27.md).
 
-**Next gate:** independent blocker review, then a separately authorized targeted
-load diagnostic with sanitized failing-path/stage capture. Further validation and
-full head-only adaptation remain unauthorized. Issue #68 stays OPEN;
-Issues #80/#82 unchanged. No general model-compute or training authority.
+**Next gate:** independent review of the load/guard evidence, then a future
+explicit authorization for PR #79 checkpoint + S3 validation-only diagnostic.
+No further execution is authorized here; full head-only adaptation remains
+unauthorized. Issue #68 stays OPEN; Issues #80/#82 unchanged.
 
 **Authority flags** (all remain `false`):
 
