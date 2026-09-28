@@ -1,0 +1,51 @@
+{
+  "NON_ACCEPTANCE_DIAGNOSTIC_ONLY": true,
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "4887b9c77210110a7b8a5311d8a5767ee858b75b1e82a34776f75d57858f3cce",
+  "child_returncode": 0,
+  "execution_counts": {
+    "backward_calls": null,
+    "checkpoint_loads": null,
+    "live_invocations": 1,
+    "model_loads": null,
+    "training_steps": null,
+    "validation_forward_batches": null,
+    "validation_passes": null
+  },
+  "repo_base": "b6af8e4c4599647b16273c5ece6f21360b9d5e5c",
+  "runner_sha256": "5ec4a8ae373f4cb6923e0b0fa77e55b79df6bd5b0a9767540dbbe2fdd1faa446",
+  "schema": "laya-span-typed-diagnosis-v1",
+  "scratch_cleaned": true,
+  "scratch_created": true,
+  "scratch_inventory": [],
+  "status": "LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER",
+  "task_scoped_compute_authorization": "laya-span-typed-diagnosis-v1",
+  "transport_exception": {
+    "class": "ValueError",
+    "errno": null,
+    "filename": null,
+    "filename2": null,
+    "frames": [
+      {
+        "function": "parent",
+        "line": 709,
+        "module_basename": "local_ai_stage_b_laya_span_typed_diagnosis.py"
+      },
+      {
+        "function": "require",
+        "line": 62,
+        "module_basename": "local_ai_stage_b_laya_s3_pr79_validation_diagnostic.py"
+      }
+    ],
+    "message": "LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER:child_result_missing_or_ambiguous",
+    "stage": "parent_transport",
+    "winerror": null
+  }
+}
