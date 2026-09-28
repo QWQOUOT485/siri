@@ -4,9 +4,30 @@
 
 ## Current Phase
 
-### 2026-09-28 PR90 child-result transport-only diagnosis completed
+### 2026-09-28 PR91 explicit transport worked; validation diagnosis blocked in sanitization
 
-**Current result:** `LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED` in a synthetic,
+**Current result:** `LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER` after the
+sole authorized validation-only live invocation. The frozen v2 runner emitted
+an explicit stderr failure envelope and exited nonzero: child return code 2,
+`sanitization` stage, `AttributeError`, no result marker. Parent retained the
+sanitized stderr summary and cleaned scratch. The frozen source has integer
+keys in its BIO label mapping while its sanitizer calls `.lower()` on every
+dictionary key; a CPU-only synthetic check reproduces `AttributeError`. This
+is strong evidence for the v2 blocker, not a retained child traceback or proof
+of PR #89's exact historical failure. See [PR91 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_2026-09-28.md).
+
+Without a child result, base load, checkpoint restore, validation forwards,
+PR #88 reproduction, BIO/typed/validity metrics, and parameter hashes during
+the run remain unknown. PR #88 remains the authoritative model diagnostic.
+No training path or adaptation was added; held-out/Stage A and `app/` were not
+changed. All six persistent authority flags remain false. Issue #68 stays
+OPEN; Issues #80/#82 remain unchanged. **Next gate:** independent review of
+this blocker and a separately authorized correction/run; no automatic retry.
+PR #91 remains OPEN/UNMERGED.
+
+### 2026-09-28 PR90 child-result transport-only diagnosis completed (historical)
+
+**Historical result:** `LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED` in a synthetic,
 CPU-only subprocess lab. PR #89 blocker evidence is merged at
 `c1a624a068beebc8c641dcd1357c526278428ac6`; its BIO/model result remains
 unknown. The lab reproduced return code 0, no result marker, and stderr-only
@@ -16,11 +37,12 @@ external symptom; the exact PR #89 failing operation is still unknown. See the
 No model, checkpoint, dataset, GPU, or training work occurred. No adaptation
 is authorized. All six persistent flags remain false. Issue #68 stays OPEN;
 Issues #80/#82 are unchanged. **Milestone reached: stop for broad review**
-before any next PR or model pass. PR #90 remains OPEN/UNMERGED.
+before the separately authorized PR #91 task. PR #90 merged at
+`c1bb2a6904141aea9d606d29d60b12c80bd2b691`.
 
 ### 2026-09-28 PR89 span/BIO and typed diagnosis blocked at child-result transport (historical)
 
-**Current result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
+**Historical result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
 authorized validation-only invocation was consumed. The child returned 0, but
 the parent received no uniquely prefixed structured child result. Base-model
 load, checkpoint restore, validation forwards, reproduction, and all new BIO,

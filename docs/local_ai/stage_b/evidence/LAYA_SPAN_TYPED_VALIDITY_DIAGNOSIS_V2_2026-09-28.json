@@ -1,0 +1,124 @@
+{
+  "NON_ACCEPTANCE_DIAGNOSTIC_ONLY": true,
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "b7c80272e4331d7a2ecb716aee705b8272f7c1e676408d50f5de6e501c434f83",
+  "child_returncode": 2,
+  "child_stderr_retained": true,
+  "diagnosis_result": {
+    "bio_confusion": null,
+    "optional_slot_raw_bio": null,
+    "parameter_hashes_after": null,
+    "pr88_reproduction": null,
+    "reason": "child_result_not_emitted",
+    "track_taxonomy_218": null,
+    "typed_counterfactual_70": null,
+    "validity_discrimination": null
+  },
+  "execution_counts": {
+    "backward_calls": null,
+    "base_model_loads": null,
+    "checkpoint_deserializations": null,
+    "checkpoint_loads": null,
+    "checkpoint_restores": null,
+    "live_invocations": 1,
+    "model_loads": null,
+    "training_steps": null,
+    "validation_forward_batches": null,
+    "validation_passes": null
+  },
+  "live_result_source": "parent_fallback_no_child_payload",
+  "outer_process_returncode": 1,
+  "parent_readonly_identity_checks": {
+    "blocked_rows_preflight": 60,
+    "checkpoint_readonly": true,
+    "checkpoint_sha256_before_after": "199bfb8f1b0a3a3a930947b93e3df2f6214950e8cfacaa28b0aefb5fa7ec1a8d",
+    "checkpoint_size_bytes": 177394599,
+    "model_aggregate_before_after": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "model_eligible_rows_preflight": 540,
+    "scratch_absent_after_parent_cleanup": true,
+    "source_revision_before_after": "42626c348753fbb17572a813127df2278a1ec527",
+    "validation_rows_preflight": 600,
+    "validation_sha256_before_after": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a",
+    "venv_inventory_before_after": "3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337"
+  },
+  "pre_live_frozen_commit": "05142022558ee9d4dc0034c80f598557b9f4ec8a",
+  "primary_result_emitted_from_atexit": false,
+  "repo_base": "c1bb2a6904141aea9d606d29d60b12c80bd2b691",
+  "reviewed_identities": {
+    "pr88_canonical_sha256": "babb424a086de8bbf83ff5ab68a91dcea39cb5ae1e1247dc5347a1cd40f6a42b",
+    "pr89_blocker_canonical_sha256": "4887b9c77210110a7b8a5311d8a5767ee858b75b1e82a34776f75d57858f3cce",
+    "pr89_runner_sha256": "5ec4a8ae373f4cb6923e0b0fa77e55b79df6bd5b0a9767540dbbe2fdd1faa446",
+    "pr90_canonical_sha256": "607c731fce78468b4427d1f16238d8515dfa740a6a5f4450fbf57408cfd6b156",
+    "pr90_runner_sha256": "750941d6e3048b8bd14ccd89b781085c5c13640418695470f003d22264e5acbe"
+  },
+  "runner_sha256": "20db77c91261aea73b61f3a6c70aad1cc25d65eeca1affbdd025f121e32ded9e",
+  "schema": "laya-span-typed-diagnosis-v2",
+  "scratch_cleaned": true,
+  "scratch_created": true,
+  "scratch_inventory": [],
+  "static_candidate": {
+    "cpu_reproduction": "sanitization_check({0: O}) raises AttributeError",
+    "frozen_source_condition": "BIO label mapping uses integer dict keys; sanitizer calls key.lower()",
+    "observation": "v2 child envelope reports AttributeError at sanitization",
+    "pr89_exact_inner_failure": "unknown",
+    "status": "SOURCE_AND_SYNTHETIC_MATCH_NOT_CHILD_TRACE"
+  },
+  "status": "LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER",
+  "stdout_marker_count": 0,
+  "task_scoped_compute_authorization": "laya-span-typed-validity-diagnosis-v2",
+  "transport": {
+    "child_returncode": 2,
+    "child_stderr_retained": true,
+    "classifier": "NONZERO_CHILD_EXIT",
+    "stderr_bytes": 529,
+    "stderr_exception_class": "AttributeError",
+    "stderr_sanitized_message": "redacted",
+    "stderr_transport_error": {
+      "errno": null,
+      "exception_class": "AttributeError",
+      "sanitized_message": "redacted",
+      "stage": "sanitization",
+      "winerror": null
+    },
+    "stderr_unparsed_present": false,
+    "stdout_bytes": 0,
+    "stdout_marker_count": 0
+  },
+  "transport_error": {
+    "errno": null,
+    "exception_class": "AttributeError",
+    "sanitized_message": "redacted",
+    "stage": "sanitization",
+    "winerror": null
+  },
+  "transport_exception": {
+    "class": "ValueError",
+    "errno": null,
+    "filename": null,
+    "filename2": null,
+    "frames": [
+      {
+        "function": "parent",
+        "line": 928,
+        "module_basename": "local_ai_stage_b_laya_span_typed_diagnosis_v2.py"
+      },
+      {
+        "function": "require",
+        "line": 62,
+        "module_basename": "local_ai_stage_b_laya_s3_pr79_validation_diagnostic.py"
+      }
+    ],
+    "message": "LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER:child_transport_NONZERO_CHILD_EXIT",
+    "stage": "parent_transport",
+    "winerror": null
+  },
+  "transport_stage": "sanitization",
+  "transport_version": "explicit-v2"
+}
