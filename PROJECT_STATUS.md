@@ -4,7 +4,21 @@
 
 ## Current Phase
 
-### 2026-09-28 PR89 span/BIO and typed diagnosis blocked at child-result transport
+### 2026-09-28 PR90 child-result transport-only diagnosis completed
+
+**Current result:** `LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED` in a synthetic,
+CPU-only subprocess lab. PR #89 blocker evidence is merged at
+`c1a624a068beebc8c641dcd1357c526278428ac6`; its BIO/model result remains
+unknown. The lab reproduced return code 0, no result marker, and stderr-only
+`atexit` exception. This proves that an exit-time exception can cause PR #89's
+external symptom; the exact PR #89 failing operation is still unknown. See the
+[PR90 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_CHILD_TRANSPORT_DIAGNOSIS_2026-09-28.md).
+No model, checkpoint, dataset, GPU, or training work occurred. No adaptation
+is authorized. All six persistent flags remain false. Issue #68 stays OPEN;
+Issues #80/#82 are unchanged. **Milestone reached: stop for broad review**
+before any next PR or model pass. PR #90 remains OPEN/UNMERGED.
+
+### 2026-09-28 PR89 span/BIO and typed diagnosis blocked at child-result transport (historical)
 
 **Current result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
 authorized validation-only invocation was consumed. The child returned 0, but
@@ -18,9 +32,7 @@ PR #88's previous validation-only diagnostic remains valid historical evidence.
 Issue #68 remains OPEN, Issues #80/#82 unchanged, and all six persistent
 authority flags remain false.
 
-**Next gate:** separately authorize a transport-only, no-model diagnosis that
-retains child stderr or an exit-time failure marker. Review that evidence
-before considering another model pass. PR #90 remains design-only; no
+The separately authorized transport-only diagnosis is recorded above. No
 adaptation, decoder change, or quality acceptance follows from this blocker.
 
 ### 2026-09-27 PR79 checkpoint / S3 validation-only diagnostic passed (historical)
