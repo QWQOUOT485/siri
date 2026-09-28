@@ -1,0 +1,289 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "607c731fce78468b4427d1f16238d8515dfa740a6a5f4450fbf57408cfd6b156",
+  "checkpoint_access": false,
+  "dataset_access": false,
+  "gpu_access": false,
+  "mechanism": "atexit exception can produce rc0 + no marker + stderr-only failure",
+  "model_access": false,
+  "pr89_blocker_canonical_sha256": "4887b9c77210110a7b8a5311d8a5767ee858b75b1e82a34776f75d57858f3cce",
+  "pr89_exact_failing_operation": "unknown",
+  "pr89_external_symptom_reproduced": true,
+  "pr89_runner_sha256": "5ec4a8ae373f4cb6923e0b0fa77e55b79df6bd5b0a9767540dbbe2fdd1faa446",
+  "repo_base": "c1a624a068beebc8c641dcd1357c526278428ac6",
+  "runner_sha256": "750941d6e3048b8bd14ccd89b781085c5c13640418695470f003d22264e5acbe",
+  "scenarios": [
+    {
+      "classifier": "TRANSPORT_OK",
+      "last_completed_stage": "atexit_completed",
+      "returncode": 0,
+      "scenario": "A",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started",
+        "stdout_write_completed",
+        "stdout_flush_completed",
+        "atexit_completed"
+      ],
+      "stderr_bytes": 371,
+      "stderr_exception_class": null,
+      "stderr_exception_message": null,
+      "stdout_bytes": 626,
+      "stdout_marker_count": 1
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "sanitization_started",
+      "returncode": 0,
+      "scenario": "B",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started"
+      ],
+      "stderr_bytes": 765,
+      "stderr_exception_class": "ValueError",
+      "stderr_exception_message": "sensitive_key",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "canonical_hash_started",
+      "returncode": 0,
+      "scenario": "C",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started"
+      ],
+      "stderr_bytes": 508,
+      "stderr_exception_class": "RuntimeError",
+      "stderr_exception_message": "synthetic_hash_failure",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "json_dumps_started",
+      "returncode": 0,
+      "scenario": "D",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started"
+      ],
+      "stderr_bytes": 1065,
+      "stderr_exception_class": "ValueError",
+      "stderr_exception_message": "redacted",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "json_dumps_started",
+      "returncode": 0,
+      "scenario": "E",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started"
+      ],
+      "stderr_bytes": 1226,
+      "stderr_exception_class": "TypeError",
+      "stderr_exception_message": "Object of type object is not JSON serializable",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "stdout_write_started",
+      "returncode": 0,
+      "scenario": "F",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started"
+      ],
+      "stderr_bytes": 648,
+      "stderr_exception_class": "OSError",
+      "stderr_exception_message": "synthetic_stdout_write_failure",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "stdout_write_completed",
+      "returncode": 0,
+      "scenario": "G",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started",
+        "stdout_write_completed"
+      ],
+      "stderr_bytes": 683,
+      "stderr_exception_class": "OSError",
+      "stderr_exception_message": "synthetic_stdout_flush_failure",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "DUPLICATE_MARKER",
+      "last_completed_stage": "atexit_completed",
+      "returncode": 0,
+      "scenario": "H",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started",
+        "stdout_write_completed",
+        "stdout_flush_completed",
+        "atexit_completed"
+      ],
+      "stderr_bytes": 371,
+      "stderr_exception_class": null,
+      "stderr_exception_message": null,
+      "stdout_bytes": 1252,
+      "stdout_marker_count": 2
+    },
+    {
+      "classifier": "MALFORMED_JSON",
+      "last_completed_stage": "atexit_completed",
+      "returncode": 0,
+      "scenario": "I",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started",
+        "stdout_write_completed",
+        "stdout_flush_completed",
+        "atexit_completed"
+      ],
+      "stderr_bytes": 371,
+      "stderr_exception_class": null,
+      "stderr_exception_message": null,
+      "stdout_bytes": 32,
+      "stdout_marker_count": 1
+    },
+    {
+      "classifier": "BAD_CANONICAL_HASH",
+      "last_completed_stage": "atexit_completed",
+      "returncode": 0,
+      "scenario": "J",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started",
+        "stdout_write_completed",
+        "stdout_flush_completed",
+        "atexit_completed"
+      ],
+      "stderr_bytes": 371,
+      "stderr_exception_class": null,
+      "stderr_exception_message": null,
+      "stdout_bytes": 626,
+      "stdout_marker_count": 1
+    },
+    {
+      "classifier": "NO_MARKER_NONZERO_EXIT",
+      "last_completed_stage": null,
+      "returncode": 7,
+      "scenario": "K",
+      "stage_trace": [],
+      "stderr_bytes": 0,
+      "stderr_exception_class": null,
+      "stderr_exception_message": null,
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    },
+    {
+      "classifier": "NO_MARKER_RC0_WITH_ATEXIT_ERROR",
+      "last_completed_stage": "stdout_write_started",
+      "returncode": 0,
+      "scenario": "L",
+      "stage_trace": [
+        "synthetic_result_built",
+        "sanitization_started",
+        "sanitization_completed",
+        "canonical_hash_started",
+        "canonical_hash_completed",
+        "json_dumps_started",
+        "json_dumps_completed",
+        "stdout_write_started"
+      ],
+      "stderr_bytes": 646,
+      "stderr_exception_class": "RuntimeError",
+      "stderr_exception_message": "synthetic_atexit_failure",
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0
+    }
+  ],
+  "schema": "laya-child-transport-diagnosis-v1",
+  "static_candidate_audit": {
+    "candidates": [
+      "Python scalar/list/dict",
+      "possible numpy scalar",
+      "possible tensor/object",
+      "possible non-finite float",
+      "possible Path/object"
+    ],
+    "status": "STATIC_CANDIDATE_ONLY"
+  },
+  "static_pr89_binding": {
+    "atexit_register": true,
+    "finish_child_order": [
+      "sanitization_check(result)",
+      "canonical_hash(result)",
+      "print(PREFIX + json.dumps("
+    ],
+    "parent_stderr_durably_retained": false,
+    "parent_stderr_pipe": true,
+    "runner_sha256": "5ec4a8ae373f4cb6923e0b0fa77e55b79df6bd5b0a9767540dbbe2fdd1faa446"
+  },
+  "status": "LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED"
+}
