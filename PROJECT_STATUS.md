@@ -4,9 +4,28 @@
 
 ## Current Phase
 
-### 2026-09-27 PR79 checkpoint / S3 validation-only diagnostic passed
+### 2026-09-28 PR89 span/BIO and typed diagnosis blocked at child-result transport
 
-**Current result:** `LAYA_PR79_CHECKPOINT_S3_VALIDATION_DIAGNOSTIC_PASSED`.
+**Current result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
+authorized validation-only invocation was consumed. The child returned 0, but
+the parent received no uniquely prefixed structured child result. Base-model
+load, checkpoint restore, validation forwards, reproduction, and all new BIO,
+typed, taxonomy, and counterfactual results are unknown; none may be treated
+as zero or as a quality finding. No retry or runner change followed. The
+dedicated scratch directory was removed and verified absent. See the
+[PR89 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_TYPED_DIAGNOSIS_2026-09-28.md).
+PR #88's previous validation-only diagnostic remains valid historical evidence.
+Issue #68 remains OPEN, Issues #80/#82 unchanged, and all six persistent
+authority flags remain false.
+
+**Next gate:** separately authorize a transport-only, no-model diagnosis that
+retains child stderr or an exit-time failure marker. Review that evidence
+before considering another model pass. PR #90 remains design-only; no
+adaptation, decoder change, or quality acceptance follows from this blocker.
+
+### 2026-09-27 PR79 checkpoint / S3 validation-only diagnostic passed (historical)
+
+**Historical result:** `LAYA_PR79_CHECKPOINT_S3_VALIDATION_DIAGNOSTIC_PASSED`.
 PR #87 merged at `144dc020344936c017f13ccf9253902d5af54c44`; its controlled-scratch
 load path was reused for one authorized diagnostic: one base load, one PR #79
 checkpoint restore, 34 batches / 540 supported validation rows, 60 blocked before
@@ -27,10 +46,6 @@ quality acceptance. No training, live train/held-out/Stage A input or app wiring
 All six persistent flags remain false. Issue #68 stays OPEN; Issues #80/#82 unchanged.
 
 See [retry diagnostic evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_S3_PR79_VALIDATION_DIAGNOSTIC_RETRY_2026-09-27.md).
-
-**Next gate:** independent review of the diagnostic, then separately authorized
-span/BIO learning and typed-decision diagnosis/design before any adaptation
-proposal. No further compute or full head-only adaptation is authorized.
 
 **Authority flags** (all remain `false`):
 
