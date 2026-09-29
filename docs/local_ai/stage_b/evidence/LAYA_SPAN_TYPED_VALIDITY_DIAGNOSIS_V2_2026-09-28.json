@@ -8,7 +8,7 @@
     "semantic_memory_enabled": false,
     "training_authorized": false
   },
-  "canonical_result_sha256": "b7c80272e4331d7a2ecb716aee705b8272f7c1e676408d50f5de6e501c434f83",
+  "canonical_result_sha256": "70a1f83e18c9df42d5a7163f16c108beb01c485fdab60882310f6f95288ab310",
   "child_returncode": 2,
   "child_stderr_retained": true,
   "diagnosis_result": {
@@ -16,7 +16,7 @@
     "optional_slot_raw_bio": null,
     "parameter_hashes_after": null,
     "pr88_reproduction": null,
-    "reason": "child_result_not_emitted",
+    "reason": "diagnosis_payload_not_durably_serialized_after_sanitization_failure",
     "track_taxonomy_218": null,
     "typed_counterfactual_70": null,
     "validity_discrimination": null
@@ -32,6 +32,81 @@
     "training_steps": null,
     "validation_forward_batches": null,
     "validation_passes": null
+  },
+  "execution_evidence": {
+    "frozen_control_flow_implied_execution": {
+      "child_returned_to_emitter_after_inner_exception": true,
+      "child_status_pass_reached": false,
+      "completed_gates": [
+        "base_model_load_path",
+        "checkpoint_deserialization_and_restore",
+        "validation_pass",
+        "34_validation_forward_batches",
+        "post_validation_parameter_hash_gate",
+        "pr88_decision_prediction_reproduction_gate",
+        "historical_report_and_reproduction",
+        "s3_report",
+        "s3_safety_gate",
+        "pr88_failure_bucket_membership_equality",
+        "diagnose"
+      ],
+      "diagnosis_completed_before_inner_sanitization": true,
+      "evidence_basis": "Frozen v2 source order plus the observed sanitization-stage AttributeError",
+      "pr88_failure_bucket_membership_equal": true,
+      "pr88_reproduction_gate_completed": true,
+      "pr88_reproduction_payload_durably_serialized": false,
+      "s3_safety_gate_completed": true,
+      "source_implied_counts": {
+        "base_model_loads": 1,
+        "checkpoint_deserializations": 1,
+        "checkpoint_restores": 1,
+        "validation_forward_batches": 34,
+        "validation_passes": 1
+      },
+      "telemetry_status": "source_implied_not_parent_observed_child_telemetry"
+    },
+    "parent_observed_transport": {
+      "child_returncode": 2,
+      "child_stderr_retained": true,
+      "live_invocations": 1,
+      "outer_process_returncode": 1,
+      "primary_result_emitted_from_atexit": false,
+      "scratch_cleaned": true,
+      "stderr_bytes": 529,
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0,
+      "transport_exception_class": "AttributeError",
+      "transport_stage": "sanitization",
+      "transport_version": "explicit-v2"
+    },
+    "sanitizer_defect": {
+      "cpu_synthetic_reproduced": true,
+      "explicit_envelope_exact_object_observed": false,
+      "integer_key_source": "diagnosis.bio_label_mapping",
+      "integer_key_source_expression": "dict(enumerate(LABELS))",
+      "pr89_historical_cause_proven": false,
+      "sanitizer_operation": "key.lower()",
+      "source_proven": true
+    },
+    "unavailable_diagnostic_payload": {
+      "items": [
+        "7x7 BIO confusion matrix",
+        "per-label precision/recall/F1",
+        "exact 218-item TRACK taxonomy counts",
+        "TRACK structure counts",
+        "exact 70 typed counterfactual counts",
+        "typed probability/margin distributions",
+        "typed-vs-span overlap matrix",
+        "validity distribution/AUROC",
+        "ARTIST raw BIO diagnosis",
+        "ALBUM raw BIO diagnosis",
+        "mixed/en diagnosis",
+        "decoder-interaction counts"
+      ],
+      "pr88_latest_readable_model_metric_evidence": true,
+      "reason": "Diagnosis was constructed in memory but did not pass inner or emitter sanitization and was not durably serialized.",
+      "status": "UNAVAILABLE_NOT_ZERO"
+    }
   },
   "live_result_source": "parent_fallback_no_child_payload",
   "outer_process_returncode": 1,
@@ -64,11 +139,11 @@
   "scratch_created": true,
   "scratch_inventory": [],
   "static_candidate": {
-    "cpu_reproduction": "sanitization_check({0: O}) raises AttributeError",
+    "cpu_reproduction": "sanitization_check({0: 'O'}) raises AttributeError",
     "frozen_source_condition": "BIO label mapping uses integer dict keys; sanitizer calls key.lower()",
     "observation": "v2 child envelope reports AttributeError at sanitization",
     "pr89_exact_inner_failure": "unknown",
-    "status": "SOURCE_AND_SYNTHETIC_MATCH_NOT_CHILD_TRACE"
+    "status": "DETERMINISTIC_SOURCE_DEFECT_CPU_SYNTHETICALLY_REPRODUCED"
   },
   "status": "LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER",
   "stdout_marker_count": 0,

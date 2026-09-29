@@ -4,26 +4,59 @@
 
 ## Current Phase
 
-### 2026-09-28 PR91 explicit transport worked; validation diagnosis blocked in sanitization
+### 2026-09-28 PR91 explicit transport worked; diagnosis reached sanitization and was not durably emitted
 
-**Current result:** `LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER` after the
-sole authorized validation-only live invocation. The frozen v2 runner emitted
-an explicit stderr failure envelope and exited nonzero: child return code 2,
-`sanitization` stage, `AttributeError`, no result marker. Parent retained the
-sanitized stderr summary and cleaned scratch. The frozen source has integer
-keys in its BIO label mapping while its sanitizer calls `.lower()` on every
-dictionary key; a CPU-only synthetic check reproduces `AttributeError`. This
-is strong evidence for the v2 blocker, not a retained child traceback or proof
-of PR #89's exact historical failure. See [PR91 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_2026-09-28.md).
+**Current result:** LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER.
+The sole authorized validation-only invocation was consumed. Parent-observed
+transport facts are: one live invocation, outer return code 1, child return
+code 2, no stdout result marker, explicit-v2 transport, sanitization-stage
+AttributeError, retained sanitized child stderr, and cleaned scratch.
 
-Without a child result, base load, checkpoint restore, validation forwards,
-PR #88 reproduction, BIO/typed/validity metrics, and parameter hashes during
-the run remain unknown. PR #88 remains the authoritative model diagnostic.
-No training path or adaptation was added; held-out/Stage A and `app/` were not
-changed. All six persistent authority flags remain false. Issue #68 stays
-OPEN; Issues #80/#82 remain unchanged. **Next gate:** independent review of
-this blocker and a separately authorized correction/run; no automatic retry.
-PR #91 remains OPEN/UNMERGED.
+Frozen-control-flow review establishes that the child completed the base-model
+load path (source-implied count 1), checkpoint deserialize/restore path
+(source-implied counts 1/1), one validation_pass() with 34 forward batches,
+the post-validation parameter-hash gate, the PR #88 decision/prediction
+reproduction gate, historical report/reproduction, S3 report and safety gate,
+PR #88 failure-bucket membership equality, and diagnose(). These are
+source-implied reachability/counts, not transported child telemetry. The
+detailed PR #88 reproduction object was not durably serialized and cannot be
+read back from this run.
+
+The frozen v2 runner contains a deterministic sanitizer defect: the diagnosis
+payload contains integer-key bio_label_mapping, while the sanitizer calls
+.lower() on every dictionary key. This defect is source-proven and
+CPU-synthetically reproduced, and it deterministically prevents successful
+sanitization of a completed diagnosis payload. The explicit failure envelope
+does not include the exact live object or a child traceback. This does not
+retroactively prove PR #89's historical inner failure.
+
+The newly computed diagnosis payload was not durably serialized and remains
+unavailable, not zero: 7×7 BIO confusion and per-label scores; exact 218-item
+TRACK taxonomy and TRACK structure counts; exact 70 typed-counterfactual
+counts; typed probability/margin distributions and typed-vs-span overlap;
+validity distribution/AUROC; ARTIST/ALBUM raw BIO diagnosis; mixed/en
+diagnosis; and decoder-interaction counts. PR #88 remains the latest readable
+model-metric evidence.
+
+No retry, training, or adaptation occurred. Held-out and Stage A remain
+unauthorized; the frozen source guard excludes them, but missing child
+telemetry does not establish their live open counters. app/ was not changed.
+All six persistent authority flags remain false:
+
+~~~text
+training_authorized=false
+model_compute_authorized=false
+semantic_memory_enabled=false
+local_ai_fallback_approved=false
+LOCAL_SEMANTIC_MEMORY_ENABLED=false
+LOCAL_AI_FALLBACK_APPROVED=false
+~~~
+
+Issue #68 remains OPEN; Issues #80/#82 are unchanged. **Next gate:** independent
+review of this corrected evidence. Any runner repair or new model run requires
+separate authorization; there is no automatic retry. PR #91 remains
+OPEN/UNMERGED.
+
 
 ### 2026-09-28 PR90 child-result transport-only diagnosis completed (historical)
 
