@@ -4,9 +4,63 @@
 
 ## Current Phase
 
-### 2026-09-28 PR90 child-result transport-only diagnosis completed
+### 2026-09-28 PR91 explicit transport worked; diagnosis reached sanitization and was not durably emitted
 
-**Current result:** `LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED` in a synthetic,
+**Current result:** LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER.
+The sole authorized validation-only invocation was consumed. Parent-observed
+transport facts are: one live invocation, outer return code 1, child return
+code 2, no stdout result marker, explicit-v2 transport, sanitization-stage
+AttributeError, retained sanitized child stderr, and cleaned scratch.
+
+Frozen-control-flow review establishes that the child completed the base-model
+load path (source-implied count 1), checkpoint deserialize/restore path
+(source-implied counts 1/1), one validation_pass() with 34 forward batches,
+the post-validation parameter-hash gate, the PR #88 decision/prediction
+reproduction gate, historical report/reproduction, S3 report and safety gate,
+PR #88 failure-bucket membership equality, and diagnose(). These are
+source-implied reachability/counts, not transported child telemetry. The
+detailed PR #88 reproduction object was not durably serialized and cannot be
+read back from this run.
+
+The frozen v2 runner contains a deterministic sanitizer defect: the diagnosis
+payload contains integer-key bio_label_mapping, while the sanitizer calls
+.lower() on every dictionary key. This defect is source-proven and
+CPU-synthetically reproduced, and it deterministically prevents successful
+sanitization of a completed diagnosis payload. The explicit failure envelope
+does not include the exact live object or a child traceback. This does not
+retroactively prove PR #89's historical inner failure.
+
+The newly computed diagnosis payload was not durably serialized and remains
+unavailable, not zero: 7×7 BIO confusion and per-label scores; exact 218-item
+TRACK taxonomy and TRACK structure counts; exact 70 typed-counterfactual
+counts; typed probability/margin distributions and typed-vs-span overlap;
+validity distribution/AUROC; ARTIST/ALBUM raw BIO diagnosis; mixed/en
+diagnosis; and decoder-interaction counts. PR #88 remains the latest readable
+model-metric evidence.
+
+No retry, training, or adaptation occurred. Held-out and Stage A remain
+unauthorized; the frozen source guard excludes them, but missing child
+telemetry does not establish their live open counters. app/ was not changed.
+All six persistent authority flags remain false:
+
+~~~text
+training_authorized=false
+model_compute_authorized=false
+semantic_memory_enabled=false
+local_ai_fallback_approved=false
+LOCAL_SEMANTIC_MEMORY_ENABLED=false
+LOCAL_AI_FALLBACK_APPROVED=false
+~~~
+
+Issue #68 remains OPEN; Issues #80/#82 are unchanged. **Next gate:** independent
+review of this corrected evidence. Any runner repair or new model run requires
+separate authorization; there is no automatic retry. PR #91 remains
+OPEN/UNMERGED.
+
+
+### 2026-09-28 PR90 child-result transport-only diagnosis completed (historical)
+
+**Historical result:** `LAYA_CHILD_TRANSPORT_DIAGNOSIS_COMPLETED` in a synthetic,
 CPU-only subprocess lab. PR #89 blocker evidence is merged at
 `c1a624a068beebc8c641dcd1357c526278428ac6`; its BIO/model result remains
 unknown. The lab reproduced return code 0, no result marker, and stderr-only
@@ -16,11 +70,12 @@ external symptom; the exact PR #89 failing operation is still unknown. See the
 No model, checkpoint, dataset, GPU, or training work occurred. No adaptation
 is authorized. All six persistent flags remain false. Issue #68 stays OPEN;
 Issues #80/#82 are unchanged. **Milestone reached: stop for broad review**
-before any next PR or model pass. PR #90 remains OPEN/UNMERGED.
+before the separately authorized PR #91 task. PR #90 merged at
+`c1bb2a6904141aea9d606d29d60b12c80bd2b691`.
 
 ### 2026-09-28 PR89 span/BIO and typed diagnosis blocked at child-result transport (historical)
 
-**Current result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
+**Historical result:** `LAYA_SPAN_TYPED_DIAGNOSIS_NEW_BLOCKER`. The one
 authorized validation-only invocation was consumed. The child returned 0, but
 the parent received no uniquely prefixed structured child result. Base-model
 load, checkpoint restore, validation forwards, reproduction, and all new BIO,

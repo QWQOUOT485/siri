@@ -1,0 +1,199 @@
+{
+  "NON_ACCEPTANCE_DIAGNOSTIC_ONLY": true,
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "canonical_result_sha256": "70a1f83e18c9df42d5a7163f16c108beb01c485fdab60882310f6f95288ab310",
+  "child_returncode": 2,
+  "child_stderr_retained": true,
+  "diagnosis_result": {
+    "bio_confusion": null,
+    "optional_slot_raw_bio": null,
+    "parameter_hashes_after": null,
+    "pr88_reproduction": null,
+    "reason": "diagnosis_payload_not_durably_serialized_after_sanitization_failure",
+    "track_taxonomy_218": null,
+    "typed_counterfactual_70": null,
+    "validity_discrimination": null
+  },
+  "execution_counts": {
+    "backward_calls": null,
+    "base_model_loads": null,
+    "checkpoint_deserializations": null,
+    "checkpoint_loads": null,
+    "checkpoint_restores": null,
+    "live_invocations": 1,
+    "model_loads": null,
+    "training_steps": null,
+    "validation_forward_batches": null,
+    "validation_passes": null
+  },
+  "execution_evidence": {
+    "frozen_control_flow_implied_execution": {
+      "child_returned_to_emitter_after_inner_exception": true,
+      "child_status_pass_reached": false,
+      "completed_gates": [
+        "base_model_load_path",
+        "checkpoint_deserialization_and_restore",
+        "validation_pass",
+        "34_validation_forward_batches",
+        "post_validation_parameter_hash_gate",
+        "pr88_decision_prediction_reproduction_gate",
+        "historical_report_and_reproduction",
+        "s3_report",
+        "s3_safety_gate",
+        "pr88_failure_bucket_membership_equality",
+        "diagnose"
+      ],
+      "diagnosis_completed_before_inner_sanitization": true,
+      "evidence_basis": "Frozen v2 source order plus the observed sanitization-stage AttributeError",
+      "pr88_failure_bucket_membership_equal": true,
+      "pr88_reproduction_gate_completed": true,
+      "pr88_reproduction_payload_durably_serialized": false,
+      "s3_safety_gate_completed": true,
+      "source_implied_counts": {
+        "base_model_loads": 1,
+        "checkpoint_deserializations": 1,
+        "checkpoint_restores": 1,
+        "validation_forward_batches": 34,
+        "validation_passes": 1
+      },
+      "telemetry_status": "source_implied_not_parent_observed_child_telemetry"
+    },
+    "parent_observed_transport": {
+      "child_returncode": 2,
+      "child_stderr_retained": true,
+      "live_invocations": 1,
+      "outer_process_returncode": 1,
+      "primary_result_emitted_from_atexit": false,
+      "scratch_cleaned": true,
+      "stderr_bytes": 529,
+      "stdout_bytes": 0,
+      "stdout_marker_count": 0,
+      "transport_exception_class": "AttributeError",
+      "transport_stage": "sanitization",
+      "transport_version": "explicit-v2"
+    },
+    "sanitizer_defect": {
+      "cpu_synthetic_reproduced": true,
+      "explicit_envelope_exact_object_observed": false,
+      "integer_key_source": "diagnosis.bio_label_mapping",
+      "integer_key_source_expression": "dict(enumerate(LABELS))",
+      "pr89_historical_cause_proven": false,
+      "sanitizer_operation": "key.lower()",
+      "source_proven": true
+    },
+    "unavailable_diagnostic_payload": {
+      "items": [
+        "7x7 BIO confusion matrix",
+        "per-label precision/recall/F1",
+        "exact 218-item TRACK taxonomy counts",
+        "TRACK structure counts",
+        "exact 70 typed counterfactual counts",
+        "typed probability/margin distributions",
+        "typed-vs-span overlap matrix",
+        "validity distribution/AUROC",
+        "ARTIST raw BIO diagnosis",
+        "ALBUM raw BIO diagnosis",
+        "mixed/en diagnosis",
+        "decoder-interaction counts"
+      ],
+      "pr88_latest_readable_model_metric_evidence": true,
+      "reason": "Diagnosis was constructed in memory but did not pass inner or emitter sanitization and was not durably serialized.",
+      "status": "UNAVAILABLE_NOT_ZERO"
+    }
+  },
+  "live_result_source": "parent_fallback_no_child_payload",
+  "outer_process_returncode": 1,
+  "parent_readonly_identity_checks": {
+    "blocked_rows_preflight": 60,
+    "checkpoint_readonly": true,
+    "checkpoint_sha256_before_after": "199bfb8f1b0a3a3a930947b93e3df2f6214950e8cfacaa28b0aefb5fa7ec1a8d",
+    "checkpoint_size_bytes": 177394599,
+    "model_aggregate_before_after": "eee3b3f039903321cab43a4fc2238af9a0d652920c698b69838dfd5458969dcf",
+    "model_eligible_rows_preflight": 540,
+    "scratch_absent_after_parent_cleanup": true,
+    "source_revision_before_after": "42626c348753fbb17572a813127df2278a1ec527",
+    "validation_rows_preflight": 600,
+    "validation_sha256_before_after": "297140d7f4b63e2ca326a5f323672a631d1585fb6a970e68021c2c554fefa23a",
+    "venv_inventory_before_after": "3ad25b9f93a161e79a43533a89711eb6a86780aabfd2ed487f2b5629b4837337"
+  },
+  "pre_live_frozen_commit": "05142022558ee9d4dc0034c80f598557b9f4ec8a",
+  "primary_result_emitted_from_atexit": false,
+  "repo_base": "c1bb2a6904141aea9d606d29d60b12c80bd2b691",
+  "reviewed_identities": {
+    "pr88_canonical_sha256": "babb424a086de8bbf83ff5ab68a91dcea39cb5ae1e1247dc5347a1cd40f6a42b",
+    "pr89_blocker_canonical_sha256": "4887b9c77210110a7b8a5311d8a5767ee858b75b1e82a34776f75d57858f3cce",
+    "pr89_runner_sha256": "5ec4a8ae373f4cb6923e0b0fa77e55b79df6bd5b0a9767540dbbe2fdd1faa446",
+    "pr90_canonical_sha256": "607c731fce78468b4427d1f16238d8515dfa740a6a5f4450fbf57408cfd6b156",
+    "pr90_runner_sha256": "750941d6e3048b8bd14ccd89b781085c5c13640418695470f003d22264e5acbe"
+  },
+  "runner_sha256": "20db77c91261aea73b61f3a6c70aad1cc25d65eeca1affbdd025f121e32ded9e",
+  "schema": "laya-span-typed-diagnosis-v2",
+  "scratch_cleaned": true,
+  "scratch_created": true,
+  "scratch_inventory": [],
+  "static_candidate": {
+    "cpu_reproduction": "sanitization_check({0: 'O'}) raises AttributeError",
+    "frozen_source_condition": "BIO label mapping uses integer dict keys; sanitizer calls key.lower()",
+    "observation": "v2 child envelope reports AttributeError at sanitization",
+    "pr89_exact_inner_failure": "unknown",
+    "status": "DETERMINISTIC_SOURCE_DEFECT_CPU_SYNTHETICALLY_REPRODUCED"
+  },
+  "status": "LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER",
+  "stdout_marker_count": 0,
+  "task_scoped_compute_authorization": "laya-span-typed-validity-diagnosis-v2",
+  "transport": {
+    "child_returncode": 2,
+    "child_stderr_retained": true,
+    "classifier": "NONZERO_CHILD_EXIT",
+    "stderr_bytes": 529,
+    "stderr_exception_class": "AttributeError",
+    "stderr_sanitized_message": "redacted",
+    "stderr_transport_error": {
+      "errno": null,
+      "exception_class": "AttributeError",
+      "sanitized_message": "redacted",
+      "stage": "sanitization",
+      "winerror": null
+    },
+    "stderr_unparsed_present": false,
+    "stdout_bytes": 0,
+    "stdout_marker_count": 0
+  },
+  "transport_error": {
+    "errno": null,
+    "exception_class": "AttributeError",
+    "sanitized_message": "redacted",
+    "stage": "sanitization",
+    "winerror": null
+  },
+  "transport_exception": {
+    "class": "ValueError",
+    "errno": null,
+    "filename": null,
+    "filename2": null,
+    "frames": [
+      {
+        "function": "parent",
+        "line": 928,
+        "module_basename": "local_ai_stage_b_laya_span_typed_diagnosis_v2.py"
+      },
+      {
+        "function": "require",
+        "line": 62,
+        "module_basename": "local_ai_stage_b_laya_s3_pr79_validation_diagnostic.py"
+      }
+    ],
+    "message": "LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER:child_transport_NONZERO_CHILD_EXIT",
+    "stage": "parent_transport",
+    "winerror": null
+  },
+  "transport_stage": "sanitization",
+  "transport_version": "explicit-v2"
+}
