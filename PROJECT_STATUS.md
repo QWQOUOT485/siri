@@ -33,9 +33,15 @@ false: `training_authorized`, `model_compute_authorized`,
 `LOCAL_SEMANTIC_MEMORY_ENABLED`, and `LOCAL_AI_FALLBACK_APPROVED`.
 
 See [PR92 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V3_2026-09-29.md).
-Issue #68 remains OPEN; Issues #80/#82 are unchanged. **Next gate:** independent
-review of PR #92 while it stays open and unmerged. Any adaptation or repair
-needs separate authorization.
+PR #92 is MERGED at reviewed head `ae9af2a238c5fa4dad9d75e978f242ad88fcf841`; its merge commit and current
+`main` are `a4179234582abef1bdc3ecb61749941192d26dd9`. Issue #68 remains OPEN; Issues #80/#82 remain OPEN and
+unchanged.
+
+**Next gate: adaptation-design review only.** This review is design-only and
+does not authorize training, model compute, hyperparameter selection,
+threshold tuning, decoder repair, or implementation. Held-out and Stage A
+remain sealed. Any later implementation or repair requires separate
+authorization.
 
 
 ### 2026-09-28 PR90 child-result transport-only diagnosis completed (historical)
