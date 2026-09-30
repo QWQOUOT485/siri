@@ -1,0 +1,1748 @@
+{
+  "authority_flags": {
+    "LOCAL_AI_FALLBACK_APPROVED": false,
+    "LOCAL_SEMANTIC_MEMORY_ENABLED": false,
+    "local_ai_fallback_approved": false,
+    "model_compute_authorized": false,
+    "semantic_memory_enabled": false,
+    "training_authorized": false
+  },
+  "blocked_before_rendering": 300,
+  "by_language": {
+    "mixed": {
+      "bio_token_counts": {
+        "B-ALBUM": 216,
+        "B-ARTIST": 294,
+        "B-TRACK": 294,
+        "I-ALBUM": 582,
+        "I-ARTIST": 594,
+        "I-TRACK": 794,
+        "O": 4469
+      },
+      "play": 294,
+      "play_fraction": 0.5903614457831325,
+      "rows": 498,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 6,
+            "2": 48,
+            "3": 54,
+            "4": 54,
+            "5": 12,
+            "6": 36,
+            "7": 6
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 210,
+          "one_token_rows": 6,
+          "spans": 216
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.494949494949495,
+          "histogram": {
+            "1": 12,
+            "2": 76,
+            "3": 120,
+            "4": 66,
+            "5": 20
+          },
+          "max": 5,
+          "mean": 3.020408163265306,
+          "min": 1,
+          "multi_token_rows": 282,
+          "one_token_rows": 12,
+          "spans": 294
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3702770780856423,
+          "histogram": {
+            "1": 2,
+            "2": 69,
+            "3": 73,
+            "4": 66,
+            "5": 39,
+            "6": 45
+          },
+          "max": 6,
+          "mean": 3.7006802721088436,
+          "min": 1,
+          "multi_token_rows": 292,
+          "one_token_rows": 2,
+          "spans": 294
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 294,
+        "intent=1,validity=0": 204
+      },
+      "unknown": 204,
+      "user_state_tokens": 7243,
+      "validity_is_one_minus_intent_label": true
+    },
+    "zh-Hans": {
+      "bio_token_counts": {
+        "B-ALBUM": 84,
+        "B-ARTIST": 84,
+        "B-TRACK": 144,
+        "I-ALBUM": 161,
+        "I-ARTIST": 204,
+        "I-TRACK": 325,
+        "O": 1666
+      },
+      "play": 144,
+      "play_fraction": 0.6,
+      "rows": 240,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5217391304347826,
+          "histogram": {
+            "1": 23,
+            "2": 12,
+            "3": 17,
+            "4": 19,
+            "5": 7,
+            "6": 6
+          },
+          "max": 6,
+          "mean": 2.9166666666666665,
+          "min": 1,
+          "multi_token_rows": 61,
+          "one_token_rows": 23,
+          "spans": 84
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 48,
+            "4": 36
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 84,
+          "one_token_rows": 0,
+          "spans": 84
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4430769230769231,
+          "histogram": {
+            "2": 53,
+            "3": 43,
+            "4": 18,
+            "5": 18,
+            "6": 12
+          },
+          "max": 6,
+          "mean": 3.2569444444444446,
+          "min": 2,
+          "multi_token_rows": 144,
+          "one_token_rows": 0,
+          "spans": 144
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 144,
+        "intent=1,validity=0": 96
+      },
+      "unknown": 96,
+      "user_state_tokens": 2668,
+      "validity_is_one_minus_intent_label": true
+    },
+    "zh-Hant": {
+      "bio_token_counts": {
+        "B-ALBUM": 282,
+        "B-ARTIST": 234,
+        "B-TRACK": 462,
+        "I-ALBUM": 783,
+        "I-ARTIST": 558,
+        "I-TRACK": 1204,
+        "O": 5537
+      },
+      "play": 462,
+      "play_fraction": 0.6062992125984252,
+      "rows": 762,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36015325670498083,
+          "histogram": {
+            "1": 12,
+            "2": 54,
+            "3": 53,
+            "4": 72,
+            "5": 54,
+            "6": 31,
+            "7": 6
+          },
+          "max": 7,
+          "mean": 3.776595744680851,
+          "min": 1,
+          "multi_token_rows": 270,
+          "one_token_rows": 12,
+          "spans": 282
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 6,
+            "3": 132,
+            "4": 96
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 234,
+          "one_token_rows": 0,
+          "spans": 234
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.38372093023255816,
+          "histogram": {
+            "1": 6,
+            "2": 154,
+            "3": 74,
+            "4": 95,
+            "5": 61,
+            "6": 59,
+            "7": 13
+          },
+          "max": 7,
+          "mean": 3.606060606060606,
+          "min": 1,
+          "multi_token_rows": 456,
+          "one_token_rows": 6,
+          "spans": 462
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 462,
+        "intent=1,validity=0": 300
+      },
+      "unknown": 300,
+      "user_state_tokens": 9060,
+      "validity_is_one_minus_intent_label": true
+    }
+  },
+  "by_template_family": {
+    "play_hans_conversational": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 26,
+        "I-ARTIST": 34,
+        "I-TRACK": 54,
+        "O": 222
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5384615384615384,
+          "histogram": {
+            "1": 4,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 2.857142857142857,
+          "min": 1,
+          "multi_token_rows": 10,
+          "one_token_rows": 4,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4444444444444444,
+          "histogram": {
+            "2": 9,
+            "3": 7,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.25,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 388,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hans_direct": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 26,
+        "I-ARTIST": 34,
+        "I-TRACK": 54,
+        "O": 135
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5384615384615384,
+          "histogram": {
+            "1": 4,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 2.857142857142857,
+          "min": 1,
+          "multi_token_rows": 10,
+          "one_token_rows": 4,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4444444444444444,
+          "histogram": {
+            "2": 9,
+            "3": 7,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.25,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 301,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hans_homophone": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 26,
+        "I-ARTIST": 34,
+        "I-TRACK": 55,
+        "O": 152
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5384615384615384,
+          "histogram": {
+            "1": 4,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 2.857142857142857,
+          "min": 1,
+          "multi_token_rows": 10,
+          "one_token_rows": 4,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.43636363636363634,
+          "histogram": {
+            "2": 8,
+            "3": 8,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.2916666666666665,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 319,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hans_particle": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 26,
+        "I-ARTIST": 34,
+        "I-TRACK": 54,
+        "O": 241
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5384615384615384,
+          "histogram": {
+            "1": 4,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 2.857142857142857,
+          "min": 1,
+          "multi_token_rows": 10,
+          "one_token_rows": 4,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4444444444444444,
+          "histogram": {
+            "2": 9,
+            "3": 7,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.25,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 407,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hans_spacing": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 26,
+        "I-ARTIST": 34,
+        "I-TRACK": 54,
+        "O": 123
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.5384615384615384,
+          "histogram": {
+            "1": 4,
+            "2": 2,
+            "3": 3,
+            "4": 3,
+            "5": 1,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 2.857142857142857,
+          "min": 1,
+          "multi_token_rows": 10,
+          "one_token_rows": 4,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4444444444444444,
+          "histogram": {
+            "2": 9,
+            "3": 7,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.25,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 289,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hans_word_order": {
+      "bio_token_counts": {
+        "B-ALBUM": 14,
+        "B-ARTIST": 14,
+        "B-TRACK": 24,
+        "I-ALBUM": 31,
+        "I-ARTIST": 34,
+        "I-TRACK": 54,
+        "O": 145
+      },
+      "play": 24,
+      "play_fraction": 1.0,
+      "rows": 24,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.45161290322580644,
+          "histogram": {
+            "1": 3,
+            "2": 2,
+            "3": 2,
+            "4": 4,
+            "5": 2,
+            "6": 1
+          },
+          "max": 6,
+          "mean": 3.2142857142857144,
+          "min": 1,
+          "multi_token_rows": 11,
+          "one_token_rows": 3,
+          "spans": 14
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.4117647058823529,
+          "histogram": {
+            "3": 8,
+            "4": 6
+          },
+          "max": 4,
+          "mean": 3.4285714285714284,
+          "min": 3,
+          "multi_token_rows": 14,
+          "one_token_rows": 0,
+          "spans": 14
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.4444444444444444,
+          "histogram": {
+            "2": 9,
+            "3": 7,
+            "4": 3,
+            "5": 3,
+            "6": 2
+          },
+          "max": 6,
+          "mean": 3.25,
+          "min": 2,
+          "multi_token_rows": 24,
+          "one_token_rows": 0,
+          "spans": 24
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 24
+      },
+      "unknown": 0,
+      "user_state_tokens": 316,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_conversational": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 130,
+        "I-ARTIST": 93,
+        "I-TRACK": 200,
+        "O": 704
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36153846153846153,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 9,
+            "4": 12,
+            "5": 9,
+            "6": 5,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.765957446808511,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.385,
+          "histogram": {
+            "1": 1,
+            "2": 26,
+            "3": 12,
+            "4": 16,
+            "5": 10,
+            "6": 10,
+            "7": 2
+          },
+          "max": 7,
+          "mean": 3.5974025974025974,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 1290,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_direct": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 130,
+        "I-ARTIST": 93,
+        "I-TRACK": 201,
+        "O": 426
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36153846153846153,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 9,
+            "4": 12,
+            "5": 9,
+            "6": 5,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.765957446808511,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.38308457711442784,
+          "histogram": {
+            "1": 1,
+            "2": 25,
+            "3": 13,
+            "4": 16,
+            "5": 10,
+            "6": 10,
+            "7": 2
+          },
+          "max": 7,
+          "mean": 3.6103896103896105,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 1013,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_homophone": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 130,
+        "I-ARTIST": 93,
+        "I-TRACK": 202,
+        "O": 477
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36153846153846153,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 9,
+            "4": 12,
+            "5": 9,
+            "6": 5,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.765957446808511,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3811881188118812,
+          "histogram": {
+            "1": 1,
+            "2": 25,
+            "3": 13,
+            "4": 15,
+            "5": 11,
+            "6": 10,
+            "7": 2
+          },
+          "max": 7,
+          "mean": 3.6233766233766236,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 1065,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_particle": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 130,
+        "I-ARTIST": 93,
+        "I-TRACK": 200,
+        "O": 764
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36153846153846153,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 9,
+            "4": 12,
+            "5": 9,
+            "6": 5,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.765957446808511,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.385,
+          "histogram": {
+            "1": 1,
+            "2": 26,
+            "3": 12,
+            "4": 16,
+            "5": 10,
+            "6": 10,
+            "7": 2
+          },
+          "max": 7,
+          "mean": 3.5974025974025974,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 1350,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_spacing": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 130,
+        "I-ARTIST": 93,
+        "I-TRACK": 200,
+        "O": 379
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.36153846153846153,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 9,
+            "4": 12,
+            "5": 9,
+            "6": 5,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.765957446808511,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.385,
+          "histogram": {
+            "1": 1,
+            "2": 26,
+            "3": 12,
+            "4": 16,
+            "5": 10,
+            "6": 10,
+            "7": 2
+          },
+          "max": 7,
+          "mean": 3.5974025974025974,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 965,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_hant_word_order": {
+      "bio_token_counts": {
+        "B-ALBUM": 47,
+        "B-ARTIST": 39,
+        "B-TRACK": 77,
+        "I-ALBUM": 133,
+        "I-ARTIST": 93,
+        "I-TRACK": 201,
+        "O": 460
+      },
+      "play": 77,
+      "play_fraction": 1.0,
+      "rows": 77,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3533834586466165,
+          "histogram": {
+            "1": 2,
+            "2": 9,
+            "3": 8,
+            "4": 12,
+            "5": 9,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.8297872340425534,
+          "min": 1,
+          "multi_token_rows": 45,
+          "one_token_rows": 2,
+          "spans": 47
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.41935483870967744,
+          "histogram": {
+            "2": 1,
+            "3": 22,
+            "4": 16
+          },
+          "max": 4,
+          "mean": 3.3846153846153846,
+          "min": 2,
+          "multi_token_rows": 39,
+          "one_token_rows": 0,
+          "spans": 39
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.38308457711442784,
+          "histogram": {
+            "1": 1,
+            "2": 26,
+            "3": 12,
+            "4": 16,
+            "5": 10,
+            "6": 9,
+            "7": 3
+          },
+          "max": 7,
+          "mean": 3.6103896103896105,
+          "min": 1,
+          "multi_token_rows": 76,
+          "one_token_rows": 1,
+          "spans": 77
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 77
+      },
+      "unknown": 0,
+      "user_state_tokens": 1050,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_asr_case": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 97,
+        "I-TRACK": 126,
+        "O": 606
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.5051546391752577,
+          "histogram": {
+            "1": 2,
+            "2": 13,
+            "3": 20,
+            "4": 12,
+            "5": 2
+          },
+          "max": 5,
+          "mean": 2.979591836734694,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3888888888888889,
+          "histogram": {
+            "1": 2,
+            "2": 10,
+            "3": 12,
+            "4": 13,
+            "5": 7,
+            "6": 5
+          },
+          "max": 6,
+          "mean": 3.5714285714285716,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 1060,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_asr_spacing": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 103,
+        "I-TRACK": 134,
+        "O": 678
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.47572815533980584,
+          "histogram": {
+            "1": 2,
+            "2": 12,
+            "3": 20,
+            "4": 9,
+            "5": 6
+          },
+          "max": 5,
+          "mean": 3.1020408163265305,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3656716417910448,
+          "histogram": {
+            "2": 12,
+            "3": 12,
+            "4": 10,
+            "5": 7,
+            "6": 8
+          },
+          "max": 6,
+          "mean": 3.7346938775510203,
+          "min": 2,
+          "multi_token_rows": 49,
+          "one_token_rows": 0,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 1146,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_code_switch": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 97,
+        "I-TRACK": 135,
+        "O": 232
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.5051546391752577,
+          "histogram": {
+            "1": 2,
+            "2": 13,
+            "3": 20,
+            "4": 12,
+            "5": 2
+          },
+          "max": 5,
+          "mean": 2.979591836734694,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.362962962962963,
+          "histogram": {
+            "2": 11,
+            "3": 13,
+            "4": 10,
+            "5": 7,
+            "6": 8
+          },
+          "max": 6,
+          "mean": 3.7551020408163267,
+          "min": 2,
+          "multi_token_rows": 49,
+          "one_token_rows": 0,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 695,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_conversational": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 103,
+        "I-TRACK": 133,
+        "O": 485
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.47572815533980584,
+          "histogram": {
+            "1": 2,
+            "2": 12,
+            "3": 20,
+            "4": 9,
+            "5": 6
+          },
+          "max": 5,
+          "mean": 3.1020408163265305,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3684210526315789,
+          "histogram": {
+            "2": 12,
+            "3": 12,
+            "4": 11,
+            "5": 6,
+            "6": 8
+          },
+          "max": 6,
+          "mean": 3.7142857142857144,
+          "min": 2,
+          "multi_token_rows": 49,
+          "one_token_rows": 0,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 952,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_particle": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 97,
+        "I-TRACK": 133,
+        "O": 535
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.5051546391752577,
+          "histogram": {
+            "1": 2,
+            "2": 13,
+            "3": 20,
+            "4": 12,
+            "5": 2
+          },
+          "max": 5,
+          "mean": 2.979591836734694,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3684210526315789,
+          "histogram": {
+            "2": 12,
+            "3": 12,
+            "4": 11,
+            "5": 6,
+            "6": 8
+          },
+          "max": 6,
+          "mean": 3.7142857142857144,
+          "min": 2,
+          "multi_token_rows": 49,
+          "one_token_rows": 0,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 996,
+      "validity_is_one_minus_intent_label": true
+    },
+    "play_mixed_word_order": {
+      "bio_token_counts": {
+        "B-ALBUM": 36,
+        "B-ARTIST": 49,
+        "B-TRACK": 49,
+        "I-ALBUM": 97,
+        "I-ARTIST": 97,
+        "I-TRACK": 133,
+        "O": 315
+      },
+      "play": 49,
+      "play_fraction": 1.0,
+      "rows": 49,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": 0.3711340206185567,
+          "histogram": {
+            "1": 1,
+            "2": 8,
+            "3": 9,
+            "4": 9,
+            "5": 2,
+            "6": 6,
+            "7": 1
+          },
+          "max": 7,
+          "mean": 3.6944444444444446,
+          "min": 1,
+          "multi_token_rows": 35,
+          "one_token_rows": 1,
+          "spans": 36
+        },
+        "artist": {
+          "begin_to_inside_ratio": 0.5051546391752577,
+          "histogram": {
+            "1": 2,
+            "2": 13,
+            "3": 20,
+            "4": 12,
+            "5": 2
+          },
+          "max": 5,
+          "mean": 2.979591836734694,
+          "min": 1,
+          "multi_token_rows": 47,
+          "one_token_rows": 2,
+          "spans": 49
+        },
+        "track": {
+          "begin_to_inside_ratio": 0.3684210526315789,
+          "histogram": {
+            "2": 12,
+            "3": 12,
+            "4": 11,
+            "5": 6,
+            "6": 8
+          },
+          "max": 6,
+          "mean": 3.7142857142857144,
+          "min": 2,
+          "multi_token_rows": 49,
+          "one_token_rows": 0,
+          "spans": 49
+        }
+      },
+      "target_pairs": {
+        "intent=0,validity=1": 49
+      },
+      "unknown": 0,
+      "user_state_tokens": 776,
+      "validity_is_one_minus_intent_label": true
+    },
+    "unknown_artist_only": {
+      "bio_token_counts": {
+        "B-ALBUM": 0,
+        "B-ARTIST": 0,
+        "B-TRACK": 0,
+        "I-ALBUM": 0,
+        "I-ARTIST": 0,
+        "I-TRACK": 0,
+        "O": 2033
+      },
+      "play": 0,
+      "play_fraction": 0.0,
+      "rows": 300,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        },
+        "artist": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        },
+        "track": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        }
+      },
+      "target_pairs": {
+        "intent=1,validity=0": 300
+      },
+      "unknown": 300,
+      "user_state_tokens": 2033,
+      "validity_is_one_minus_intent_label": true
+    },
+    "unknown_missing_track": {
+      "bio_token_counts": {
+        "B-ALBUM": 0,
+        "B-ARTIST": 0,
+        "B-TRACK": 0,
+        "I-ALBUM": 0,
+        "I-ARTIST": 0,
+        "I-TRACK": 0,
+        "O": 2560
+      },
+      "play": 0,
+      "play_fraction": 0.0,
+      "rows": 300,
+      "span_token_lengths": {
+        "album": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        },
+        "artist": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        },
+        "track": {
+          "begin_to_inside_ratio": null,
+          "histogram": {},
+          "max": null,
+          "mean": null,
+          "min": null,
+          "multi_token_rows": 0,
+          "one_token_rows": 0,
+          "spans": 0
+        }
+      },
+      "target_pairs": {
+        "intent=1,validity=0": 300
+      },
+      "unknown": 300,
+      "user_state_tokens": 2560,
+      "validity_is_one_minus_intent_label": true
+    }
+  },
+  "canonical_result_sha256": "cc4737c3b36edb7e6e16aae6d9bcdce6d0bf5cab7a64905cad59bc6435dbcf50",
+  "language_coverage_manifest_only": {
+    "source": "final_v1/corpus_manifest.json",
+    "train": {
+      "en": 0,
+      "mixed": 630,
+      "zh-Hans": 288,
+      "zh-Hant": 882
+    },
+    "validation": {
+      "en": 192,
+      "mixed": 408,
+      "zh-Hans": 0,
+      "zh-Hant": 0
+    },
+    "validation_rows_opened": false
+  },
+  "manifest_self_sha256": {
+    "corpus_manifest.json": "297c1bdc79243944af6d2b866cd89faf1afc0e6b47048c913ced8f027fa3a45c",
+    "split_assignment.json": "84e8fe440674a0e5af785586fdde893b5e48e020583a8269f7ae27870201be37"
+  },
+  "numeric_hyperparameters_selected": false,
+  "process_boundary": {
+    "before_after_identities_equal": true,
+    "checkpoint_loaded": false,
+    "frameworks_imported": false,
+    "gpu_used": false,
+    "held_out_rows_opened": false,
+    "model_loaded": false,
+    "opened_data_inputs": [
+      "corpus_manifest.json",
+      "split_assignment.json",
+      "train"
+    ],
+    "stage_a_rows_opened": false,
+    "tokenizer_only_cpu": true,
+    "training_performed": false,
+    "validation_rows_opened": false
+  },
+  "repo_base": "b0491a5f76ca0b614d3718edbd887717b2c32b28",
+  "schema": "laya-v2-train-target-audit-v1",
+  "selected_objective": "seven-class-token-ce-plus-stratified-slot-start-vs-rest-bce-shared-logits",
+  "selected_validity_representation": "user-state-only-masked-arithmetic-mean",
+  "source_sha256": {
+    "local_ai_stage_b_corpus.py": "f69320872a0b2cb9df9f148e7065271c021399578f1e72108a3fe9257e063425",
+    "local_ai_stage_b_laya_adapter.py": "cdda28ad4821d1c032d74ac23d6b0aba54f15d4f342616512d5a64faca751f8e",
+    "local_ai_stage_b_laya_small_adaptation.py": "85832ab8a28780c93a0742db1db178f8458e536812f73181308f8057d9b2633e",
+    "local_ai_stage_b_laya_span_decoder.py": "f497267fdbf916a193191d64b0b59853fa7473a27a1a592c1ce47498bfafd845",
+    "local_ai_stage_b_laya_training_pipeline_smoke.py": "95c6d818e5b6a0db273bb4f5a1e25486f0cfa152fa7000002e7d82c3f64240e8",
+    "local_ai_stage_b_laya_v2_target_audit.py": "e1742987ab5743abf1c43cf0a4016e947e193ca8d07f9a4bf03baf0cc8695be6"
+  },
+  "status": "LAYA_V2_PROTOCOL_TARGET_AUDIT_READY",
+  "supported": {
+    "bio_token_counts": {
+      "B-ALBUM": 582,
+      "B-ARTIST": 612,
+      "B-TRACK": 900,
+      "I-ALBUM": 1526,
+      "I-ARTIST": 1356,
+      "I-TRACK": 2323,
+      "O": 11672
+    },
+    "play": 900,
+    "play_fraction": 0.6,
+    "rows": 1500,
+    "span_token_lengths": {
+      "album": {
+        "begin_to_inside_ratio": 0.381389252948886,
+        "histogram": {
+          "1": 41,
+          "2": 114,
+          "3": 124,
+          "4": 145,
+          "5": 73,
+          "6": 73,
+          "7": 12
+        },
+        "max": 7,
+        "mean": 3.6219931271477663,
+        "min": 1,
+        "multi_token_rows": 541,
+        "one_token_rows": 41,
+        "spans": 582
+      },
+      "artist": {
+        "begin_to_inside_ratio": 0.45132743362831856,
+        "histogram": {
+          "1": 12,
+          "2": 82,
+          "3": 300,
+          "4": 198,
+          "5": 20
+        },
+        "max": 5,
+        "mean": 3.215686274509804,
+        "min": 1,
+        "multi_token_rows": 600,
+        "one_token_rows": 12,
+        "spans": 612
+      },
+      "track": {
+        "begin_to_inside_ratio": 0.38743004735256137,
+        "histogram": {
+          "1": 8,
+          "2": 276,
+          "3": 190,
+          "4": 179,
+          "5": 118,
+          "6": 116,
+          "7": 13
+        },
+        "max": 7,
+        "mean": 3.581111111111111,
+        "min": 1,
+        "multi_token_rows": 892,
+        "one_token_rows": 8,
+        "spans": 900
+      }
+    },
+    "target_pairs": {
+      "intent=0,validity=1": 900,
+      "intent=1,validity=0": 600
+    },
+    "unknown": 600,
+    "user_state_tokens": 18971,
+    "validity_is_one_minus_intent_label": true
+  },
+  "tokenizer_identity": {
+    "files": {
+      "rl_agent_config.json": "25061739243b617ad88d1219ba6f8a9c86c5881ca28df024fa2d9b3b2fcc30c6",
+      "tokenizer/tokenizer.json": "609d8f4c067cd3950f88594c5a802616cea245823836ef5848ee4fc40aab5b6f",
+      "tokenizer/tokenizer_config.json": "2c0c4d82d4b4bc6b4ac40b2375e067a1645f78b381a9774248d47915f33d751f"
+    },
+    "revision": "052592a15d198d9ad47da779604259b10b47b7aa",
+    "weight_files_opened": false
+  },
+  "train_groups": 300,
+  "train_rows": 1800,
+  "train_sha256": "54624942de9b1011404000bff2033d726a0a3934c4f515914ce31764648fc1d2",
+  "whole_group_identity_verified": true
+}
