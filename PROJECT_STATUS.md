@@ -4,58 +4,38 @@
 
 ## Current Phase
 
-### 2026-09-28 PR91 explicit transport worked; diagnosis reached sanitization and was not durably emitted
+### 2026-09-29 PR92 validation-only span/typed/validity diagnosis completed
 
-**Current result:** LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V2_NEW_BLOCKER.
-The sole authorized validation-only invocation was consumed. Parent-observed
-transport facts are: one live invocation, outer return code 1, child return
-code 2, no stdout result marker, explicit-v2 transport, sanitization-stage
-AttributeError, retained sanitized child stderr, and cleaned scratch.
+**Current result:** `LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V3_COMPLETED`.
+PR #91 merged at `b779b3361f5bcf22c505d0db69c126af8240d30a`;
+its v2 sanitizer blocker remains historical. The separately authorized PR #92
+v3 runner fixed integer BIO-key sanitization and completed one live diagnostic
+with explicit transport (child return 0, one marker, `TRANSPORT_OK`). Its
+canonical JSON SHA-256 is
+`43d8b82429a77ac03b95cb461715ea03321c551c16a6aabac5ca25d1be020c9d`.
 
-Frozen-control-flow review establishes that the child completed the base-model
-load path (source-implied count 1), checkpoint deserialize/restore path
-(source-implied counts 1/1), one validation_pass() with 34 forward batches,
-the post-validation parameter-hash gate, the PR #88 decision/prediction
-reproduction gate, historical report/reproduction, S3 report and safety gate,
-PR #88 failure-bucket membership equality, and diagnose(). These are
-source-implied reachability/counts, not transported child telemetry. The
-detailed PR #88 reproduction object was not durably serialized and cannot be
-read back from this run.
+The single RX 9070 XT run strictly restored the same read-only checkpoint,
+covered all 540 supported validation rows in 34 forward batches, blocked 60
+non-supported rows before rendering, and reproduced PR #88 case IDs, typed
+decisions, validity gates, and both prediction objects 540/540. It durably
+records the 7×7 BIO confusion, exact 218-case TRACK taxonomy, exact 70-case
+typed counterfactual, validity distribution, optional-slot raw BIO, and mixed/en
+slices. The leading TRACK failures were 104 orphan-I and 96 absent-label rows;
+typed rejected 70/300 gold plays; validity scores were near constant (AUROC
+0.4310). These are diagnostic observations, not model quality acceptance.
 
-The frozen v2 runner contains a deterministic sanitizer defect: the diagnosis
-payload contains integer-key bio_label_mapping, while the sanitizer calls
-.lower() on every dictionary key. This defect is source-proven and
-CPU-synthetically reproduced, and it deterministically prevents successful
-sanitization of a completed diagnosis payload. The explicit failure envelope
-does not include the exact live object or a child traceback. This does not
-retroactively prove PR #89's historical inner failure.
+No training, adaptation, backward, optimizer, scheduler, threshold tuning,
+decoder repair, or app change occurred. Train, held-out, and Stage A were not
+opened as model inputs. Source/model/checkpoint/venv/validation identities
+were unchanged; diagnostic scratch was cleaned. All six authority flags remain
+false: `training_authorized`, `model_compute_authorized`,
+`semantic_memory_enabled`, `local_ai_fallback_approved`,
+`LOCAL_SEMANTIC_MEMORY_ENABLED`, and `LOCAL_AI_FALLBACK_APPROVED`.
 
-The newly computed diagnosis payload was not durably serialized and remains
-unavailable, not zero: 7×7 BIO confusion and per-label scores; exact 218-item
-TRACK taxonomy and TRACK structure counts; exact 70 typed-counterfactual
-counts; typed probability/margin distributions and typed-vs-span overlap;
-validity distribution/AUROC; ARTIST/ALBUM raw BIO diagnosis; mixed/en
-diagnosis; and decoder-interaction counts. PR #88 remains the latest readable
-model-metric evidence.
-
-No retry, training, or adaptation occurred. Held-out and Stage A remain
-unauthorized; the frozen source guard excludes them, but missing child
-telemetry does not establish their live open counters. app/ was not changed.
-All six persistent authority flags remain false:
-
-~~~text
-training_authorized=false
-model_compute_authorized=false
-semantic_memory_enabled=false
-local_ai_fallback_approved=false
-LOCAL_SEMANTIC_MEMORY_ENABLED=false
-LOCAL_AI_FALLBACK_APPROVED=false
-~~~
-
+See [PR92 evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V3_2026-09-29.md).
 Issue #68 remains OPEN; Issues #80/#82 are unchanged. **Next gate:** independent
-review of this corrected evidence. Any runner repair or new model run requires
-separate authorization; there is no automatic retry. PR #91 remains
-OPEN/UNMERGED.
+review of PR #92 while it stays open and unmerged. Any adaptation or repair
+needs separate authorization.
 
 
 ### 2026-09-28 PR90 child-result transport-only diagnosis completed (historical)
