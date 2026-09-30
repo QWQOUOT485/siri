@@ -4,9 +4,32 @@
 
 ## Current Phase
 
-### 2026-09-29 PR92 validation-only span/typed/validity diagnosis completed
+### 2026-09-30 Laya v2 protocol / train-only target audit ready for review
 
-**Current result:** `LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V3_COMPLETED`.
+**Current result:** `LAYA_V2_PROTOCOL_TARGET_AUDIT_READY`. The proposed
+[v2 protocol](docs/local_ai/stage_b/LOCAL_AI_STAGE_B_LAYA_ADAPTATION_V2_PROTOCOL.md)
+supersedes the unchanged full head-only recipe as the next design: seven-class
+CE plus shared-logit slot-start supervision, user-state masked-mean validity
+readout with the duplicate binary target/gate retained, native typed path and
+S3 unchanged. Numeric tunables and compute authorization remain outstanding.
+
+The train-only CPU tokenizer audit verified 1,800 rows / 300 complete groups,
+rendered 1,500 supported rows and blocked 300 before rendering. It counted
+18,971 user tokens; B/I TRACK=900/2,323, ARTIST=612/1,356, ALBUM=582/1,526.
+Validity equals 1-intent_label on all eligible rows. Two audit results match;
+34 focused synthetic/identity tests pass. See
+[audit evidence](docs/local_ai/stage_b/evidence/LOCAL_AI_STAGE_B_LAYA_V2_TARGET_AUDIT_2026-09-30.md).
+
+This is source/target/synthetic evidence, not learned quality or runtime
+acceptance. No model/checkpoint/GPU/training or validation/held-out/Stage A row
+input occurred; no decoder/app/frozen corpus change. All six authority flags
+remain false. Next gate is independent review of this protocol/audit, then a
+separate implementation/compute authorization with configuration and stop
+criteria frozen. No full adaptation or LoRA is authorized.
+
+### 2026-09-29 PR92 validation-only span/typed/validity diagnosis completed (historical)
+
+**Historical result:** `LAYA_SPAN_TYPED_VALIDITY_DIAGNOSIS_V3_COMPLETED`.
 PR #91 merged at `b779b3361f5bcf22c505d0db69c126af8240d30a`;
 its v2 sanitizer blocker remains historical. The separately authorized PR #92
 v3 runner fixed integer BIO-key sanitization and completed one live diagnostic
@@ -37,10 +60,9 @@ PR #92 is MERGED at reviewed head `ae9af2a238c5fa4dad9d75e978f242ad88fcf841`; me
 `a4179234582abef1bdc3ecb61749941192d26dd9`. Issue #68 remains OPEN; Issues #80/#82 remain OPEN and
 unchanged.
 
-**Next gate: adaptation-design review only.** This review is design-only and
-does not authorize training, model compute, hyperparameter selection,
-threshold tuning, decoder repair, or implementation. Held-out and Stage A
-remain sealed. Any later implementation or repair requires separate
+The subsequent read-only design review recommended superseding the unchanged
+recipe; the current v2 protocol/audit gate is recorded above. Held-out and
+Stage A remain sealed. Any later implementation or compute requires separate
 authorization.
 
 
